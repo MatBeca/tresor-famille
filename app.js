@@ -197,7 +197,7 @@ ${o.kids.map((k, i) => `<div class="kidform"><header><h3>Enfant ${i + 1}</h3>${o
 <div class="pills">${[0, 10, 25].map(n => `<button class="pill" data-act="obgift" data-n="${n}" aria-pressed="${o.giftMatch === n}">${n ? n + ' %' : 'Aucun'}</button>`).join('')}</div></div>
 <div class="card"><h3>Le dé de la bourse</h3><p class="soft small" style="margin:0">Lancé une fois par semaine. Tous rapportent en moyenne +0,25 % par semaine, seul le risque change.</p>
 <div class="preset">${Object.entries(DICE).map(([k, d]) => `<button data-act="obdice" data-n="${k}" aria-pressed="${o.dice === k}"><b>${d.name}</b><span>${d.faces.map(pct).join(' · ')}<br>${d.txt}</span></button>`).join('')}</div></div>
-<div class="card"><h3>Où va l’argent placé ?</h3><p class="soft small" style="margin:0">L’appli tient les comptes, mais l’argent doit exister en vrai. Quand vous le voulez, mettez de côté ce que l’appli indique (Livret A au nom de l’enfant, compte épargne ou tirelire fermée) : l’espace parents vous dit combien, et vous n’aurez pas de surprise le jour d’un projet.</p></div>
+<div class="card"><h3>Où va l’argent placé ?</h3><p class="soft small" style="margin:0">L’appli tient les comptes, mais l’argent doit exister en vrai. Quand vous le voulez, mettez de côté ce que l’appli indique (Livret A au nom de l’enfant, compte épargne ou boîte fermée à la maison) : l’espace parents vous dit combien, et vous n’aurez pas de surprise le jour d’un projet.</p></div>
 <div class="card"><h3>Code parents</h3><p class="soft small" style="margin:0">4 chiffres pour ouvrir l’espace parents sur l’appareil d’un enfant.</p>
 <label>Code à 4 chiffres<input id="ob-pin" class="secret" type="text" inputmode="numeric" autocomplete="off" maxlength="4" data-ob="pin" value="${esc(o.pin)}"></label></div>`;
   }
@@ -255,10 +255,10 @@ ${since !== null && since < 5 ? `<p class="msg" style="margin-top:0">Déjà pay�
 
 function giftView(k) {
   const dis = ready ? '' : 'disabled';
-  return `<h2 class="title">J’ai reçu de l’argent</h2><p class="lead">Ajoute-le quand tu veux${gm() > 0 ? `. Ce que tu fais pousser reçoit un bonus ${P().de} de ${String(gm()).replace('.', ',')} %` : ''}.</p>
+  return `<h2 class="title">J’ai reçu de l’argent</h2><p class="lead">Range-le comme ta paie : dans ton porte-monnaie pour le dépenser, ou dans ta tirelire pour le faire pousser${gm() > 0 ? ` (+${String(gm()).replace('.', ',')} % de bonus ${P().de})` : ''}.</p>
 <section class="card"><div class="grid2"><label>Combien (€)<input id="g-amount" type="text" inputmode="decimal" autocomplete="off" data-f="gamount" value="${esc(form.gamount)}" placeholder="Ex. : 10"></label>
 <label>De qui ?<input id="g-from" type="text" autocomplete="off" maxlength="40" data-f="gfrom" value="${esc(form.gfrom)}" placeholder="Mamie, un anniversaire…"></label></div>
-<div class="list" style="margin-top:16px"><button class="btn ghost" data-act="gift" data-r="0" ${dis}>Tout dans mon porte-monnaie</button><button class="btn gold" data-act="gift" data-r="0.5" ${dis}>Moitié-moitié</button><button class="btn gr" data-act="gift" data-r="1" ${dis}>Tout dans ma tirelire</button></div></section>`;
+<div class="list" style="margin-top:16px"><button class="btn ghost" data-act="gift" data-r="0" ${dis}>Tout dans mon porte-monnaie</button><button class="btn gold" data-act="gift" data-r="0.5" ${dis}>Moitié porte-monnaie, moitié tirelire</button><button class="btn gr" data-act="gift" data-r="1" ${dis}>Tout dans ma tirelire</button></div></section>`;
 }
 
 function bourseView(k, t) {
@@ -342,7 +342,7 @@ function parentsView() {
   return `<h2 class="title">Espace parents</h2>
 ${lock ? `<div class="msg">Cet appareil est verrouillé sur ${esc(K.name)}.<div class="row" style="margin-top:8px"><button class="btn sm" data-act="unlockdev">Déverrouiller l’appareil</button></div></div>` : ''}
 <section class="card"><h3>L’argent placé, en vrai</h3>
-<p class="soft small" style="margin:0">Pépite tient les comptes, mais l’argent placé doit exister quelque part : sinon, le jour où un projet est débloqué, la somme n’est pas là. Mettez le montant « À mettre de côté » en lieu sûr (un Livret A au nom de l’enfant, un compte épargne ou une vraie tirelire fermée), puis touchez « C’est rangé ». Le compteur repart de zéro.</p>
+<p class="soft small" style="margin:0">Pépite tient les comptes, mais l’argent placé doit exister quelque part : sinon, le jour où un projet est débloqué, la somme n’est pas là. Mettez le montant « À mettre de côté » en lieu sûr (un Livret A au nom de l’enfant, un compte épargne ou une boîte fermée à la maison), puis touchez « C’est rangé ». Le compteur repart de zéro.</p>
 ${kids().map(k => { const T = tot(k.id); return `<div style="padding:12px 0;border-bottom:1px solid var(--line)"><b>${esc(k.name)}</b>
 <p style="margin:2px 0 0">Déjà mis de côté : <b>${f(T.livret)}</b> · À mettre de côté : <b class="${T.due > 0 ? 'g' : ''}">${f(Math.max(0, T.due))}</b></p>
 ${T.due < 0 ? `<p class="soft small" style="margin:2px 0 0">Vous avez ${f(-T.due)} d’avance après de mauvaises semaines en bourse : rien à ajouter.</p>` : ''}
@@ -498,7 +498,7 @@ function doGift(ratio) {
   const before = tot(cur).total;
   EV[cur] = [...evs(cur), { t: 'recu', d: iso(), from, inv: inv2, dep: dep2, bonus }];
   saveK(cur);
-  sayMs(before, inv2 ? `Super ! ${f(inv2 + bonus)} rejoignent ta tirelire.` : `${f(dep2)} dans ton porte-monnaie.`, inv2 ? `Donne ${f(inv2)} ${P().a} pour qu’ils soient mis en lieu sûr.` : '');
+  sayMs(before, inv2 ? `Super ! ${f(inv2 + bonus)} rejoignent ta tirelire.` : `${f(dep2)} dans ton porte-monnaie.`, inv2 ? `${dep2 ? `Garde ${f(dep2)} dans ton porte-monnaie et donne` : 'Donne'} ${f(inv2)} ${P().a} pour qu’ils soient mis en lieu sûr.` : '');
   form.gamount = ''; form.gfrom = ''; view = 'home';
 }
 function doProject() {
