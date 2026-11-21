@@ -205,3 +205,10 @@ input:focus,select:focus{border-color:var(--kid);outline:none}
 .sheet h3{font-size:23px}
 @keyframes up2{from{transform:translateY(20px);opacity:0}}
 @media(min-width:700px){.modal{place-items:center}}
+
+/* logo et nom */
+.wm{display:inline-block;font-family:Fredoka,Nunito,sans-serif;font-weight:700;letter-spacing:.3px;line-height:1}
+.wm .e{position:relative;display:inline-block}
+.wm .e::before{content:"";position:absolute;left:52%;top:-.12em;width:.34em;height:.27em;transform:translateX(-35%) rotate(-28deg);background:#13a05a;border-radius:0 100% 0 100%}
+.brand .wm{font-size:26px;padding-top:4px}
+.splash svg.logo,.welcome svg.logo{width:104px;height:104px}

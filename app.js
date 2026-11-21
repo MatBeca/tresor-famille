@@ -37,7 +37,8 @@ const DICE = {
 };
 const CAPS = [20, 50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 20000];
 const PIPS = { 1: [[50, 50]], 2: [[28, 28], [72, 72]], 3: [[28, 28], [50, 50], [72, 72]], 4: [[28, 28], [72, 28], [28, 72], [72, 72]], 5: [[28, 28], [72, 28], [50, 50], [28, 72], [72, 72]], 6: [[28, 26], [72, 26], [28, 50], [72, 50], [28, 74], [72, 74]] };
-const LOGO = `<svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><path d="M10 40v6a22 14 0 0 0 44 0v-6z" fill="#d99a0b" stroke="#a87300" stroke-width="3" stroke-linejoin="round"/><ellipse cx="32" cy="40" rx="22" ry="14" fill="#f5b323" stroke="#a87300" stroke-width="3"/><ellipse cx="32" cy="40" rx="14" ry="8.5" fill="none" stroke="#ffe08a" stroke-width="2.5"/><path d="M32 40V16" stroke="#0b7440" stroke-width="4" stroke-linecap="round"/><path d="M32 24C25 14 15 14 12 18c4 7 13 9 20 6z" fill="#2fc275"/><path d="M32 20c6-10 16-11 19-7-3 7-12 10-19 7z" fill="#13a05a"/><path d="M15 48a22 14 0 0 0 7 4" stroke="#fff3c4" stroke-width="2" stroke-linecap="round" fill="none"/></svg>`;
+const LOGO = `<svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><defs><clipPath id="nc"><path d="M8 38C5 29 11 21 19 19 23 12 32 10 38 14 46 11 55 17 56 26 60 33 58 43 51 47 47 55 36 57 30 53 21 56 10 49 8 38Z"/></clipPath></defs><g clip-path="url(#nc)"><rect width="64" height="64" fill="#efa418"/><path d="M4 34 12 22 22 16 29 26 18 34z" fill="#ffd95a"/><path d="M22 16 34 8 42 14 38 25 29 26z" fill="#ffe991"/><path d="M42 14 58 18 60 30 48 31 38 25z" fill="#f7bb32"/><path d="M18 34 29 26 38 25 40 37 27 41z" fill="#f5b323"/><path d="M38 25 48 31 60 30 62 44 50 46 40 37z" fill="#dc9310"/><path d="M4 34 18 34 27 41 20 58 2 50z" fill="#e59d14"/><path d="M27 41 40 37 50 46 44 62 20 58z" fill="#c27c00"/></g><path d="M8 38C5 29 11 21 19 19 23 12 32 10 38 14 46 11 55 17 56 26 60 33 58 43 51 47 47 55 36 57 30 53 21 56 10 49 8 38Z" fill="none" stroke="#6e4400" stroke-width="3.2" stroke-linejoin="round"/><path d="M15 29 21 21" stroke="#fffbe6" stroke-width="3" stroke-linecap="round"/><path d="M50 3.5l1.9 5.1 5.1 1.9-5.1 1.9-1.9 5.1-1.9-5.1-5.1-1.9 5.1-1.9z" fill="#fff3b0" stroke="#6e4400" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
+const WM = `<span class="wm" role="img" aria-label="Pépite"><span aria-hidden="true">P<span class="e">e</span>pite</span></span>`;
 const I = {
   jar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2.5" width="8" height="3" rx="1"/><path d="M6.5 7.5c0-1.1.9-2 2-2h7c1.1 0 2 .9 2 2V19a2.5 2.5 0 0 1-2.5 2.5h-6A2.5 2.5 0 0 1 6.5 19z"/><path d="M6.5 13.5h11"/></svg>',
   coin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/></svg>',
@@ -146,11 +147,11 @@ function jar(t, g) {
 }
 
 /* ---------- vues ---------- */
-function splash(msg) { return `<div class="splash"><div>${LOGO}<h1 style="font-size:40px;margin-top:8px">Pépite</h1><p class="soft">${esc(msg || 'L’argent de poche qui pousse')}</p></div></div>`; }
+function splash(msg) { return `<div class="splash"><div>${LOGO}<h1 style="font-size:46px;margin-top:8px">${WM}</h1><p class="soft">${esc(msg || 'L’argent de poche qui pousse')}</p></div></div>`; }
 
 function loginView() {
   const up = loginMode === 'up';
-  return `<main class="view full"><div class="welcome">${LOGO}<h1>Pépite</h1><p>L’argent de poche qui pousse</p></div>
+  return `<main class="view full"><div class="welcome">${LOGO}<h1>${WM}</h1><p>L’argent de poche qui pousse</p></div>
 <div class="tabs2"><button data-act="lmode" data-m="in" aria-pressed="${!up}">J’ai un compte</button><button data-act="lmode" data-m="up" aria-pressed="${up}">Créer un compte</button></div>
 <form class="card" id="loginf" autocomplete="on">
 <h3>${up ? 'Créer le compte de la famille' : 'Connexion de cet appareil'}</h3>
@@ -201,7 +202,7 @@ ${o.kids.map((k, i) => `<div class="kidform"><header><h3>Enfant ${i + 1}</h3>${o
 
 function topbar() {
   const av = lock ? '' : kids().map(k => `<button class="av" style="--c:${k.color}" data-act="kid" data-k="${k.id}" aria-pressed="${k.id === cur}" aria-label="${esc(k.name)}">${esc(k.name.slice(0, 1).toUpperCase())}</button>`).join('');
-  return `<header class="topbar"><div class="brand">${LOGO}<span>Pépite</span></div>${kids().length > 1 ? av : ''}<button class="iconbtn" data-act="go" data-v="parents" aria-label="Espace parents">${I.gear}</button></header>`;
+  return `<header class="topbar"><div class="brand">${LOGO}${WM}</div>${kids().length > 1 ? av : ''}<button class="iconbtn" data-act="go" data-v="parents" aria-label="Espace parents">${I.gear}</button></header>`;
 }
 function tabbar() {
   const tabs = [['home', 'Bocal', I.jar], ['paie', 'Paie', I.coin], ['bourse', 'Bourse', I.die], ['projet', 'Projet', I.flag], ['futur', 'Futur', I.chart]];
@@ -381,17 +382,21 @@ function mainView() {
   return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view">${content}</main>${tabbar()}${resetFor ? resetModal() : ''}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
 }
 
+let lastKey = '';
 function render() {
   if (rolling) return;
-  let html, color = PAL[1];
-  if (user === undefined) html = splash();
-  else if (!user) html = loginView();
-  else if (!famLoaded) html = splash('Ouverture de la banque…');
-  else if (!F) { if (!ob) { ob = newOb(); tryLegacy(); } html = obView(); color = ob.step === 2 && ob.kids[0] ? ob.kids[0].color : PAL[1]; }
-  else { html = mainView(); const k = kidOf(cur); if (k) color = k.color; }
+  let html, color = '#2f5fe0', key;
+  if (user === undefined) { html = splash(); key = 'splash'; }
+  else if (!user) { html = loginView(); key = 'login'; }
+  else if (!famLoaded) { html = splash('Ouverture de la banque…'); key = 'splash2'; }
+  else if (!F) { key = 'ob' + (ob ? ob.step : 1); if (!ob) { ob = newOb(); tryLegacy(); } html = obView(); color = ob.step === 2 && ob.kids[0] ? ob.kids[0].color : PAL[1]; }
+  else { html = mainView(); key = 'main:' + view + ':' + cur + ':' + (lock && !pinOk ? 'pin' : '') + (resetFor ? ':modal' : ''); const k = kidOf(cur); if (k) color = k.color; }
   document.documentElement.style.setProperty('--kid', color);
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', color);
-  Idiomorph.morph(document.getElementById('app'), html, { morphStyle: 'innerHTML', ignoreActiveValue: true });
+  const app = document.getElementById('app');
+  // Changement d'écran : on remplace tout ; sinon on ne met à jour que ce qui change (clics et saisies préservés).
+  if (key !== lastKey) { app.innerHTML = html; lastKey = key; }
+  else Idiomorph.morph(app, html, { morphStyle: 'innerHTML', ignoreActiveValue: true });
 }
 
 /* ---------- données ---------- */
