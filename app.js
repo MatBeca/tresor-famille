@@ -122,9 +122,10 @@ function eta(id, perWeek) {
 const avgInv = id => { const p = tot(id).pays.slice(-8); return p.length ? p.reduce((a, b) => a + b, 0) / p.length : kidOf(id).weekly; };
 const etaTxt = w => w === null ? null : w <= 1 ? 'dès la semaine prochaine' : `dans ${w} semaines, vers ${new Date(Date.now() + w * 7 * 864e5).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`;
 function milestone(before, after) {
-  const g = goalOf(cur); if (!g) return '';
+  const g = goalOf(cur);
+  if (!g) { const c = CAPS.find(x => before < x && after >= x); return c ? `C’est pépite ! Ta tirelire passe les ${f(c)}.` : ''; }
   const b = before / g.budget, a = after / g.budget;
-  for (const m of [1, 0.75, 0.5, 0.25]) if (b < m && a >= m) return m === 1 ? `Objectif « ${esc(g.name)} » atteint !` : `Palier ${m * 100} % atteint pour « ${esc(g.name)} » !`;
+  for (const m of [1, 0.75, 0.5, 0.25]) if (b < m && a >= m) return m === 1 ? `C’est pépite ! Objectif « ${esc(g.name)} » atteint !` : `Palier ${m * 100} % atteint pour « ${esc(g.name)} » !`;
   return '';
 }
 function sayMs(before, msg, sub) { const ms = milestone(before, tot(cur).total); if (ms) say(ms, msg); else say(msg, sub); }
@@ -169,7 +170,7 @@ function splash(msg) { return `<div class="splash"><div>${LOGO}<h1 style="font-s
 function loginView() {
   const up = loginMode === 'up';
   return `<main class="view full"><div class="welcome">${LOGO}<h1>${WM}</h1><p>L’argent de poche qui pousse</p></div>
-<div class="intro"><p>Pépite aide les parents à montrer à leurs enfants, avec leur argent de poche, pourquoi épargner et investir tôt change tout.</p><p class="soft small">Bonus, bourse et intérêts sont un jeu financé par vous, les parents : ce n’est pas un vrai placement.</p></div>
+<div class="intro"><p class="story">Pièce après pièce, la tirelire se remplit… jusqu’à devenir une vraie pépite.</p><p>Pépite aide les parents à montrer à leurs enfants, avec leur argent de poche, pourquoi épargner et investir tôt change tout.</p><p class="soft small">Bonus, bourse et intérêts sont un jeu financé par vous, les parents : ce n’est pas un vrai placement.</p></div>
 <div class="tabs2"><button data-act="lmode" data-m="in" aria-pressed="${!up}">J’ai un compte</button><button data-act="lmode" data-m="up" aria-pressed="${up}">Créer un compte</button></div>
 <form class="card" id="loginf" autocomplete="on">
 <h3>${up ? 'Créer le compte de la famille' : 'Connexion de cet appareil'}</h3>
@@ -186,7 +187,7 @@ function obView() {
   const o = ob, st = `<div class="stepper"><span>Étape ${o.step} sur 3 · ${['Bienvenue', 'Vos enfants', 'Les règles du jeu'][o.step - 1]}</span><div class="sbar"><i style="width:${(o.step / 3 * 100).toFixed(0)}%"></i></div></div>`;
   let body = '';
   if (o.step === 1) {
-    body = `${st}<div class="welcome">${LOGO}<h1>Bienvenue !</h1><p>Avec leur argent de poche, vos enfants découvrent pourquoi épargner et investir tôt change tout.</p></div>
+    body = `${st}<div class="welcome">${LOGO}<h1>Bienvenue !</h1><p>Avec leur argent de poche, vos enfants découvrent pourquoi épargner et investir tôt change tout. Pièce après pièce, leur tirelire se remplit… jusqu’à devenir une vraie pépite.</p></div>
 <div class="why"><div>${I.coin}<span><b>Une paie chaque semaine</b>Votre enfant décide librement ce qu’il fait de son argent : tout dépenser, tout faire pousser, ou un peu des deux. Et s’il le fait pousser, il découvre peu à peu les arcanes de l’investissement.</span></div>
 <div>${I.die}<span><b>Un bonus et une bourse</b>Vous ajoutez un bonus sur l’argent qu’il place. Ensuite, chaque semaine, il peut lancer un dé qui fait varier sa tirelire, à la hausse ou à la baisse, comme les cours en Bourse. Il choisit lui-même son niveau de risque, ou décide de ne pas jouer.</span></div>
 <div>${I.flag}<span><b>Des projets et un horizon</b>Il se fixe un objectif, comme l’achat d’un vélo, et fait grossir sa pépite jusqu’à ses 18 ans.</span></div></div>
@@ -235,7 +236,7 @@ function homeView(k, t) {
   const g = goalOf(cur), J = jar(t, g), paid = sameWeek(t.paie), rolled = sameWeek(t.bourse && t.bourse.d);
   const prog = Math.min(100, Math.max(0, t.total / (g ? g.budget : J.cap) * 100));
   const hint = g ? (t.total >= g.budget ? `Objectif « ${esc(g.name)} » atteint !` : `Encore ${f(g.budget - t.total)} pour « ${esc(g.name)} »`) : (t.total >= J.cap ? `Palier de ${f(J.cap)} atteint !` : `Encore ${f(J.cap - t.total)} pour le palier de ${f(J.cap)}`);
-  return `<section class="hero"><div><p class="hi">Salut ${esc(k.name)} !</p><p class="lbl">Ta tirelire qui pousse</p><div class="amount">${f(t.total)}</div>
+  return `<section class="hero"><div><p class="hi">Salut ${esc(k.name)} !</p><p class="lbl">${g && t.total >= g.budget ? 'C’est pépite ! Ta tirelire est pleine' : 'Ta tirelire qui pousse'}</p><div class="amount">${f(t.total)}</div>
 <div class="prog">${g ? '<b style="left:25%"></b><b style="left:50%"></b><b style="left:75%"></b>' : ''}<i style="width:${prog.toFixed(1)}%"></i></div><p class="small">${hint}</p></div>${J.svg}</section>
 <div class="tiles"><div class="tile"><small><i style="background:var(--kid)"></i>Mon argent</small><b>${f(t.own)}</b></div>
 <div class="tile"><small><i style="background:var(--gold)"></i>Bonus ${P().de}</small><b>${f(t.bonus)}</b></div>
@@ -346,7 +347,7 @@ function projetView(k, t) {
 <div class="gnum"><span class="amount">${Math.floor(p * 100)} %</span><span>${f(have)} sur ${f(g.budget)}</span></div>
 <div class="track"><div class="road"><i style="width:${(p * 100).toFixed(1)}%"></i></div>${flags}<span class="me" style="left:${(p * 100).toFixed(1)}%">${esc(k.name.slice(0, 1).toUpperCase())}</span></div>
 ${reached ? '' : `<p style="margin:6px 0 0">Il te manque <b>${f(g.budget - have)}</b>.${etaTxt(w1) ? ` Si tu continues comme ça, tu l’auras ${etaTxt(w1)}.` : ' Fais pousser un peu chaque semaine pour avancer.'}</p>${wAll !== null && w1 !== null && wAll < w1 ? `<p class="soft small" style="margin:6px 0 0">En faisant pousser toute ta paie : ${etaTxt(wAll)}.</p>` : ''}`}</section>
-${reached ? `<section class="card celebrate"><h3>Objectif atteint, bravo !</h3><p style="margin:0">Prépare ta présentation ${P().a} : pourquoi tu le veux, combien il coûte, ce qu’il va t’apporter. S’ils sont convaincus, ils débloqueront ton argent.</p></section>` : ''}
+${reached ? `<section class="card celebrate"><h3>C’est pépite ! Objectif atteint</h3><p style="margin:0">Prépare ta présentation ${P().a} : pourquoi tu le veux, combien il coûte, ce qu’il va t’apporter. S’ils sont convaincus, ils débloqueront ton argent.</p></section>` : ''}
 <section class="card"><h3>Les paliers</h3><ul class="log">${MS.map(m => { const v = r2(g.budget * m), ok = have >= v; return `<li><span class="${ok ? 'g' : 'soft'}" style="width:26px;flex:none">${ok ? I.check : '○'}</span><span>${m === 1 ? 'Objectif complet' : 'Palier ' + m * 100 + ' %'} : ${f(v)}</span><b class="${ok ? 'g' : 'soft'}">${ok ? 'atteint' : 'encore ' + f(v - have)}</b></li>`; }).join('')}</ul></section>
 <div class="row"><button class="btn ghost sm" data-act="goaledit">Modifier</button><button class="btn ghost sm" data-act="goaldrop">${goalDropArm ? 'Confirmer l’abandon' : 'Abandonner ce projet'}</button></div>${doneHtml}`;
 }
