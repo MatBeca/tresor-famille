@@ -236,3 +236,6 @@ input:focus,select:focus{border-color:var(--kid);outline:none}
 .choice>span{background:var(--glass);border-radius:14px;padding:8px 10px;font-size:15px}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:1px}
 .plain{margin:8px 0 0;padding-left:18px;display:grid;gap:6px;font-size:16px}
+
+/* paie en pause */
+.paused{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 10%,var(--card))}

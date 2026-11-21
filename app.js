@@ -56,14 +56,14 @@ const I = {
 /* ---------- état ---------- */
 let user, auth, fdb;
 let F = null, famLoaded = false, famServer = false, lastF = '';
-const EV = {}, GOAL = {}, KL = {}, lastK = {}, kidUnsubs = {};
+const EV = {}, GOAL = {}, PAUSE = {}, KL = {}, lastK = {}, kidUnsubs = {};
 let goalEdit = false, goalDropArm = false, resetFor = null, payHelp = null;
 let famUnsub = null, ready = false, status = '', offlineTimer = null;
 let view = 'home', cur = null, lock = null, pinOk = false, pinBuf = '', pinBad = false;
 let tray = 0, inv = 0, dep = 0, rolling = false;
 let toast = null, toastT = null, undoArm = false, wipeArm = false, delArm = null;
 const projInv = {}, sel = {};
-const form = { resetname: '', goalname: '', goalbudget: '', gamount: '', gfrom: '', plabel: '', pamount: '', pkid: '', email: '', pass: '', newpin: '' };
+const form = { preason: '', pdur: '1', resetname: '', goalname: '', goalbudget: '', gamount: '', gfrom: '', plabel: '', pamount: '', pkid: '', email: '', pass: '', newpin: '' };
 let loginMode = 'in', loginMsg = '', loginErr = '', busy = false;
 let ob = null;
 try { lock = localStorage.getItem('pepite-lock'); cur = localStorage.getItem('pepite-cur'); } catch (e) {}
@@ -95,6 +95,8 @@ function tot(id) {
   return t;
 }
 const goalOf = id => GOAL[id] || null;
+const pauseOf = id => { const p = PAUSE[id]; if (!p) return null; if (p.until && Date.now() >= new Date(p.until).getTime()) return null; return p; };
+const untilTxt = p => p.until ? 'jusqu’au ' + new Date(new Date(p.until).getTime() - 864e5).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + ' inclus' : 'jusqu’à nouvel ordre';
 const MS = [0.25, 0.5, 0.75, 1];
 function eta(id, perWeek) {
   const g = goalOf(id), t = tot(id); if (!g) return null; if (t.total >= g.budget) return 0;
@@ -227,13 +229,16 @@ function homeView(k, t) {
 ${t.out > 0 ? `<p class="soft small" style="margin:8px 4px 0">Projets réalisés : ${f(t.out)}</p>` : ''}
 <h3 class="sec">Mon projet</h3><div class="list"><button class="item" data-act="go" data-v="projet"><span class="ic" style="background:var(--kidt);color:var(--kidtxt)">${I.flag}</span><span>${g ? `<b>${esc(g.name)} : ${Math.floor(Math.min(1, Math.max(0, t.total) / g.budget) * 100)} %</b><small>${t.total >= g.budget ? 'Atteint : prépare ta présentation !' : `${f(Math.max(0, t.total))} sur ${f(g.budget)}`}</small>` : '<b>Choisis un projet</b><small>Un vélo, un jeu ? Fixe-toi un objectif.</small>'}</span><span class="end">${I.chev}</span></button></div>
 <h3 class="sec">Cette semaine</h3><div class="list">
-<button class="item" data-act="go" data-v="paie"><span class="ic" style="background:#fff3c4;color:#a87300">${I.coin}</span><span><b>Ma paie</b><small>${paid ? 'Rangée, bravo !' : `${k.weekly} pièce${k.weekly > 1 ? 's' : ''} t’attendent`}</small></span><span class="end ${paid ? 'done' : ''}">${paid ? I.check : I.chev}</span></button>
+<button class="item" data-act="go" data-v="paie"><span class="ic" style="background:#fff3c4;color:#a87300">${I.coin}</span><span><b>Ma paie</b><small>${pauseOf(cur) ? 'En pause ' + untilTxt(pauseOf(cur)) : paid ? 'Rangée, bravo !' : `${k.weekly} pièce${k.weekly > 1 ? 's' : ''} t’attendent`}</small></span><span class="end ${paid && !pauseOf(cur) ? 'done' : ''}">${paid && !pauseOf(cur) ? I.check : I.chev}</span></button>
 <button class="item" data-act="go" data-v="bourse"><span class="ic" style="background:var(--glass)">${I.die}</span><span><b>La bourse</b><small>${rolled ? `Dé ${t.bourse.face} : ${pct(t.bourse.rate)}` : 'Lance le dé de la semaine'}</small></span><span class="end ${rolled ? 'done' : ''}">${rolled ? I.check : I.chev}</span></button>
 <button class="item" data-act="go" data-v="recu"><span class="ic" style="background:color-mix(in srgb,var(--grow) 14%,transparent);color:var(--grow)">${I.gift}</span><span><b>J’ai reçu de l’argent</b><small>Un cadeau, un anniversaire ?</small></span><span class="end">${I.chev}</span></button>
 <button class="item" data-act="go" data-v="carnet"><span class="ic" style="background:var(--glass)">${I.book}</span><span><b>Mon carnet</b><small>Tout ce qui est entré et sorti</small></span><span class="end">${I.chev}</span></button></div>`;
 }
 
 function payView(k, t) {
+  const pz = pauseOf(cur);
+  if (pz) return `<h2 class="title">Jour de paie</h2><section class="card paused"><h3>Ta paie est en pause</h3><p style="margin:0">${P().label} ${F.parents === 'parents' ? 'ont' : 'a'} mis ta paie en pause ${untilTxt(pz)}.</p>
+${pz.reason ? `<p class="msg">« ${esc(pz.reason)} »</p>` : ''}<p class="soft" style="margin:10px 0 0">Ta tirelire reste à toi : elle continue de pousser avec la bourse, et tu peux toujours ranger l’argent que tu reçois.</p></section>`;
   const blocked = !!lock && sameWeek(t.paie), since = t.paie ? daysSince(t.paie) : null, bonusNow = r2(inv * F.match / 100), dis = ready ? '' : 'disabled';
   const coin = (act) => `<button class="coin" data-act="${act}" aria-label="Reprendre cette pièce" ${dis}>1&nbsp;€</button>`;
   const help = payHelp === null ? !t.paie : payHelp, m = String(F.match).replace('.', ',');
@@ -322,6 +327,8 @@ function carnetView(k) {
     if (e.t === 'paie') return `<li><time>${dateFr(e.d)}</time><span>Paie : ${f(e.inv)} placés, ${f(e.dep)} dans le porte-monnaie</span><b class="g">+${f(e.inv + e.bonus)}</b></li>`;
     if (e.t === 'recu') return `<li><time>${dateFr(e.d)}</time><span>Reçu${e.from ? ' de ' + esc(e.from) : ''} : ${f(e.inv)} placés, ${f(e.dep)} dans le porte-monnaie</span><b class="g">+${f(e.inv + e.bonus)}</b></li>`;
     if (e.t === 'bourse') return `<li><time>${dateFr(e.d)}</time><span>Bourse : dé ${e.face} (${pct(e.rate)})</span><b class="${e.gain < 0 ? 'neg' : 'g'}">${e.gain < 0 ? '−' : '+'}${f(Math.abs(e.gain))}</b></li>`;
+    if (e.t === 'pause') return `<li><time>${dateFr(e.d)}</time><span>Paie mise en pause${e.reason ? ' : ' + esc(e.reason) : ''}</span><b class="soft">—</b></li>`;
+    if (e.t === 'reprise') return `<li><time>${dateFr(e.d)}</time><span>Paie reprise</span><b class="soft">—</b></li>`;
     if (e.t === 'vire') return `<li><time>${dateFr(e.d)}</time><span>Mis en lieu sûr ${P().de}</span><b class="soft">${f(e.amount)}</b></li>`;
     return `<li><time>${dateFr(e.d)}</time><span>Projet : ${esc(e.label)}</span><b class="neg">−${f(e.amount)}</b></li>`;
   }).join('') || '<li class="soft">Rien encore : ta première paie arrive bientôt.</li>';
@@ -337,7 +344,7 @@ function pinView() {
 function parentsView() {
   if (lock && !pinOk) return pinView();
   const dis = ready ? '' : 'disabled', K = kidOf(cur), last = evs(cur)[evs(cur).length - 1];
-  const lastTxt = last ? ({ paie: 'la paie du ', bourse: 'le lancer du ', recu: 'l’argent reçu le ', vire: 'le virement du ', projet: 'le projet du ' }[last.t] || '') + dateFr(last.d) : '';
+  const lastTxt = last ? ({ paie: 'la paie du ', bourse: 'le lancer du ', recu: 'l’argent reçu le ', vire: 'le virement du ', projet: 'le projet du ', pause: 'la pause du ', reprise: 'la reprise du ' }[last.t] || '') + dateFr(last.d) : '';
   const pk = form.pkid && kidOf(form.pkid) ? form.pkid : cur;
   return `<h2 class="title">Espace parents</h2>
 ${lock ? `<div class="msg">Cet appareil est verrouillé sur ${esc(K.name)}.<div class="row" style="margin-top:8px"><button class="btn sm" data-act="unlockdev">Déverrouiller l’appareil</button></div></div>` : ''}
@@ -347,6 +354,11 @@ ${kids().map(k => { const T = tot(k.id); return `<div style="padding:12px 0;bord
 <p style="margin:2px 0 0">Déjà mis de côté : <b>${f(T.livret)}</b> · À mettre de côté : <b class="${T.due > 0 ? 'g' : ''}">${f(Math.max(0, T.due))}</b></p>
 ${T.due < 0 ? `<p class="soft small" style="margin:2px 0 0">Vous avez ${f(-T.due)} d’avance après de mauvaises semaines en bourse : rien à ajouter.</p>` : ''}
 <div class="row" style="margin-top:8px"><button class="btn gr sm" data-act="vire" data-k="${k.id}" ${T.due > 0 && ready ? '' : 'disabled'}>C’est rangé (${f(Math.max(0, T.due))})</button></div></div>`; }).join('')}</section>
+<section class="card"><h3>Mettre la paie en pause</h3><p class="soft small" style="margin:0">En cas de conflit, la paie peut être suspendue. Les semaines en pause ne sont pas rattrapées. La tirelire, elle, reste à l’enfant : elle continue de pousser et il peut toujours y ranger l’argent reçu.</p>
+${kids().map(k => { const pz = pauseOf(k.id); return `<div style="padding:12px 0;border-bottom:1px solid var(--line)"><b>${esc(k.name)}</b>${pz ? `<p style="margin:2px 0 0">En pause ${untilTxt(pz)}${pz.reason ? ` · « ${esc(pz.reason)} »` : ''}</p><div class="row" style="margin-top:8px"><button class="btn gr sm" data-act="presume" data-k="${k.id}" ${dis}>Reprendre la paie maintenant</button></div>`
+  : `<div class="pills">${[['1', 'Cette semaine'], ['2', '2 semaines'], ['0', 'Jusqu’à nouvel ordre']].map(([v, l]) => `<button class="pill" data-act="pdur" data-n="${v}" aria-pressed="${form.pdur === v}">${l}</button>`).join('')}</div>
+<label>Message pour ${esc(k.name)} (facultatif)<input id="pr-${k.id}" type="text" autocomplete="off" maxlength="80" data-f="preason:${k.id}" value="${esc(form['preason:' + k.id] || '')}" placeholder="Ex. : on en reparle ensemble dimanche"></label>
+<div class="row" style="margin-top:8px"><button class="btn ghost sm" data-act="ppause" data-k="${k.id}" ${dis}>Mettre la paie ${de(k.name)} en pause</button></div>`}</div>`; }).join('')}</section>
 <section class="card"><h3>Débloquer pour un projet</h3>${kids().filter(k => goalOf(k.id)).map(k => { const g = goalOf(k.id), T = tot(k.id); return `<div class="msg" style="margin-top:6px">${esc(k.name)} vise « ${esc(g.name)} » : ${f(Math.max(0, T.total))} sur ${f(g.budget)}.<div class="row" style="margin-top:8px"><button class="btn gr sm" data-act="goalunlock" data-k="${k.id}" ${T.total >= g.budget && ready ? '' : 'disabled'}>${T.total >= g.budget ? `Débloquer ${f(g.budget)} pour « ${esc(g.name)} »` : 'Pas encore atteint'}</button></div></div>`; }).join('')}
 <p class="soft small" style="margin:10px 0 0">Autre projet, ou montant différent :</p>
 <label>Pour<select data-f="pkid">${kids().map(k => `<option value="${k.id}" ${k.id === pk ? 'selected' : ''}>${esc(k.name)} (${f(tot(k.id).total)})</option>`).join('')}</select></label>
@@ -417,7 +429,7 @@ function render() {
 const chains = {};
 function queue(key, fn) { chains[key] = (chains[key] || Promise.resolve()).then(fn).catch(() => { status = 'Enregistrement impossible : vérifie ta connexion.'; render(); }); return chains[key]; }
 function saveF() { const body = clone(F); lastF = JSON.stringify(body); return queue('F', () => setDoc(doc(fdb, 'familles', user.uid), body)); }
-function saveK(id) { const body = { events: clone(evs(id)), goal: goalOf(id) ? clone(goalOf(id)) : null }; lastK[id] = JSON.stringify(body); return queue(id, () => setDoc(doc(fdb, 'familles', user.uid, 'enfants', id), body)); }
+function saveK(id) { const body = { events: clone(evs(id)), goal: goalOf(id) ? clone(goalOf(id)) : null, pause: PAUSE[id] ? clone(PAUSE[id]) : null }; lastK[id] = JSON.stringify(body); return queue(id, () => setDoc(doc(fdb, 'familles', user.uid, 'enfants', id), body)); }
 function updateReady() {
   const r = !!(F && famServer && kids().every(k => KL[k.id]));
   if (r !== ready) { ready = r; if (r) { status = ''; clearTimeout(offlineTimer); resetCoins(); } return true; }
@@ -428,13 +440,13 @@ function syncKids() {
   for (const id of ids) if (!kidUnsubs[id]) {
     kidUnsubs[id] = onSnapshot(doc(fdb, 'familles', user.uid, 'enfants', id), { includeMetadataChanges: true }, snap => {
       let ch = false;
-      if (snap.exists()) { const d = snap.data(), body = { events: d.events || [], goal: d.goal || null }, s = JSON.stringify(body); if (s !== lastK[id]) { lastK[id] = s; EV[id] = clone(body.events); GOAL[id] = body.goal ? clone(body.goal) : null; ch = true; } }
+      if (snap.exists()) { const d = snap.data(), body = { events: d.events || [], goal: d.goal || null, pause: d.pause || null }, s = JSON.stringify(body); if (s !== lastK[id]) { lastK[id] = s; EV[id] = clone(body.events); GOAL[id] = body.goal ? clone(body.goal) : null; PAUSE[id] = body.pause ? clone(body.pause) : null; ch = true; } }
       if (!snap.metadata.fromCache && !KL[id]) { KL[id] = true; ch = true; }
       if (updateReady()) ch = true;
       if (ch) render();
     }, () => { status = 'La banque ne répond plus : relance l’application.'; render(); });
   }
-  for (const id of Object.keys(kidUnsubs)) if (!ids.includes(id)) { kidUnsubs[id](); delete kidUnsubs[id]; delete EV[id]; delete GOAL[id]; delete KL[id]; delete lastK[id]; }
+  for (const id of Object.keys(kidUnsubs)) if (!ids.includes(id)) { kidUnsubs[id](); delete kidUnsubs[id]; delete EV[id]; delete GOAL[id]; delete PAUSE[id]; delete KL[id]; delete lastK[id]; }
 }
 function startSync() {
   stopSync();
@@ -453,7 +465,7 @@ function stopSync() {
   if (famUnsub) famUnsub(); famUnsub = null;
   for (const id of Object.keys(kidUnsubs)) { kidUnsubs[id](); delete kidUnsubs[id]; }
   F = null; famLoaded = false; famServer = false; ready = false; lastF = ''; ob = null;
-  for (const o of [EV, GOAL, KL, lastK]) for (const k of Object.keys(o)) delete o[k];
+  for (const o of [EV, GOAL, PAUSE, KL, lastK]) for (const k of Object.keys(o)) delete o[k];
   clearTimeout(offlineTimer);
 }
 async function tryLegacy() {
@@ -531,7 +543,7 @@ async function obFinish() {
   busy = true; render();
   try {
     const fam = { v: 1, parents: ob.parents, kids: ob.kids.map(k => ({ id: k.id, name: k.name, birth: k.birth, weekly: k.weekly, color: k.color })), match: ob.match, giftMatch: ob.giftMatch, dice: DICE[ob.dice].faces.slice(), diceName: ob.dice, pin: ob.pin, created: iso() };
-    await Promise.all(fam.kids.map(k => setDoc(doc(fdb, 'familles', user.uid, 'enfants', k.id), { events: (ob.legacy && ob.legacy[k.id]) || [], goal: null })));
+    await Promise.all(fam.kids.map(k => setDoc(doc(fdb, 'familles', user.uid, 'enfants', k.id), { events: (ob.legacy && ob.legacy[k.id]) || [], goal: null, pause: null })));
     await setDoc(doc(fdb, 'familles', user.uid), fam);
     view = 'home'; cur = fam.kids[0].id;
   } catch (e) { ob.err = 'Impossible d’enregistrer : vérifiez la connexion et les règles Firestore.'; }
@@ -570,7 +582,7 @@ document.addEventListener('click', ev => {
     case 'backGrow': if (inv) { inv--; tray++; } break;
     case 'pay': {
       const t = tot(cur);
-      if (!ready || tray || (lock && sameWeek(t.paie))) break;
+      if (!ready || tray || pauseOf(cur) || (lock && sameWeek(t.paie))) break;
       const bonus = r2(inv * F.match / 100);
       const before = t.total;
       EV[cur] = [...evs(cur), { t: 'paie', d: iso(), inv, dep, bonus }];
@@ -609,7 +621,10 @@ document.addEventListener('click', ev => {
     }
     case 'goaldrop': if (ready) { if (!goalDropArm) goalDropArm = true; else { GOAL[cur] = null; saveK(cur); goalDropArm = false; say('Projet abandonné.', 'Tu peux en choisir un autre quand tu veux.'); } } break;
     case 'goalunlock': if (ready) { const g = goalOf(k), T = tot(k); if (g && T.total >= g.budget) { const amount = r2(g.budget), fromLivret = r2(Math.max(0, amount - Math.max(0, T.due))); EV[k] = [...evs(k), { t: 'projet', d: iso(), label: g.name, amount, fromLivret, goal: true }]; GOAL[k] = null; saveK(k); say(`« ${esc(g.name)} » débloqué : ${f(amount)} pour ${esc(kidOf(k).name)}.`, fromLivret > 0 ? `Reprenez ${f(fromLivret)} dans l’argent mis de côté.` : ''); } } break;
-    case 'undo': if (ready) { if (!undoArm) undoArm = true; else { EV[cur] = evs(cur).slice(0, -1); saveK(cur); undoArm = false; say('Dernière opération annulée.'); } } break;
+    case 'pdur': form.pdur = b.dataset.n; break;
+    case 'ppause': if (ready) { const n = +form.pdur, until = n ? new Date(wk(new Date()) + n * 7 * 864e5).toISOString() : null, reason = (form['preason:' + k] || '').trim().slice(0, 80); PAUSE[k] = { since: iso(), until, reason }; EV[k] = [...evs(k), { t: 'pause', d: iso(), until, reason }]; saveK(k); form['preason:' + k] = ''; say(`Paie ${de(kidOf(k).name)} en pause ${untilTxt(PAUSE[k])}.`); } break;
+    case 'presume': if (ready) { PAUSE[k] = null; EV[k] = [...evs(k), { t: 'reprise', d: iso() }]; saveK(k); say(`La paie ${de(kidOf(k).name)} reprend.`); if (k === cur) resetCoins(); } break;
+    case 'undo': if (ready) { if (!undoArm) undoArm = true; else { const lastEv = evs(cur)[evs(cur).length - 1]; if (lastEv && lastEv.t === 'pause') PAUSE[cur] = null; EV[cur] = evs(cur).slice(0, -1); saveK(cur); undoArm = false; say('Dernière opération annulée.'); } } break;
     case 'resetopen': resetFor = cur; form.resetname = ''; break;
     case 'resetclose': resetFor = null; form.resetname = ''; break;
     case 'resetdo': {
