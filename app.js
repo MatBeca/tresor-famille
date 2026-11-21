@@ -97,6 +97,29 @@ function ensureCur() {
 function resetCoins() { const k = kidOf(cur); tray = k ? k.weekly : 0; inv = 0; dep = 0; }
 function say(msg, sub) { toast = { msg, sub }; clearTimeout(toastT); toastT = setTimeout(() => { toast = null; render(); }, 4500); }
 
+const BACKLOG = 4;
+const normWk = ms => wk(new Date(ms + 12 * 3600e3));
+function startWeek(id) {
+  const k = kidOf(id); if (k && k.start) return wk(k.start);
+  const first = evs(id).find(e => e.t === 'paie'); return first ? wk(first.w || first.d) : wk(new Date());
+}
+function pausedWeeks(id) {
+  const iv = []; let open = null;
+  for (const e of evs(id)) {
+    if (e.t === 'pause') { open = { from: wk(e.d), to: e.until ? new Date(e.until).getTime() : Infinity }; iv.push(open); }
+    else if (e.t === 'reprise' && open) { open.to = Math.min(open.to, wk(e.d)); open = null; }
+  }
+  return w => iv.some(x => w >= x.from && w < x.to);
+}
+function owed(id) {
+  const cw = wk(new Date()), st = startWeek(id), isPaused = pausedWeeks(id);
+  const paid = new Set(evs(id).filter(e => e.t === 'paie').map(e => e.w ? wk(e.w) : wk(e.d)));
+  const out = [];
+  for (let i = BACKLOG - 1; i >= 0; i--) { const w = normWk(cw - i * 7 * 864e5); if (w >= st && !paid.has(w) && !isPaused(w)) out.push(w); }
+  return out;
+}
+const weekTxt = w => w === wk(new Date()) ? 'de cette semaine' : 'de la semaine du ' + new Date(w).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+
 function tot(id) {
   const t = { own: 0, bonus: 0, gains: 0, out: 0, pig: 0, vire: 0, fromL: 0, paie: null, bourse: null, pays: [], rolls: [] };
   for (const e of evs(id)) {
@@ -233,7 +256,7 @@ function tabbar() {
 }
 
 function homeView(k, t) {
-  const g = goalOf(cur), J = jar(t, g), paid = sameWeek(t.paie), rolled = sameWeek(t.bourse && t.bourse.d);
+  const g = goalOf(cur), J = jar(t, g), due = owed(cur).length, paid = due === 0, rolled = sameWeek(t.bourse && t.bourse.d);
   const prog = Math.min(100, Math.max(0, t.total / (g ? g.budget : J.cap) * 100));
   const hint = g ? (t.total >= g.budget ? `Objectif « ${esc(g.name)} » atteint !` : `Encore ${f(g.budget - t.total)} pour « ${esc(g.name)} »`) : (t.total >= J.cap ? `Palier de ${f(J.cap)} atteint !` : `Encore ${f(J.cap - t.total)} pour le palier de ${f(J.cap)}`);
   return `<section class="hero"><div><p class="hi">Salut ${esc(k.name)} !</p><p class="lbl">${g && t.total >= g.budget ? 'C’est pépite ! Ta tirelire est pleine' : 'Ta tirelire qui pousse'}</p><div class="amount">${f(t.total)}</div>
@@ -245,7 +268,7 @@ function homeView(k, t) {
 ${t.out > 0 ? `<p class="soft small" style="margin:8px 4px 0">Projets réalisés : ${f(t.out)}</p>` : ''}
 <h3 class="sec">Mon projet</h3><div class="list"><button class="item" data-act="go" data-v="projet"><span class="ic" style="background:var(--kidt);color:var(--kidtxt)">${I.flag}</span><span>${g ? `<b>${esc(g.name)} : ${Math.floor(Math.min(1, Math.max(0, t.total) / g.budget) * 100)} %</b><small>${t.total >= g.budget ? 'Atteint : prépare ta présentation !' : `${f(Math.max(0, t.total))} sur ${f(g.budget)}`}</small>` : '<b>Choisis un projet</b><small>Un vélo, un jeu ? Fixe-toi un objectif.</small>'}</span><span class="end">${I.chev}</span></button></div>
 <h3 class="sec">Cette semaine</h3><div class="list">
-<button class="item" data-act="go" data-v="paie"><span class="ic" style="background:#fff3c4;color:#a87300">${I.coin}</span><span><b>Ma paie</b><small>${pauseOf(cur) ? 'En pause ' + untilTxt(pauseOf(cur)) : paid ? 'Rangée, bravo !' : `${k.weekly} pièce${k.weekly > 1 ? 's' : ''} t’attendent`}</small></span><span class="end ${paid && !pauseOf(cur) ? 'done' : ''}">${paid && !pauseOf(cur) ? I.check : I.chev}</span></button>
+<button class="item" data-act="go" data-v="paie"><span class="ic" style="background:#fff3c4;color:#a87300">${I.coin}</span><span><b>Ma paie</b><small>${pauseOf(cur) ? 'En pause ' + untilTxt(pauseOf(cur)) : paid ? 'Rangée, bravo !' : due > 1 ? `${due} paies t’attendent` : `${k.weekly} pièce${k.weekly > 1 ? 's' : ''} t’attendent`}</small></span><span class="end ${paid && !pauseOf(cur) ? 'done' : ''}">${paid && !pauseOf(cur) ? I.check : I.chev}</span></button>
 <button class="item" data-act="go" data-v="bourse"><span class="ic" style="background:var(--glass)">${I.die}</span><span><b>La bourse</b><small>${postOf(cur) === 'none' ? 'Tu ne joues pas la bourse' : rolled ? `Dé ${t.bourse.face} : ${pct(t.bourse.rate)}` : 'Lance le dé de la semaine'}</small></span><span class="end ${rolled ? 'done' : ''}">${rolled ? I.check : I.chev}</span></button>
 <button class="item" data-act="go" data-v="recu"><span class="ic" style="background:color-mix(in srgb,var(--grow) 14%,transparent);color:var(--grow)">${I.gift}</span><span><b>J’ai reçu de l’argent</b><small>Un cadeau, un anniversaire ?</small></span><span class="end">${I.chev}</span></button>
 <button class="item" data-act="go" data-v="carnet"><span class="ic" style="background:var(--glass)">${I.book}</span><span><b>Mon carnet</b><small>Tout ce qui est entré et sorti</small></span><span class="end">${I.chev}</span></button></div>`;
@@ -255,7 +278,7 @@ function payView(k, t) {
   const pz = pauseOf(cur);
   if (pz) return `<h2 class="title">Jour de paie</h2><section class="card paused"><h3>Ta paie est en pause</h3><p style="margin:0">${P().label} ${F.parents === 'parents' ? 'ont' : 'a'} mis ta paie en pause ${untilTxt(pz)}.</p>
 ${pz.reason ? `<p class="msg">« ${esc(pz.reason)} »</p>` : ''}<p class="soft" style="margin:10px 0 0">Ta tirelire reste à toi : elle continue de pousser avec la bourse, et tu peux toujours ranger l’argent que tu reçois.</p></section>`;
-  const blocked = !!lock && sameWeek(t.paie), since = t.paie ? daysSince(t.paie) : null, bonusNow = r2(inv * F.match / 100), dis = ready ? '' : 'disabled';
+  const ow = owed(cur), blocked = ow.length === 0, bonusNow = r2(inv * F.match / 100), dis = ready ? '' : 'disabled';
   const coin = (act) => `<button class="coin" data-act="${act}" aria-label="Reprendre cette pièce" ${dis}>1&nbsp;€</button>`;
   const help = payHelp === null ? !t.paie : payHelp, m = String(F.match).replace('.', ',');
   return `<h2 class="title">Jour de paie</h2><p class="lead">${k.weekly} pièce${k.weekly > 1 ? 's' : ''} de 1 € à ranger, une par une.</p>
@@ -265,7 +288,7 @@ ${help ? `<ol class="howto"><li><b>Chaque semaine, tu reçois ta paie</b>${k.wee
 <span><i class="dot" style="background:var(--grow)"></i><b>Dans ma tirelire</b> : elle est placée pour pousser. ${P().aj.charAt(0).toUpperCase() + P().aj.slice(1)} ${m} % de bonus, et elle peut grossir chaque semaine avec la bourse.</span></span></li>
 <li><b>Ta tirelire est mise de côté</b>Pour récupérer cet argent, tu choisis un projet et tu le présentes ${P().a}.</li></ol>` : ''}</section>
 <section class="card">${blocked ? `<p class="result" style="text-align:center">Ta paie de la semaine est rangée.<br><span class="soft" style="font-size:17px">Rendez-vous lundi !</span></p>` : `
-${since !== null && since < 5 ? `<p class="msg" style="margin-top:0">Déjà payée il y a ${since === 0 ? 'moins d’un jour' : since + ' jour' + (since > 1 ? 's' : '')}.</p>` : ''}
+<p class="result" style="margin:0 0 4px">Paie ${weekTxt(ow[0])}</p>${ow.length > 1 ? `<p class="msg" style="margin-top:6px">Tu as ${ow.length} paies à ranger. On commence par la plus ancienne.</p>` : ''}
 <div class="tray" aria-label="Pièces à ranger">${Array.from({ length: tray }, () => '<span class="coin">1&nbsp;€</span>').join('') || '<span class="soft">Toutes les pièces sont rangées !</span>'}</div>
 <div class="moves"><button class="btn ghost" data-act="toPig" ${tray && ready ? '' : 'disabled'}>Dans mon porte-monnaie</button><button class="btn gr" data-act="toGrow" ${tray && ready ? '' : 'disabled'}>Dans ma tirelire</button></div>
 <div class="zones"><div class="zone"><strong>Mon porte-monnaie : ${f(dep)}</strong>${Array.from({ length: dep }, () => coin('backPig')).join('')}</div>
@@ -402,7 +425,7 @@ ${kids().map(k => { const pz = pauseOf(k.id); return `<div style="padding:12px 0
 <label>Par semaine (€)<input id="k-w-${k.id}" type="number" min="1" max="50" value="${k.weekly}" data-set="kweekly:${k.id}"></label></div>
 <div class="swatches">${PAL.map(c => `<button class="sw" style="--c:${c}" data-act="kcolor" data-k="${k.id}" data-c="${c}" aria-pressed="${k.color === c}" aria-label="Couleur"></button>`).join('')}</div></div>`).join('')}
 <div class="row"><button class="btn ghost full" data-act="kadd" ${dis}>Ajouter un enfant</button></div></section>
-<section class="card"><h3>Les règles du jeu</h3><p class="soft small" style="margin:0">Les bonus ne s’appliquent qu’à l’argent placé (les pièces que l’enfant fait pousser), jamais à celui qui va dans le porte-monnaie.</p>
+<section class="card"><h3>Les règles du jeu</h3><p class="soft small" style="margin:0">Une paie par semaine, du lundi au dimanche. Si vous la versez en retard, les paies non rangées restent disponibles ${BACKLOG} semaines, puis elles sont perdues. </p><p class="soft small" style="margin:6px 0 0">Les bonus ne s’appliquent qu’à l’argent placé (les pièces que l’enfant fait pousser), jamais à celui qui va dans le porte-monnaie.</p>
 <label>Les enfants vous appellent<select data-set="parents">${Object.entries(PAR).filter(([k]) => k !== 'papamaman' || F.parents === k).map(([k, v]) => `<option value="${k}" ${F.parents === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>
 <div class="grid2"><label>Bonus argent de poche (%)<input id="r-m" type="number" min="0" max="100" value="${F.match}" data-set="match"></label>
 <label>Bonus argent reçu (%)<input id="r-g" type="number" min="0" max="100" value="${gm()}" data-set="giftMatch"></label></div>
@@ -573,7 +596,7 @@ async function obFinish() {
   if (!obValidate()) return render();
   busy = true; render();
   try {
-    const fam = { v: 1, parents: ob.parents, kids: ob.kids.map(k => ({ id: k.id, name: k.name, birth: k.birth, weekly: k.weekly, color: k.color, posture: ob.dice })), match: ob.match, giftMatch: ob.giftMatch, dice: POST[ob.dice].faces.slice(), diceName: ob.dice, defaultPosture: ob.dice, pin: ob.pin, created: iso() };
+    const fam = { v: 1, parents: ob.parents, kids: ob.kids.map(k => ({ id: k.id, start: iso(), name: k.name, birth: k.birth, weekly: k.weekly, color: k.color, posture: ob.dice })), match: ob.match, giftMatch: ob.giftMatch, dice: POST[ob.dice].faces.slice(), diceName: ob.dice, defaultPosture: ob.dice, pin: ob.pin, created: iso() };
     await Promise.all(fam.kids.map(k => setDoc(doc(fdb, 'familles', user.uid, 'enfants', k.id), { events: (ob.legacy && ob.legacy[k.id]) || [], goal: null, pause: null })));
     await setDoc(doc(fdb, 'familles', user.uid), fam);
     view = 'home'; cur = fam.kids[0].id;
@@ -613,13 +636,14 @@ document.addEventListener('click', ev => {
     case 'backGrow': if (inv) { inv--; tray++; } break;
     case 'pay': {
       const t = tot(cur);
-      if (!ready || tray || pauseOf(cur) || (lock && sameWeek(t.paie))) break;
+      const ow = owed(cur);
+      if (!ready || tray || pauseOf(cur) || !ow.length) break;
       const bonus = r2(inv * F.match / 100);
       const before = t.total;
-      EV[cur] = [...evs(cur), { t: 'paie', d: iso(), inv, dep, bonus }];
+      EV[cur] = [...evs(cur), { t: 'paie', d: iso(), w: new Date(ow[0]).toISOString(), inv, dep, bonus }];
       saveK(cur);
       sayMs(before, inv ? `Bravo ! ${f(inv + bonus)} rejoignent ta tirelire.` : 'Paie rangée : tout est dans ton porte-monnaie.', dep ? `${f(dep)} en pièces pour ton porte-monnaie.` : '');
-      resetCoins(); view = 'home'; window.scrollTo(0, 0); break;
+      resetCoins(); if (ow.length <= 1) { view = 'home'; window.scrollTo(0, 0); } break;
     }
     case 'gift': if (ready) doGift(parseFloat(b.dataset.r)); break;
     case 'payhelp': payHelp = !(payHelp === null ? !tot(cur).paie : payHelp); break;
@@ -666,7 +690,7 @@ document.addEventListener('click', ev => {
       break;
     }
     case 'kcolor': { const x = kidOf(k); if (x && ready) { x.color = b.dataset.c; saveF(); } break; }
-    case 'kadd': if (ready) { const id = uid6(); const used = kids().map(z => z.color); F.kids.push({ id, posture: F.defaultPosture || 'equilibre', name: 'Nouvel enfant', birth: '2018-01-01', weekly: 3, color: PAL.find(c => !used.includes(c)) || PAL[0] }); EV[id] = []; KL[id] = true; saveK(id); saveF(); syncKids(); cur = id; say('Enfant ajouté : complétez sa fiche.'); } break;
+    case 'kadd': if (ready) { const id = uid6(); const used = kids().map(z => z.color); F.kids.push({ id, start: iso(), posture: F.defaultPosture || 'equilibre', name: 'Nouvel enfant', birth: '2018-01-01', weekly: 3, color: PAL.find(c => !used.includes(c)) || PAL[0] }); EV[id] = []; KL[id] = true; saveK(id); saveF(); syncKids(); cur = id; say('Enfant ajouté : complétez sa fiche.'); } break;
     case 'kdel': if (ready) { if (delArm !== k) delArm = k; else { F.kids = F.kids.filter(z => z.id !== k); saveF(); queue('del' + k, () => deleteDoc(doc(fdb, 'familles', user.uid, 'enfants', k))); syncKids(); delArm = null; ensureCur(); say('Enfant supprimé.'); } } break;
     case 'posture': if (ready && POST[b.dataset.n] && postOf(cur) !== b.dataset.n) { const x = kidOf(cur), prev = postOf(cur); x.posture = b.dataset.n; saveF(); EV[cur] = [...evs(cur), { t: 'posture', d: iso(), p: b.dataset.n, prev }]; saveK(cur); say(b.dataset.n === 'none' ? 'Tu ne joues plus la bourse.' : `Stratégie ${POST[b.dataset.n].name} choisie !`, b.dataset.n === 'aventurier' ? 'Attention : tu peux gagner gros, mais aussi perdre.' : ''); } break;
     case 'logout': try { localStorage.removeItem('pepite-lock'); } catch (e) {} lock = null; view = 'home'; signOut(auth); return;
