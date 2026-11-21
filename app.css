@@ -213,3 +213,12 @@ input:focus,select:focus{border-color:var(--kid);outline:none}
 .welcome h1 .wm,.splash h1 .wm{height:56px}
 .intro{background:var(--card);border:2px solid var(--line);border-radius:20px;padding:14px 16px;margin-top:16px;text-align:center}
 .intro p{margin:0;font-size:16px}.intro p+p{margin-top:6px}
+
+/* étapes des premiers pas */
+.stepper{margin:10px 4px 0}
+.stepper span{font-weight:800;font-size:14px;color:var(--soft)}
+.sbar{height:8px;border-radius:99px;background:var(--line);margin-top:6px;overflow:hidden}
+.sbar i{display:block;height:100%;background:var(--kid);border-radius:99px;transition:width .3s}
+.why span b{display:block;font:600 17px Fredoka,sans-serif;color:var(--ink)}
+.why span{font-size:15px;color:var(--soft)}
+.why svg{color:var(--kid)}

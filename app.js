@@ -166,16 +166,16 @@ ${up ? '' : '<button class="link" type="button" data-act="reset">Mot de passe ou
 
 function newOb() { return { step: 1, parents: 'parents', kids: [{ id: uid6(), name: '', birth: '', weekly: '', color: PAL[0] }], match: 25, giftMatch: 10, dice: 'equilibre', pin: '', legacy: null, err: '' }; }
 function obView() {
-  const o = ob, st = `<div class="steps">${[1, 2, 3].map(i => `<i class="${i <= o.step ? 'on' : ''}"></i>`).join('')}</div>`;
+  const o = ob, st = `<div class="stepper"><span>Étape ${o.step} sur 3 · ${['Bienvenue', 'Vos enfants', 'Les règles du jeu'][o.step - 1]}</span><div class="sbar"><i style="width:${(o.step / 3 * 100).toFixed(0)}%"></i></div></div>`;
   let body = '';
   if (o.step === 1) {
-    body = `<div class="welcome">${LOGO}<h1>Bienvenue !</h1><p>Avec leur argent de poche, vos enfants découvrent pourquoi épargner et investir tôt change tout.</p></div>
-<div class="msg">Important : ce que l’argent « gagne » dans Pépite (bonus, bourse) est financé par vous. C’est un jeu pédagogique, pas un vrai placement.</div>${st}
-<div class="why"><div>${I.coin}<span>Chaque semaine, une paie en pièces : on dépense ou on fait pousser.</span></div>
-<div>${I.die}<span>L’argent placé reçoit un bonus, puis la bourse de la semaine le fait monter ou baisser.</span></div>
-<div>${I.chart}<span>On voit son trésor grandir jusqu’à ses 18 ans.</span></div></div>
+    body = `${st}<div class="welcome">${LOGO}<h1>Bienvenue !</h1><p>Avec leur argent de poche, vos enfants découvrent pourquoi épargner et investir tôt change tout.</p></div>
+<div class="why"><div>${I.coin}<span><b>Une paie chaque semaine</b>Votre enfant range ses pièces : il en dépense une partie et fait pousser le reste.</span></div>
+<div>${I.die}<span><b>Un bonus et une bourse</b>Vous ajoutez un bonus sur ce qu’il place, puis un dé fait monter ou baisser son bocal chaque semaine.</span></div>
+<div>${I.flag}<span><b>Des projets et un horizon</b>Il se fixe un objectif, comme un vélo, et voit son trésor grandir jusqu’à ses 18 ans.</span></div></div>
+<div class="msg">Ce que l’argent « gagne » dans Pépite (bonus, bourse) est payé par vous : c’est un jeu pour apprendre, pas un vrai placement.</div>
 <div class="card"><h3>Comment vos enfants vous appellent-ils ?</h3><p class="soft small" style="margin:0">C’est le nom utilisé dans l’appli, par exemple « le bonus de papa ».</p>
-<div class="pills">${Object.entries(PAR).map(([k, v]) => `<button class="pill" data-act="obpar" data-k="${k}" aria-pressed="${o.parents === k}">${v.label}</button>`).join('')}</div></div>
+<div class="pills">${Object.entries(PAR).filter(([k]) => k !== 'papamaman').map(([k, v]) => `<button class="pill" data-act="obpar" data-k="${k}" aria-pressed="${o.parents === k}">${v.label}</button>`).join('')}</div></div>
 ${o.legacy ? '<div class="msg">Les données déjà saisies pour vos enfants seront reprises.</div>' : ''}`;
   } else if (o.step === 2) {
     body = `${st}<h2 class="title">Vos enfants</h2><p class="lead">Chacun aura son bocal, sa couleur et son argent de poche.</p>
@@ -351,7 +351,7 @@ ${T.due < 0 ? `<p class="soft small" style="margin:2px 0 0">Vous avez ${f(-T.due
 <div class="swatches">${PAL.map(c => `<button class="sw" style="--c:${c}" data-act="kcolor" data-k="${k.id}" data-c="${c}" aria-pressed="${k.color === c}" aria-label="Couleur"></button>`).join('')}</div></div>`).join('')}
 <div class="row"><button class="btn ghost full" data-act="kadd" ${dis}>Ajouter un enfant</button></div></section>
 <section class="card"><h3>Les règles du jeu</h3>
-<label>Les enfants vous appellent<select data-set="parents">${Object.entries(PAR).map(([k, v]) => `<option value="${k}" ${F.parents === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>
+<label>Les enfants vous appellent<select data-set="parents">${Object.entries(PAR).filter(([k]) => k !== 'papamaman' || F.parents === k).map(([k, v]) => `<option value="${k}" ${F.parents === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>
 <div class="grid2"><label>Bonus argent de poche (%)<input id="r-m" type="number" min="0" max="100" value="${F.match}" data-set="match"></label>
 <label>Bonus argent reçu (%)<input id="r-g" type="number" min="0" max="100" value="${gm()}" data-set="giftMatch"></label></div>
 <label>Le dé de la bourse</label><div class="pills">${Object.entries(DICE).map(([k, d]) => `<button class="pill" data-act="dicepreset" data-n="${k}" aria-pressed="${F.diceName === k}">${d.name}</button>`).join('')}</div>
