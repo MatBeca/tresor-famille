@@ -56,13 +56,13 @@ const I = {
 let user, auth, fdb;
 let F = null, famLoaded = false, famServer = false, lastF = '';
 const EV = {}, GOAL = {}, KL = {}, lastK = {}, kidUnsubs = {};
-let goalEdit = false, goalDropArm = false;
+let goalEdit = false, goalDropArm = false, resetFor = null;
 let famUnsub = null, ready = false, status = '', offlineTimer = null;
 let view = 'home', cur = null, lock = null, pinOk = false, pinBuf = '', pinBad = false;
 let tray = 0, inv = 0, dep = 0, rolling = false;
 let toast = null, toastT = null, undoArm = false, wipeArm = false, delArm = null;
 const projInv = {}, sel = {};
-const form = { goalname: '', goalbudget: '', gamount: '', gfrom: '', plabel: '', pamount: '', pkid: '', email: '', pass: '', newpin: '' };
+const form = { resetname: '', goalname: '', goalbudget: '', gamount: '', gfrom: '', plabel: '', pamount: '', pkid: '', email: '', pass: '', newpin: '' };
 let loginMode = 'in', loginMsg = '', loginErr = '', busy = false;
 let ob = null;
 try { lock = localStorage.getItem('pepite-lock'); cur = localStorage.getItem('pepite-cur'); } catch (e) {}
@@ -356,8 +356,20 @@ ${T.due < 0 ? `<p class="soft small" style="margin:2px 0 0">Vous avez ${f(-T.due
 <div class="row">${kids().map(k => `<button class="btn ghost sm" data-act="lock" data-k="${k.id}" ${/^\d{4}$/.test(F.pin || '') ? '' : 'disabled'}>Verrouiller sur ${esc(k.name)}</button>`).join('')}</div></section>
 <section class="card"><h3>Corriger une erreur</h3>
 ${last ? `<div class="row" style="margin-top:4px"><button class="btn ghost sm" data-act="undo" ${dis}>${undoArm ? 'Confirmer : annuler ' + lastTxt : 'Annuler la dernière opération ' + de(K.name)}</button></div>
-<div class="row"><button class="btn ghost sm" data-act="wipe" ${dis}>${wipeArm ? 'Confirmer : tout effacer pour ' + esc(K.name) : 'Effacer tout l’historique ' + de(K.name)}</button></div>` : `<p class="soft">Rien à annuler pour ${esc(K.name)}.</p>`}</section>
+<div class="row"><button class="btn danger sm" data-act="resetopen" ${dis}>Vider le bocal et tout remettre à zéro pour ${esc(K.name)}</button></div>` : `<p class="soft">Rien à annuler pour ${esc(K.name)}.</p>`}</section>
 <section class="card"><h3>Compte</h3><p class="soft small" style="margin:0">Connecté avec ${esc(user.email || '')}.</p><div class="row"><button class="btn ghost sm" data-act="logout">Déconnecter cet appareil</button></div></section>`;
+}
+
+function resetModal() {
+  const k = kidOf(resetFor); if (!k) return '';
+  const T = tot(k.id), g = goalOf(k.id), n = evs(k.id).length, okName = form.resetname.trim().toLowerCase() === k.name.toLowerCase();
+  return `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="rt"><div class="sheet">
+<h3 id="rt">Tout remettre à zéro pour ${esc(k.name)} ?</h3>
+<p style="margin:6px 0 0">Cette action efface définitivement :</p>
+<ul style="margin:6px 0 0;padding-left:20px"><li>le bocal : <b>${f(Math.max(0, T.total))}</b></li><li>tout l’historique : <b>${n} opération${n > 1 ? 's' : ''}</b></li>${g ? `<li>le projet en cours : <b>${esc(g.name)}</b></li>` : ''}</ul>
+${T.livret > 0 ? `<p class="msg">Vous avez déjà mis ${f(T.livret)} de côté pour ${esc(k.name)}. Cet argent existe toujours en vrai : décidez ce que vous en faites avant de remettre à zéro.</p>` : ''}
+<label>Pour confirmer, tapez le prénom « ${esc(k.name)} »<input id="reset-name" type="text" autocomplete="off" data-f="resetname" value="${esc(form.resetname)}"></label>
+<div class="row"><button class="btn ghost" data-act="resetclose">Annuler</button><button class="btn danger" data-act="resetdo" ${okName && ready ? '' : 'disabled'}>Tout remettre à zéro</button></div></div></div>`;
 }
 
 function mainView() {
@@ -366,7 +378,7 @@ function mainView() {
   if (!k) return splash('Aucun enfant');
   const t = tot(cur);
   const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : homeView(k, t);
-  return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view">${content}</main>${tabbar()}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
+  return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view">${content}</main>${tabbar()}${resetFor ? resetModal() : ''}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
 }
 
 function render() {
@@ -577,7 +589,15 @@ document.addEventListener('click', ev => {
     case 'goaldrop': if (ready) { if (!goalDropArm) goalDropArm = true; else { GOAL[cur] = null; saveK(cur); goalDropArm = false; say('Projet abandonné.', 'Tu peux en choisir un autre quand tu veux.'); } } break;
     case 'goalunlock': if (ready) { const g = goalOf(k), T = tot(k); if (g && T.total >= g.budget) { const amount = r2(g.budget), fromLivret = r2(Math.max(0, amount - Math.max(0, T.due))); EV[k] = [...evs(k), { t: 'projet', d: iso(), label: g.name, amount, fromLivret, goal: true }]; GOAL[k] = null; saveK(k); say(`« ${esc(g.name)} » débloqué : ${f(amount)} pour ${esc(kidOf(k).name)}.`, fromLivret > 0 ? `Reprenez ${f(fromLivret)} dans l’argent mis de côté.` : ''); } } break;
     case 'undo': if (ready) { if (!undoArm) undoArm = true; else { EV[cur] = evs(cur).slice(0, -1); saveK(cur); undoArm = false; say('Dernière opération annulée.'); } } break;
-    case 'wipe': if (ready) { if (!wipeArm) wipeArm = true; else { EV[cur] = []; saveK(cur); wipeArm = false; say('Historique effacé.'); } } break;
+    case 'resetopen': resetFor = cur; form.resetname = ''; break;
+    case 'resetclose': resetFor = null; form.resetname = ''; break;
+    case 'resetdo': {
+      const x = kidOf(resetFor);
+      if (!ready || !x || form.resetname.trim().toLowerCase() !== x.name.toLowerCase()) break;
+      EV[x.id] = []; GOAL[x.id] = null; saveK(x.id); if (x.id === cur) resetCoins();
+      resetFor = null; form.resetname = ''; say(`Le bocal ${de(x.name)} est remis à zéro.`);
+      break;
+    }
     case 'kcolor': { const x = kidOf(k); if (x && ready) { x.color = b.dataset.c; saveF(); } break; }
     case 'kadd': if (ready) { const id = uid6(); const used = kids().map(z => z.color); F.kids.push({ id, name: 'Nouvel enfant', birth: '2018-01-01', weekly: 3, color: PAL.find(c => !used.includes(c)) || PAL[0] }); EV[id] = []; KL[id] = true; saveK(id); saveF(); syncKids(); cur = id; say('Enfant ajouté : complétez sa fiche.'); } break;
     case 'kdel': if (ready) { if (delArm !== k) delArm = k; else { F.kids = F.kids.filter(z => z.id !== k); saveF(); queue('del' + k, () => deleteDoc(doc(fdb, 'familles', user.uid, 'enfants', k))); syncKids(); delArm = null; ensureCur(); say('Enfant supprimé.'); } } break;
@@ -590,6 +610,7 @@ document.addEventListener('click', ev => {
 document.addEventListener('input', ev => {
   const t = ev.target, fk = t.dataset.f, ok = t.dataset.ob;
   if (fk) form[fk] = t.value;
+  if (fk === 'resetname') { const x = kidOf(resetFor), btn = document.querySelector('[data-act=resetdo]'); if (x && btn) btn.disabled = !(ready && t.value.trim().toLowerCase() === x.name.toLowerCase()); }
   if (ok && ob) { const [key, id] = ok.split(':'); if (id) { const x = ob.kids.find(z => z.id === id); if (x) x[key] = t.value; } else ob[key] = t.value.replace(/\D/g, '').slice(0, 4); }
   if (t.dataset.set === 'pin') form.newpin = t.value.replace(/\D/g, '').slice(0, 4);
 });
