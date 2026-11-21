@@ -1,9 +1,16 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Seul le compte famille lit et écrit le trésor.
+    // Chaque famille ne voit et ne modifie que ses propres données.
+    match /familles/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+      match /enfants/{enfant} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+    // Anciennes données de la première version, lues une fois pour l'import.
     match /tresor/{doc} {
-      allow read, write: if request.auth != null && request.auth.token.email == "matthieu.becamel@gmail.com";
+      allow read: if request.auth != null && request.auth.token.email == "matthieu.becamel@gmail.com";
     }
   }
 }
