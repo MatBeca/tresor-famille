@@ -48,19 +48,21 @@ const I = {
   check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
   gift: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8.5" width="17" height="4" rx="1"/><path d="M5 12.5v7a1.5 1.5 0 0 0 1.5 1.5h11a1.5 1.5 0 0 0 1.5-1.5v-7M12 8.5V21"/><path d="M12 8.5C10 4 6.5 4.5 7.5 7c.5 1.2 2.5 1.5 4.5 1.5zM12 8.5c2-4.5 5.5-4 4.5-1.5-.5 1.2-2.5 1.5-4.5 1.5z"/></svg>',
+  flag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>',
   sprout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-9"/><path d="M12 12C12 7 8 5 4 5c0 5 4 7 8 7zM12 10c0-4 3-6 8-6 0 4-3 6-8 6z"/></svg>'
 };
 
 /* ---------- état ---------- */
 let user, auth, fdb;
 let F = null, famLoaded = false, famServer = false, lastF = '';
-const EV = {}, KL = {}, lastK = {}, kidUnsubs = {};
+const EV = {}, GOAL = {}, KL = {}, lastK = {}, kidUnsubs = {};
+let goalEdit = false, goalDropArm = false;
 let famUnsub = null, ready = false, status = '', offlineTimer = null;
 let view = 'home', cur = null, lock = null, pinOk = false, pinBuf = '', pinBad = false;
 let tray = 0, inv = 0, dep = 0, rolling = false;
 let toast = null, toastT = null, undoArm = false, wipeArm = false, delArm = null;
 const projInv = {}, sel = {};
-const form = { gamount: '', gfrom: '', plabel: '', pamount: '', pkid: '', email: '', pass: '', newpin: '' };
+const form = { goalname: '', goalbudget: '', gamount: '', gfrom: '', plabel: '', pamount: '', pkid: '', email: '', pass: '', newpin: '' };
 let loginMode = 'in', loginMsg = '', loginErr = '', busy = false;
 let ob = null;
 try { lock = localStorage.getItem('pepite-lock'); cur = localStorage.getItem('pepite-cur'); } catch (e) {}
@@ -91,6 +93,23 @@ function tot(id) {
   t.livret = r2(t.vire - t.fromL); t.due = r2(t.total - t.livret);
   return t;
 }
+const goalOf = id => GOAL[id] || null;
+const MS = [0.25, 0.5, 0.75, 1];
+function eta(id, perWeek) {
+  const g = goalOf(id), t = tot(id); if (!g) return null; if (t.total >= g.budget) return 0;
+  const m = mean() / 100, match = F.match / 100; let x = Math.max(0, t.total);
+  for (let w = 1; w <= 520; w++) { x += x * m + perWeek * (1 + match); if (x >= g.budget) return w; }
+  return null;
+}
+const avgInv = id => { const p = tot(id).pays.slice(-8); return p.length ? p.reduce((a, b) => a + b, 0) / p.length : kidOf(id).weekly; };
+const etaTxt = w => w === null ? null : w <= 1 ? 'dès la semaine prochaine' : `dans ${w} semaines, vers ${new Date(Date.now() + w * 7 * 864e5).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`;
+function milestone(before, after) {
+  const g = goalOf(cur); if (!g) return '';
+  const b = before / g.budget, a = after / g.budget;
+  for (const m of [1, 0.75, 0.5, 0.25]) if (b < m && a >= m) return m === 1 ? `Objectif « ${esc(g.name)} » atteint !` : `Palier ${m * 100} % atteint pour « ${esc(g.name)} » !`;
+  return '';
+}
+function sayMs(before, msg, sub) { const ms = milestone(before, tot(cur).total); if (ms) say(ms, msg); else say(msg, sub); }
 function project(id, perWeek) {
   const k = kidOf(id), t = tot(id), m = mean() / 100, match = F.match / 100, now = new Date(), birth = new Date(k.birth + 'T12:00:00');
   let own = t.own, bonus = t.bonus, gains = t.gains, w = 0; const pts = [];
@@ -105,8 +124,8 @@ function project(id, perWeek) {
 
 /* ---------- dessins ---------- */
 function die(n, size) { return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" role="img" aria-label="Dé : ${n}"><rect x="6" y="9" width="88" height="88" rx="22" fill="#d9d3e6"/><rect x="6" y="4" width="88" height="88" rx="22" fill="#fff" stroke="#22203a" stroke-width="5"/>${PIPS[n].map(([x, y]) => `<circle cx="${x}" cy="${y - 2}" r="9" fill="#22203a"/>`).join('')}</svg>`; }
-function jar(t) {
-  const cap = t.total <= 0 ? 20 : (CAPS.find(c => c >= t.total) || Math.ceil(t.total / 10000) * 10000);
+function jar(t, g) {
+  const cap = g ? Math.max(g.budget, t.total) : t.total <= 0 ? 20 : (CAPS.find(c => c >= t.total) || Math.ceil(t.total / 10000) * 10000);
   const pos = t.own + t.bonus + Math.max(0, t.gains), k = pos > 0 ? Math.max(0, t.total) / pos : 0, H = 196;
   const h = [t.own * k / cap * H, t.bonus * k / cap * H, Math.max(0, t.gains) * k / cap * H];
   const fills = ['var(--kid)', 'var(--gold)', 'var(--grow)'];
@@ -119,7 +138,7 @@ function jar(t) {
 <rect x="22" y="56" width="176" height="214" rx="40" style="fill:var(--glass)"/>
 <g clip-path="url(#jc)">${layers}<rect x="16" y="${y.toFixed(1)}" width="188" height="${(266 - y).toFixed(1)}" fill="url(#pc)"/></g>
 <line x1="34" x2="186" y1="70" y2="70" stroke-dasharray="7 7" style="stroke:var(--soft)" stroke-width="2.5" stroke-linecap="round"/>
-<rect x="38" y="84" width="14" height="140" rx="7" fill="#fff" fill-opacity=".55"/>
+<rect x="38" y="84" width="14" height="140" rx="7" fill="#fff" fill-opacity=".55"/>${g ? [0.25, 0.5, 0.75].map(m => { const yy = (266 - m * g.budget / cap * H).toFixed(1); return `<line x1="168" x2="192" y1="${yy}" y2="${yy}" style="stroke:var(--ink)" stroke-width="4" stroke-linecap="round"/>`; }).join('') : ''}
 <rect x="22" y="56" width="176" height="214" rx="40" fill="none" style="stroke:var(--ink)" stroke-width="6"/>
 <rect x="52" y="20" width="116" height="38" rx="12" style="fill:var(--kid);stroke:var(--ink)" stroke-width="6"/>
 <rect x="64" y="28" width="40" height="7" rx="3.5" fill="#fff" fill-opacity=".45"/></svg>`;
@@ -152,7 +171,7 @@ function obView() {
 <div class="why"><div>${I.coin}<span>Chaque semaine, une paie en pièces : on dépense ou on fait pousser.</span></div>
 <div>${I.die}<span>L’argent placé reçoit un bonus, puis la bourse de la semaine le fait monter ou baisser.</span></div>
 <div>${I.chart}<span>On voit son trésor grandir jusqu’à ses 18 ans.</span></div></div>
-<div class="card"><h3>Comment vos enfants vous appellent-ils ?</h3><p class="soft small" style="margin:0">C’est le nom utilisé dans l’appli, par exemple « le bonus de papa ».</p>
+<div class="card"><h3>Comment vos enfants vous appellent-ils ?</h3><p class="soft small" style="margin:0">C’est le nom utilisé dans l’appli, par exemple « le bonus de papa ».</p>
 <div class="pills">${Object.entries(PAR).map(([k, v]) => `<button class="pill" data-act="obpar" data-k="${k}" aria-pressed="${o.parents === k}">${v.label}</button>`).join('')}</div></div>
 ${o.legacy ? '<div class="msg">Les données déjà saisies pour vos enfants seront reprises.</div>' : ''}`;
   } else if (o.step === 2) {
@@ -172,6 +191,7 @@ ${o.kids.map((k, i) => `<div class="kidform"><header><h3>Enfant ${i + 1}</h3>${o
 <div class="pills">${[0, 10, 25].map(n => `<button class="pill" data-act="obgift" data-n="${n}" aria-pressed="${o.giftMatch === n}">${n ? n + ' %' : 'Aucun'}</button>`).join('')}</div></div>
 <div class="card"><h3>Le dé de la bourse</h3><p class="soft small" style="margin:0">Lancé une fois par semaine. Tous rapportent en moyenne +0,25 % par semaine, seul le risque change.</p>
 <div class="preset">${Object.entries(DICE).map(([k, d]) => `<button data-act="obdice" data-n="${k}" aria-pressed="${o.dice === k}"><b>${d.name}</b><span>${d.faces.map(pct).join(' · ')}<br>${d.txt}</span></button>`).join('')}</div></div>
+<div class="card"><h3>Où va l’argent placé ?</h3><p class="soft small" style="margin:0">L’appli tient les comptes, mais l’argent doit exister en vrai. Quand vous le voulez, mettez de côté ce que l’appli indique (Livret A au nom de l’enfant, compte épargne ou tirelire fermée) : l’espace parents vous dit combien, et vous n’aurez pas de surprise le jour d’un projet.</p></div>
 <div class="card"><h3>Code parents</h3><p class="soft small" style="margin:0">4 chiffres pour ouvrir l’espace parents sur l’appareil d’un enfant.</p>
 <label>Code à 4 chiffres<input id="ob-pin" class="secret" type="text" inputmode="numeric" autocomplete="off" maxlength="4" data-ob="pin" value="${esc(o.pin)}"></label></div>`;
   }
@@ -184,24 +204,27 @@ function topbar() {
   return `<header class="topbar"><div class="brand">${LOGO}<span>Pépite</span></div>${kids().length > 1 ? av : ''}<button class="iconbtn" data-act="go" data-v="parents" aria-label="Espace parents">${I.gear}</button></header>`;
 }
 function tabbar() {
-  const tabs = [['home', 'Bocal', I.jar], ['paie', 'Paie', I.coin], ['bourse', 'Bourse', I.die], ['futur', 'Futur', I.chart], ['carnet', 'Carnet', I.book]];
+  const tabs = [['home', 'Bocal', I.jar], ['paie', 'Paie', I.coin], ['bourse', 'Bourse', I.die], ['projet', 'Projet', I.flag], ['futur', 'Futur', I.chart]];
   return `<nav class="tabbar" aria-label="Navigation"><div>${tabs.map(([v, l, ic]) => `<button class="tab" data-act="go" data-v="${v}" ${view === v ? 'aria-current="page"' : ''}>${ic}${l}</button>`).join('')}</div></nav>`;
 }
 
 function homeView(k, t) {
-  const J = jar(t), paid = sameWeek(t.paie), rolled = sameWeek(t.bourse && t.bourse.d);
-  const prog = Math.min(100, Math.max(0, t.total / J.cap * 100));
+  const g = goalOf(cur), J = jar(t, g), paid = sameWeek(t.paie), rolled = sameWeek(t.bourse && t.bourse.d);
+  const prog = Math.min(100, Math.max(0, t.total / (g ? g.budget : J.cap) * 100));
+  const hint = g ? (t.total >= g.budget ? `Objectif « ${esc(g.name)} » atteint !` : `Encore ${f(g.budget - t.total)} pour « ${esc(g.name)} »`) : (t.total >= J.cap ? `Palier de ${f(J.cap)} atteint !` : `Encore ${f(J.cap - t.total)} pour le palier de ${f(J.cap)}`);
   return `<section class="hero"><div><p class="hi">Salut ${esc(k.name)} !</p><p class="lbl">Dans ton bocal</p><div class="amount">${f(t.total)}</div>
-<div class="prog"><i style="width:${prog.toFixed(1)}%"></i></div><p class="small">${t.total >= J.cap ? `Palier de ${f(J.cap)} atteint !` : `Encore ${f(J.cap - t.total)} pour le palier de ${f(J.cap)}`}</p></div>${J.svg}</section>
+<div class="prog">${g ? '<b style="left:25%"></b><b style="left:50%"></b><b style="left:75%"></b>' : ''}<i style="width:${prog.toFixed(1)}%"></i></div><p class="small">${hint}</p></div>${J.svg}</section>
 <div class="tiles"><div class="tile"><small><i style="background:var(--kid)"></i>Mon argent</small><b>${f(t.own)}</b></div>
 <div class="tile"><small><i style="background:var(--gold)"></i>Bonus ${P().de}</small><b>${f(t.bonus)}</b></div>
 <div class="tile"><small><i style="background:var(--grow)"></i>Gagné tout seul</small><b class="${t.gains < 0 ? 'neg' : 'g'}">${f(t.gains)}</b></div>
 <div class="tile"><small><i style="background:var(--line)"></i>Ma tirelire</small><b>${f(t.pig)}</b></div></div>
 ${t.out > 0 ? `<p class="soft small" style="margin:8px 4px 0">Projets réalisés : ${f(t.out)}</p>` : ''}
+<h3 class="sec">Mon projet</h3><div class="list"><button class="item" data-act="go" data-v="projet"><span class="ic" style="background:var(--kidt);color:var(--kidtxt)">${I.flag}</span><span>${g ? `<b>${esc(g.name)} : ${Math.floor(Math.min(1, Math.max(0, t.total) / g.budget) * 100)} %</b><small>${t.total >= g.budget ? 'Atteint : prépare ta présentation !' : `${f(Math.max(0, t.total))} sur ${f(g.budget)}`}</small>` : '<b>Choisis un projet</b><small>Un vélo, un jeu ? Fixe-toi un objectif.</small>'}</span><span class="end">${I.chev}</span></button></div>
 <h3 class="sec">Cette semaine</h3><div class="list">
 <button class="item" data-act="go" data-v="paie"><span class="ic" style="background:#fff3c4;color:#a87300">${I.coin}</span><span><b>Ma paie</b><small>${paid ? 'Rangée, bravo !' : `${k.weekly} pièce${k.weekly > 1 ? 's' : ''} t’attendent`}</small></span><span class="end ${paid ? 'done' : ''}">${paid ? I.check : I.chev}</span></button>
 <button class="item" data-act="go" data-v="bourse"><span class="ic" style="background:var(--glass)">${I.die}</span><span><b>La bourse</b><small>${rolled ? `Dé ${t.bourse.face} : ${pct(t.bourse.rate)}` : 'Lance le dé de la semaine'}</small></span><span class="end ${rolled ? 'done' : ''}">${rolled ? I.check : I.chev}</span></button>
-<button class="item" data-act="go" data-v="recu"><span class="ic" style="background:color-mix(in srgb,var(--grow) 14%,transparent);color:var(--grow)">${I.gift}</span><span><b>J’ai reçu de l’argent</b><small>Un cadeau, un anniversaire ?</small></span><span class="end">${I.chev}</span></button></div>`;
+<button class="item" data-act="go" data-v="recu"><span class="ic" style="background:color-mix(in srgb,var(--grow) 14%,transparent);color:var(--grow)">${I.gift}</span><span><b>J’ai reçu de l’argent</b><small>Un cadeau, un anniversaire ?</small></span><span class="end">${I.chev}</span></button>
+<button class="item" data-act="go" data-v="carnet"><span class="ic" style="background:var(--glass)">${I.book}</span><span><b>Mon carnet</b><small>Tout ce qui est entré et sorti</small></span><span class="end">${I.chev}</span></button></div>`;
 }
 
 function payView(k, t) {
@@ -256,12 +279,35 @@ function futurView(k, t) {
 <p class="soft small" style="margin:8px 0 0">Calcul fait avec la moyenne du dé (${pct(r2(mean()))} par semaine). Le vrai résultat dépendra de tes lancers.</p></section>`;
 }
 
+function projetView(k, t) {
+  const g = goalOf(cur), done = evs(cur).filter(e => e.t === 'projet').reverse(), dis = ready ? '' : 'disabled';
+  const doneHtml = done.length ? `<section class="card"><h3>Mes projets réalisés</h3><ul class="log">${done.map(e => `<li><time>${dateFr(e.d)}</time><span>${esc(e.label)}</span><b>${f(e.amount)}</b></li>`).join('')}</ul></section>` : '';
+  if (!g || goalEdit) {
+    return `<h2 class="title">${g ? 'Modifier mon projet' : 'Mon projet'}</h2><p class="lead">Un vélo, un jeu, une sortie ? Fixe-toi un objectif et regarde-toi avancer, palier après palier.</p>
+<section class="card"><label>Mon projet<input id="go-name" type="text" autocomplete="off" maxlength="30" data-f="goalname" value="${esc(form.goalname)}" placeholder="Ex. : un vélo"></label>
+<div class="pills">${['Vélo', 'Trottinette', 'Jeu vidéo', 'Livres', 'Sortie', 'Cadeau'].map(n => `<button class="pill" data-act="goalpick" data-n="${n}" aria-pressed="${form.goalname === n}">${n}</button>`).join('')}</div>
+<label>Combien ça coûte ? (€)<input id="go-budget" type="text" inputmode="decimal" autocomplete="off" data-f="goalbudget" value="${esc(form.goalbudget)}" placeholder="Ex. : 150"></label>
+<div class="row">${g ? '<button class="btn ghost" data-act="goalcancel">Annuler</button>' : ''}<button class="btn" data-act="goalset" ${dis}>${g ? 'Enregistrer' : 'Créer mon projet'}</button></div></section>${doneHtml}`;
+  }
+  const have = Math.max(0, t.total), p = Math.min(1, have / g.budget), reached = have >= g.budget;
+  const w1 = eta(cur, avgInv(cur)), wAll = eta(cur, k.weekly);
+  const flags = MS.map(m => `<span class="flag ${p >= m ? 'on' : ''}" style="left:${m * 100}%">${p >= m ? I.check : ''}</span><span class="flagl" style="left:${m * 100}%">${m === 1 ? esc(g.name) : m * 100 + ' %'}</span>`).join('');
+  return `<h2 class="title">Mon projet</h2>
+<section class="card goal"><p class="lbl" style="margin:0">Objectif</p><h3 class="gname">${esc(g.name)}</h3>
+<div class="gnum"><span class="amount">${Math.floor(p * 100)} %</span><span>${f(have)} sur ${f(g.budget)}</span></div>
+<div class="track"><div class="road"><i style="width:${(p * 100).toFixed(1)}%"></i></div>${flags}<span class="me" style="left:${(p * 100).toFixed(1)}%">${esc(k.name.slice(0, 1).toUpperCase())}</span></div>
+${reached ? '' : `<p style="margin:6px 0 0">Il te manque <b>${f(g.budget - have)}</b>.${etaTxt(w1) ? ` Si tu continues comme ça, tu l’auras ${etaTxt(w1)}.` : ' Fais pousser un peu chaque semaine pour avancer.'}</p>${wAll !== null && w1 !== null && wAll < w1 ? `<p class="soft small" style="margin:6px 0 0">En faisant pousser toute ta paie : ${etaTxt(wAll)}.</p>` : ''}`}</section>
+${reached ? `<section class="card celebrate"><h3>Objectif atteint, bravo !</h3><p style="margin:0">Prépare ta présentation ${P().a} : pourquoi tu le veux, combien il coûte, ce qu’il va t’apporter. S’ils sont convaincus, ils débloqueront ton argent.</p></section>` : ''}
+<section class="card"><h3>Les paliers</h3><ul class="log">${MS.map(m => { const v = r2(g.budget * m), ok = have >= v; return `<li><span class="${ok ? 'g' : 'soft'}" style="width:26px;flex:none">${ok ? I.check : '○'}</span><span>${m === 1 ? 'Objectif complet' : 'Palier ' + m * 100 + ' %'} : ${f(v)}</span><b class="${ok ? 'g' : 'soft'}">${ok ? 'atteint' : 'encore ' + f(v - have)}</b></li>`; }).join('')}</ul></section>
+<div class="row"><button class="btn ghost sm" data-act="goaledit">Modifier</button><button class="btn ghost sm" data-act="goaldrop">${goalDropArm ? 'Confirmer l’abandon' : 'Abandonner ce projet'}</button></div>${doneHtml}`;
+}
+
 function carnetView(k) {
   const ev = evs(cur).slice(-40).reverse().map(e => {
     if (e.t === 'paie') return `<li><time>${dateFr(e.d)}</time><span>Paie : ${f(e.inv)} placés, ${f(e.dep)} dans la tirelire</span><b class="g">+${f(e.inv + e.bonus)}</b></li>`;
     if (e.t === 'recu') return `<li><time>${dateFr(e.d)}</time><span>Reçu${e.from ? ' de ' + esc(e.from) : ''} : ${f(e.inv)} placés, ${f(e.dep)} dans la tirelire</span><b class="g">+${f(e.inv + e.bonus)}</b></li>`;
     if (e.t === 'bourse') return `<li><time>${dateFr(e.d)}</time><span>Bourse : dé ${e.face} (${pct(e.rate)})</span><b class="${e.gain < 0 ? 'neg' : 'g'}">${e.gain < 0 ? '−' : '+'}${f(Math.abs(e.gain))}</b></li>`;
-    if (e.t === 'vire') return `<li><time>${dateFr(e.d)}</time><span>Rangé à la banque, sur ton Livret A</span><b class="soft">${f(e.amount)}</b></li>`;
+    if (e.t === 'vire') return `<li><time>${dateFr(e.d)}</time><span>Mis en lieu sûr ${P().de}</span><b class="soft">${f(e.amount)}</b></li>`;
     return `<li><time>${dateFr(e.d)}</time><span>Projet : ${esc(e.label)}</span><b class="neg">−${f(e.amount)}</b></li>`;
   }).join('') || '<li class="soft">Rien encore : ta première paie arrive bientôt.</li>';
   return `<h2 class="title">Mon carnet</h2><p class="lead">Tout ce qui est entré et sorti de ton bocal.</p><section class="card"><ul class="log">${ev}</ul></section>`;
@@ -280,11 +326,14 @@ function parentsView() {
   const pk = form.pkid && kidOf(form.pkid) ? form.pkid : cur;
   return `<h2 class="title">Espace parents</h2>
 ${lock ? `<div class="msg">Cet appareil est verrouillé sur ${esc(K.name)}.<div class="row" style="margin-top:8px"><button class="btn sm" data-act="unlockdev">Déverrouiller l’appareil</button></div></div>` : ''}
-<section class="card"><h3>Livret A</h3>${kids().map(k => { const T = tot(k.id); return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><b>${esc(k.name)}</b>
-<p style="margin:2px 0 0">Déjà versé : <b>${f(T.livret)}</b> · À virer : <b class="${T.due > 0 ? 'g' : ''}">${f(Math.max(0, T.due))}</b></p>
-${T.due < 0 ? `<p class="soft small" style="margin:2px 0 0">Le Livret A a ${f(-T.due)} d’avance après de mauvaises semaines : rien à virer.</p>` : ''}
-<div class="row" style="margin-top:8px"><button class="btn gr sm" data-act="vire" data-k="${k.id}" ${T.due > 0 && ready ? '' : 'disabled'}>Argent versé</button></div></div>`; }).join('')}</section>
-<section class="card"><h3>Débloquer pour un projet</h3>
+<section class="card"><h3>L’argent placé, en vrai</h3>
+<p class="soft small" style="margin:0">Pépite tient les comptes, mais l’argent placé doit exister quelque part : sinon, le jour où un projet est débloqué, la somme n’est pas là. Mettez le montant « À mettre de côté » en lieu sûr (un Livret A au nom de l’enfant, un compte épargne ou une vraie tirelire fermée), puis touchez « C’est rangé ». Le compteur repart de zéro.</p>
+${kids().map(k => { const T = tot(k.id); return `<div style="padding:12px 0;border-bottom:1px solid var(--line)"><b>${esc(k.name)}</b>
+<p style="margin:2px 0 0">Déjà mis de côté : <b>${f(T.livret)}</b> · À mettre de côté : <b class="${T.due > 0 ? 'g' : ''}">${f(Math.max(0, T.due))}</b></p>
+${T.due < 0 ? `<p class="soft small" style="margin:2px 0 0">Vous avez ${f(-T.due)} d’avance après de mauvaises semaines en bourse : rien à ajouter.</p>` : ''}
+<div class="row" style="margin-top:8px"><button class="btn gr sm" data-act="vire" data-k="${k.id}" ${T.due > 0 && ready ? '' : 'disabled'}>C’est rangé (${f(Math.max(0, T.due))})</button></div></div>`; }).join('')}</section>
+<section class="card"><h3>Débloquer pour un projet</h3>${kids().filter(k => goalOf(k.id)).map(k => { const g = goalOf(k.id), T = tot(k.id); return `<div class="msg" style="margin-top:6px">${esc(k.name)} vise « ${esc(g.name)} » : ${f(Math.max(0, T.total))} sur ${f(g.budget)}.<div class="row" style="margin-top:8px"><button class="btn gr sm" data-act="goalunlock" data-k="${k.id}" ${T.total >= g.budget && ready ? '' : 'disabled'}>${T.total >= g.budget ? `Débloquer ${f(g.budget)} pour « ${esc(g.name)} »` : 'Pas encore atteint'}</button></div></div>`; }).join('')}
+<p class="soft small" style="margin:10px 0 0">Autre projet, ou montant différent :</p>
 <label>Pour<select data-f="pkid">${kids().map(k => `<option value="${k.id}" ${k.id === pk ? 'selected' : ''}>${esc(k.name)} (${f(tot(k.id).total)})</option>`).join('')}</select></label>
 <label>Le projet présenté<input id="p-label" type="text" autocomplete="off" maxlength="60" data-f="plabel" value="${esc(form.plabel)}" placeholder="Un vélo, un cadeau, une sortie…"></label>
 <label>Montant (€)<input id="p-amount" type="text" inputmode="decimal" autocomplete="off" data-f="pamount" value="${esc(form.pamount)}"></label>
@@ -316,7 +365,7 @@ function mainView() {
   const k = kidOf(cur);
   if (!k) return splash('Aucun enfant');
   const t = tot(cur);
-  const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'parents' ? parentsView() : homeView(k, t);
+  const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : homeView(k, t);
   return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view">${content}</main>${tabbar()}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
 }
 
@@ -337,7 +386,7 @@ function render() {
 const chains = {};
 function queue(key, fn) { chains[key] = (chains[key] || Promise.resolve()).then(fn).catch(() => { status = 'Enregistrement impossible : vérifie ta connexion.'; render(); }); return chains[key]; }
 function saveF() { const body = clone(F); lastF = JSON.stringify(body); return queue('F', () => setDoc(doc(fdb, 'familles', user.uid), body)); }
-function saveK(id) { const body = { events: clone(evs(id)) }; lastK[id] = JSON.stringify(body.events); return queue(id, () => setDoc(doc(fdb, 'familles', user.uid, 'enfants', id), body)); }
+function saveK(id) { const body = { events: clone(evs(id)), goal: goalOf(id) ? clone(goalOf(id)) : null }; lastK[id] = JSON.stringify(body); return queue(id, () => setDoc(doc(fdb, 'familles', user.uid, 'enfants', id), body)); }
 function updateReady() {
   const r = !!(F && famServer && kids().every(k => KL[k.id]));
   if (r !== ready) { ready = r; if (r) { status = ''; clearTimeout(offlineTimer); resetCoins(); } return true; }
@@ -348,13 +397,13 @@ function syncKids() {
   for (const id of ids) if (!kidUnsubs[id]) {
     kidUnsubs[id] = onSnapshot(doc(fdb, 'familles', user.uid, 'enfants', id), { includeMetadataChanges: true }, snap => {
       let ch = false;
-      if (snap.exists()) { const e = snap.data().events || [], s = JSON.stringify(e); if (s !== lastK[id]) { lastK[id] = s; EV[id] = clone(e); ch = true; } }
+      if (snap.exists()) { const d = snap.data(), body = { events: d.events || [], goal: d.goal || null }, s = JSON.stringify(body); if (s !== lastK[id]) { lastK[id] = s; EV[id] = clone(body.events); GOAL[id] = body.goal ? clone(body.goal) : null; ch = true; } }
       if (!snap.metadata.fromCache && !KL[id]) { KL[id] = true; ch = true; }
       if (updateReady()) ch = true;
       if (ch) render();
     }, () => { status = 'La banque ne répond plus : relance l’application.'; render(); });
   }
-  for (const id of Object.keys(kidUnsubs)) if (!ids.includes(id)) { kidUnsubs[id](); delete kidUnsubs[id]; delete EV[id]; delete KL[id]; delete lastK[id]; }
+  for (const id of Object.keys(kidUnsubs)) if (!ids.includes(id)) { kidUnsubs[id](); delete kidUnsubs[id]; delete EV[id]; delete GOAL[id]; delete KL[id]; delete lastK[id]; }
 }
 function startSync() {
   stopSync();
@@ -373,7 +422,7 @@ function stopSync() {
   if (famUnsub) famUnsub(); famUnsub = null;
   for (const id of Object.keys(kidUnsubs)) { kidUnsubs[id](); delete kidUnsubs[id]; }
   F = null; famLoaded = false; famServer = false; ready = false; lastF = ''; ob = null;
-  for (const o of [EV, KL, lastK]) for (const k of Object.keys(o)) delete o[k];
+  for (const o of [EV, GOAL, KL, lastK]) for (const k of Object.keys(o)) delete o[k];
   clearTimeout(offlineTimer);
 }
 async function tryLegacy() {
@@ -404,10 +453,10 @@ function roll() {
   setTimeout(() => {
     if (spin) clearInterval(spin);
     if (el) el.style.transform = '';
-    const rate = F.dice[face - 1], gain = r2(Math.max(0, tot(cur).total) * rate / 100);
+    const before = tot(cur).total, rate = F.dice[face - 1], gain = r2(Math.max(0, before) * rate / 100);
     EV[cur] = [...evs(cur), { t: 'bourse', d: iso(), face, rate, gain }];
     rolling = false; saveK(cur);
-    say(rate > 0 ? `Dé ${face} : +${f(gain)} dans ton bocal !` : rate < 0 ? `Dé ${face} : ton bocal perd ${f(Math.abs(gain))}.` : `Dé ${face} : rien ne bouge cette semaine.`, rate < 0 ? 'Ça arrive, la semaine prochaine sera peut-être meilleure.' : '');
+    sayMs(before, rate > 0 ? `Dé ${face} : +${f(gain)} dans ton bocal !` : rate < 0 ? `Dé ${face} : ton bocal perd ${f(Math.abs(gain))}.` : `Dé ${face} : rien ne bouge cette semaine.`, rate < 0 ? 'Ça arrive, la semaine prochaine sera peut-être meilleure.' : '');
     render();
   }, quick ? 30 : 1300);
 }
@@ -415,9 +464,10 @@ function doGift(ratio) {
   const amt = r2(num(form.gamount));
   if (!(amt > 0) || amt > 2000) { say('Écris d’abord combien tu as reçu.'); return; }
   const inv2 = r2(amt * ratio), dep2 = r2(amt - inv2), bonus = r2(inv2 * gm() / 100), from = form.gfrom.trim();
+  const before = tot(cur).total;
   EV[cur] = [...evs(cur), { t: 'recu', d: iso(), from, inv: inv2, dep: dep2, bonus }];
   saveK(cur);
-  say(inv2 ? `Super ! ${f(inv2 + bonus)} rejoignent ton bocal.` : `${f(dep2)} rangés dans ta tirelire.`, inv2 ? `Donne ${f(inv2)} ${P().a} : ils iront sur ton Livret A.` : '');
+  sayMs(before, inv2 ? `Super ! ${f(inv2 + bonus)} rejoignent ton bocal.` : `${f(dep2)} rangés dans ta tirelire.`, inv2 ? `Donne ${f(inv2)} ${P().a} pour qu’ils soient mis en lieu sûr.` : '');
   form.gamount = ''; form.gfrom = ''; view = 'home';
 }
 function doProject() {
@@ -427,7 +477,7 @@ function doProject() {
   const fromLivret = r2(Math.max(0, a - Math.max(0, T.due)));
   EV[k] = [...evs(k), { t: 'projet', d: iso(), label, amount: a, fromLivret }];
   saveK(k);
-  say(`Projet « ${esc(label)} » validé : ${f(a)} pour ${esc(kidOf(k).name)}.`, fromLivret > 0 ? `Retirez ${f(fromLivret)} du Livret A.` : '');
+  say(`Projet « ${esc(label)} » validé : ${f(a)} pour ${esc(kidOf(k).name)}.`, fromLivret > 0 ? `Reprenez ${f(fromLivret)} dans l’argent mis de côté.` : '');
   form.plabel = ''; form.pamount = '';
 }
 function obValidate() {
@@ -450,7 +500,7 @@ async function obFinish() {
   busy = true; render();
   try {
     const fam = { v: 1, parents: ob.parents, kids: ob.kids.map(k => ({ id: k.id, name: k.name, birth: k.birth, weekly: k.weekly, color: k.color })), match: ob.match, giftMatch: ob.giftMatch, dice: DICE[ob.dice].faces.slice(), diceName: ob.dice, pin: ob.pin, created: iso() };
-    await Promise.all(fam.kids.map(k => setDoc(doc(fdb, 'familles', user.uid, 'enfants', k.id), { events: (ob.legacy && ob.legacy[k.id]) || [] })));
+    await Promise.all(fam.kids.map(k => setDoc(doc(fdb, 'familles', user.uid, 'enfants', k.id), { events: (ob.legacy && ob.legacy[k.id]) || [], goal: null })));
     await setDoc(doc(fdb, 'familles', user.uid), fam);
     view = 'home'; cur = fam.kids[0].id;
   } catch (e) { ob.err = 'Impossible d’enregistrer : vérifiez la connexion et les règles Firestore.'; }
@@ -464,6 +514,7 @@ document.addEventListener('click', ev => {
   if (a !== 'undo') undoArm = false;
   if (a !== 'wipe') wipeArm = false;
   if (a !== 'kdel') delArm = null;
+  if (a !== 'goaldrop') goalDropArm = false;
   switch (a) {
     case 'lmode': loginMode = b.dataset.m; loginErr = ''; loginMsg = ''; break;
     case 'reset':
@@ -481,7 +532,7 @@ document.addEventListener('click', ev => {
     case 'obprev': ob.step--; ob.err = ''; window.scrollTo(0, 0); break;
     case 'obfinish': obFinish(); return;
     case 'go': view = b.dataset.v; if (view !== 'parents') { pinOk = false; } pinBuf = ''; pinBad = false; window.scrollTo(0, 0); break;
-    case 'kid': cur = k; resetCoins(); try { localStorage.setItem('pepite-cur', cur); } catch (e) {} break;
+    case 'kid': cur = k; goalEdit = false; resetCoins(); try { localStorage.setItem('pepite-cur', cur); } catch (e) {} break;
     case 'toPig': if (tray) { tray--; dep++; } break;
     case 'toGrow': if (tray) { tray--; inv++; } break;
     case 'backPig': if (dep) { dep--; tray++; } break;
@@ -490,9 +541,10 @@ document.addEventListener('click', ev => {
       const t = tot(cur);
       if (!ready || tray || (lock && sameWeek(t.paie))) break;
       const bonus = r2(inv * F.match / 100);
+      const before = t.total;
       EV[cur] = [...evs(cur), { t: 'paie', d: iso(), inv, dep, bonus }];
       saveK(cur);
-      say(inv ? `Bravo ! ${f(inv + bonus)} rejoignent ton bocal.` : 'Paie rangée : tout est dans ta tirelire.', dep ? `${f(dep)} en pièces pour ta tirelire.` : '');
+      sayMs(before, inv ? `Bravo ! ${f(inv + bonus)} rejoignent ton bocal.` : 'Paie rangée : tout est dans ta tirelire.', dep ? `${f(dep)} en pièces pour ta tirelire.` : '');
       resetCoins(); view = 'home'; window.scrollTo(0, 0); break;
     }
     case 'gift': if (ready) doGift(parseFloat(b.dataset.r)); break;
@@ -506,8 +558,24 @@ document.addEventListener('click', ev => {
     case 'pinback': pinBuf = pinBuf.slice(0, -1); break;
     case 'unlockdev': lock = null; pinOk = false; try { localStorage.removeItem('pepite-lock'); } catch (e) {} say('Appareil déverrouillé.'); break;
     case 'lock': if (/^\d{4}$/.test(F.pin || '')) { lock = cur = k; pinOk = false; view = 'home'; resetCoins(); try { localStorage.setItem('pepite-lock', lock); } catch (e) {} window.scrollTo(0, 0); say(`Appareil réservé à ${esc(kidOf(k).name)}.`, 'Le code parents rouvre tout.'); } break;
-    case 'vire': if (ready) { const T = tot(k); if (T.due > 0) { EV[k] = [...evs(k), { t: 'vire', d: iso(), amount: T.due }]; saveK(k); say(`Virement de ${f(T.due)} noté.`, 'Le compteur repart de zéro.'); } } break;
+    case 'vire': if (ready) { const T = tot(k); if (T.due > 0) { EV[k] = [...evs(k), { t: 'vire', d: iso(), amount: T.due }]; saveK(k); say(`${f(T.due)} mis de côté pour ${esc(kidOf(k).name)}.`, 'Le compteur repart de zéro.'); } } break;
     case 'project': if (ready) doProject(); break;
+    case 'goalpick': form.goalname = b.dataset.n; break;
+    case 'goaledit': { const g = goalOf(cur); goalEdit = true; form.goalname = g.name; form.goalbudget = String(g.budget).replace('.', ','); break; }
+    case 'goalcancel': goalEdit = false; form.goalname = ''; form.goalbudget = ''; break;
+    case 'goalset': {
+      if (!ready) break;
+      const name = form.goalname.trim(), bud = r2(num(form.goalbudget));
+      if (!name) { say('Donne un nom à ton projet.'); break; }
+      if (!(bud >= 1 && bud <= 10000)) { say('Indique un prix entre 1 € et 10 000 €.'); break; }
+      const g0 = goalOf(cur);
+      GOAL[cur] = { name: name.slice(0, 30), budget: bud, created: g0 ? g0.created : iso() };
+      saveK(cur); goalEdit = false; form.goalname = ''; form.goalbudget = '';
+      say(g0 ? 'Projet mis à jour.' : `C’est parti pour « ${esc(name)} » !`, g0 ? '' : 'Ton bocal affiche maintenant tes paliers.');
+      break;
+    }
+    case 'goaldrop': if (ready) { if (!goalDropArm) goalDropArm = true; else { GOAL[cur] = null; saveK(cur); goalDropArm = false; say('Projet abandonné.', 'Tu peux en choisir un autre quand tu veux.'); } } break;
+    case 'goalunlock': if (ready) { const g = goalOf(k), T = tot(k); if (g && T.total >= g.budget) { const amount = r2(g.budget), fromLivret = r2(Math.max(0, amount - Math.max(0, T.due))); EV[k] = [...evs(k), { t: 'projet', d: iso(), label: g.name, amount, fromLivret, goal: true }]; GOAL[k] = null; saveK(k); say(`« ${esc(g.name)} » débloqué : ${f(amount)} pour ${esc(kidOf(k).name)}.`, fromLivret > 0 ? `Reprenez ${f(fromLivret)} dans l’argent mis de côté.` : ''); } } break;
     case 'undo': if (ready) { if (!undoArm) undoArm = true; else { EV[cur] = evs(cur).slice(0, -1); saveK(cur); undoArm = false; say('Dernière opération annulée.'); } } break;
     case 'wipe': if (ready) { if (!wipeArm) wipeArm = true; else { EV[cur] = []; saveK(cur); wipeArm = false; say('Historique effacé.'); } } break;
     case 'kcolor': { const x = kidOf(k); if (x && ready) { x.color = b.dataset.c; saveF(); } break; }
