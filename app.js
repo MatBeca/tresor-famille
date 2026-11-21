@@ -188,9 +188,9 @@ ${o.kids.map((k, i) => `<div class="kidform"><header><h3>Enfant ${i + 1}</h3>${o
 <p class="soft small" style="margin:10px 4px 0">Repère courant : 0,50 € à 1 € par semaine et par année d’âge.</p>`;
   } else {
     body = `${st}<h2 class="title">Les règles du jeu</h2><p class="lead">Tout reste modifiable plus tard dans l’espace parents.</p>
-<div class="card"><h3>Bonus sur l’argent de poche placé</h3><p class="soft small" style="margin:0">Ce que vous ajoutez quand l’enfant fait pousser une pièce.</p>
+<div class="card"><h3>Bonus sur l’argent de poche placé</h3><p class="soft small" style="margin:0">Versé uniquement sur les pièces que l’enfant fait pousser. Rien sur celles qu’il met dans sa tirelire pour les dépenser : c’est ce qui rend le choix intéressant.</p>
 <div class="pills">${[10, 25, 50].map(n => `<button class="pill" data-act="obmatch" data-n="${n}" aria-pressed="${o.match === n}">${n} %</button>`).join('')}</div></div>
-<div class="card"><h3>Bonus sur l’argent reçu</h3><p class="soft small" style="margin:0">Cadeaux, anniversaires, petits services.</p>
+<div class="card"><h3>Bonus sur l’argent reçu</h3><p class="soft small" style="margin:0">Cadeaux, anniversaires, petits services. Là aussi, seulement sur la part qu’il fait pousser.</p>
 <div class="pills">${[0, 10, 25].map(n => `<button class="pill" data-act="obgift" data-n="${n}" aria-pressed="${o.giftMatch === n}">${n ? n + ' %' : 'Aucun'}</button>`).join('')}</div></div>
 <div class="card"><h3>Le dé de la bourse</h3><p class="soft small" style="margin:0">Lancé une fois par semaine. Tous rapportent en moyenne +0,25 % par semaine, seul le risque change.</p>
 <div class="preset">${Object.entries(DICE).map(([k, d]) => `<button data-act="obdice" data-n="${k}" aria-pressed="${o.dice === k}"><b>${d.name}</b><span>${d.faces.map(pct).join(' · ')}<br>${d.txt}</span></button>`).join('')}</div></div>
@@ -350,7 +350,7 @@ ${T.due < 0 ? `<p class="soft small" style="margin:2px 0 0">Vous avez ${f(-T.due
 <label>Par semaine (€)<input id="k-w-${k.id}" type="number" min="1" max="50" value="${k.weekly}" data-set="kweekly:${k.id}"></label></div>
 <div class="swatches">${PAL.map(c => `<button class="sw" style="--c:${c}" data-act="kcolor" data-k="${k.id}" data-c="${c}" aria-pressed="${k.color === c}" aria-label="Couleur"></button>`).join('')}</div></div>`).join('')}
 <div class="row"><button class="btn ghost full" data-act="kadd" ${dis}>Ajouter un enfant</button></div></section>
-<section class="card"><h3>Les règles du jeu</h3>
+<section class="card"><h3>Les règles du jeu</h3><p class="soft small" style="margin:0">Les bonus ne s’appliquent qu’à l’argent placé (les pièces que l’enfant fait pousser), jamais à celui qui va dans la tirelire.</p>
 <label>Les enfants vous appellent<select data-set="parents">${Object.entries(PAR).filter(([k]) => k !== 'papamaman' || F.parents === k).map(([k, v]) => `<option value="${k}" ${F.parents === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>
 <div class="grid2"><label>Bonus argent de poche (%)<input id="r-m" type="number" min="0" max="100" value="${F.match}" data-set="match"></label>
 <label>Bonus argent reçu (%)<input id="r-g" type="number" min="0" max="100" value="${gm()}" data-set="giftMatch"></label></div>
