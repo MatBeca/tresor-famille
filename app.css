@@ -250,3 +250,4 @@ input:focus,select:focus{border-color:var(--kid);outline:none}
 .pfaces{display:flex;flex-wrap:wrap;gap:5px}
 .pfaces i{font-style:normal;font-weight:800;font-size:13px;background:var(--glass);border-radius:99px;padding:2px 8px}
 .post .pr{font-size:15px}
+.intro .story{font:600 19px Fredoka,sans-serif;color:var(--ink);margin-bottom:8px}
