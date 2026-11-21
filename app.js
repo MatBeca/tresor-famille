@@ -57,7 +57,7 @@ const I = {
 let user, auth, fdb;
 let F = null, famLoaded = false, famServer = false, lastF = '';
 const EV = {}, GOAL = {}, KL = {}, lastK = {}, kidUnsubs = {};
-let goalEdit = false, goalDropArm = false, resetFor = null;
+let goalEdit = false, goalDropArm = false, resetFor = null, payHelp = null;
 let famUnsub = null, ready = false, status = '', offlineTimer = null;
 let view = 'home', cur = null, lock = null, pinOk = false, pinBuf = '', pinBad = false;
 let tray = 0, inv = 0, dep = 0, rolling = false;
@@ -179,6 +179,9 @@ function obView() {
 ${o.legacy ? '<div class="msg">Les données déjà saisies pour vos enfants seront reprises.</div>' : ''}`;
   } else if (o.step === 2) {
     body = `${st}<h2 class="title">Vos enfants</h2><p class="lead">Chacun aura son bocal, sa couleur et son argent de poche.</p>
+<div class="card help" style="margin-top:12px"><h3>Comment fonctionne la paie ?</h3><p style="margin:0;font-size:16px">Chaque semaine, l’enfant reçoit son argent de poche sous forme de pièces de 1 € dans l’appli, et range chaque pièce :</p>
+<ul class="plain"><li><b>Dans sa tirelire</b> : vous lui donnez ces pièces en vrai, il les dépense librement.</li><li><b>À faire pousser</b> : l’argent reste chez vous, mis de côté. Il reçoit votre bonus et varie avec la bourse de la semaine.</li></ul>
+<p class="soft small" style="margin:8px 0 0">Plus il fait pousser tôt, plus son trésor grossit : c’est toute la leçon.</p></div>
 ${o.kids.map((k, i) => `<div class="kidform"><header><h3>Enfant ${i + 1}</h3>${o.kids.length > 1 ? `<button class="link" data-act="obdel" data-k="${k.id}">Retirer</button>` : ''}</header>
 <label>Prénom<input id="ob-n-${k.id}" type="text" autocomplete="off" maxlength="20" data-ob="name:${k.id}" value="${esc(k.name)}"></label>
 <div class="grid2"><label>Date de naissance<input id="ob-b-${k.id}" type="date" data-ob="birth:${k.id}" value="${esc(k.birth)}"></label>
@@ -233,7 +236,13 @@ ${t.out > 0 ? `<p class="soft small" style="margin:8px 4px 0">Projets réalisés
 function payView(k, t) {
   const blocked = !!lock && sameWeek(t.paie), since = t.paie ? daysSince(t.paie) : null, bonusNow = r2(inv * F.match / 100), dis = ready ? '' : 'disabled';
   const coin = (act) => `<button class="coin" data-act="${act}" aria-label="Reprendre cette pièce" ${dis}>1&nbsp;€</button>`;
-  return `<h2 class="title">Jour de paie</h2><p class="lead">${k.weekly} pièce${k.weekly > 1 ? 's' : ''} de 1 €. Range chacune : tu la dépenses, ou tu la fais pousser et ${P().aj} ${String(F.match).replace('.', ',')} %.</p>
+  const help = payHelp === null ? !t.paie : payHelp, m = String(F.match).replace('.', ',');
+  return `<h2 class="title">Jour de paie</h2><p class="lead">${k.weekly} pièce${k.weekly > 1 ? 's' : ''} de 1 € à ranger, une par une.</p>
+<section class="card help"><button class="helphead" data-act="payhelp" aria-expanded="${help}"><span>Comment ça marche ?</span>${help ? '<span class="soft small">Masquer</span>' : I.chev}</button>
+${help ? `<ol class="howto"><li><b>Chaque semaine, tu reçois ta paie</b>${k.weekly} pièce${k.weekly > 1 ? 's' : ''} de 1 €, ton argent de poche.</li>
+<li><b>Pour chaque pièce, tu choisis</b><span class="choice"><span><i class="dot" style="background:var(--line)"></i><b>Dans ma tirelire</b> : ${P().label.toLowerCase()} ${F.parents === 'parents' ? 'te la donnent' : 'te la donne'} tout de suite, tu la dépenses comme tu veux.</span>
+<span><i class="dot" style="background:var(--grow)"></i><b>À faire pousser</b> : elle va dans ton bocal, ${P().aj} ${m} % de bonus, et elle peut grossir chaque semaine avec la bourse.</span></span></li>
+<li><b>Ton bocal est mis de côté</b>Pour récupérer cet argent, tu choisis un projet et tu le présentes ${P().a}.</li></ol>` : ''}</section>
 <section class="card">${blocked ? `<p class="result" style="text-align:center">Ta paie de la semaine est rangée.<br><span class="soft" style="font-size:17px">Rendez-vous lundi !</span></p>` : `
 ${since !== null && since < 5 ? `<p class="msg" style="margin-top:0">Déjà payée il y a ${since === 0 ? 'moins d’un jour' : since + ' jour' + (since > 1 ? 's' : '')}.</p>` : ''}
 <div class="tray" aria-label="Pièces à ranger">${Array.from({ length: tray }, () => '<span class="coin">1&nbsp;€</span>').join('') || '<span class="soft">Toutes les pièces sont rangées !</span>'}</div>
@@ -570,6 +579,7 @@ document.addEventListener('click', ev => {
       resetCoins(); view = 'home'; window.scrollTo(0, 0); break;
     }
     case 'gift': if (ready) doGift(parseFloat(b.dataset.r)); break;
+    case 'payhelp': payHelp = !(payHelp === null ? !tot(cur).paie : payHelp); break;
     case 'pm': projInv[cur] = Math.max(0, projInv[cur] - (projInv[cur] > 20 ? 5 : 1)); break;
     case 'pp': projInv[cur] = Math.min(500, projInv[cur] + (projInv[cur] >= 20 ? 5 : 1)); break;
     case 'pset': projInv[cur] = +b.dataset.n; break;
