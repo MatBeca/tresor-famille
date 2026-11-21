@@ -187,7 +187,7 @@ function obView() {
   let body = '';
   if (o.step === 1) {
     body = `${st}<div class="welcome">${LOGO}<h1>Bienvenue !</h1><p>Avec leur argent de poche, vos enfants découvrent pourquoi épargner et investir tôt change tout.</p></div>
-<div class="why"><div>${I.coin}<span><b>Une paie chaque semaine</b>Votre enfant range ses pièces : il en dépense une partie et fait pousser le reste.</span></div>
+<div class="why"><div>${I.coin}<span><b>Une paie chaque semaine</b>Votre enfant décide librement ce qu’il fait de son argent : tout dépenser, tout faire pousser, ou un peu des deux. Et s’il le fait pousser, il découvre peu à peu les arcanes de l’investissement.</span></div>
 <div>${I.die}<span><b>Un bonus et une bourse</b>Vous ajoutez un bonus sur ce qu’il place, puis un dé fait monter ou baisser sa tirelire chaque semaine.</span></div>
 <div>${I.flag}<span><b>Des projets et un horizon</b>Il se fixe un objectif, comme un vélo, et voit son trésor grandir jusqu’à ses 18 ans.</span></div></div>
 <div class="msg">Ce que l’argent « gagne » dans Pépite (bonus, bourse) est payé par vous : c’est un jeu pour apprendre, pas un vrai placement.</div>
