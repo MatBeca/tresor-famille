@@ -239,3 +239,14 @@ input:focus,select:focus{border-color:var(--kid);outline:none}
 
 /* paie en pause */
 .paused{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 10%,var(--card))}
+
+/* stratégies de bourse */
+.post{display:grid;gap:6px;text-align:left;width:100%;background:var(--card);border:2px solid var(--line);border-bottom-width:5px;border-radius:20px;padding:14px}
+.post.on{border-color:var(--kid);background:var(--kidt)}
+.post .ph{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.post .ph b{font:600 20px Fredoka,sans-serif}
+.post .tag{background:var(--kid);color:#fff;border-radius:99px;padding:3px 10px;font-weight:800;font-size:13px;white-space:nowrap}
+.post .pt{font-size:16px}
+.pfaces{display:flex;flex-wrap:wrap;gap:5px}
+.pfaces i{font-style:normal;font-weight:800;font-size:13px;background:var(--glass);border-radius:99px;padding:2px 8px}
+.post .pr{font-size:15px}

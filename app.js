@@ -30,11 +30,13 @@ const PAR = {
   maman: { label: 'Maman', de: 'de maman', a: 'à maman', aj: 'maman ajoute' },
   papamaman: { label: 'Papa et maman', de: 'de papa et maman', a: 'à papa et maman', aj: 'papa et maman ajoutent' }
 };
-const DICE = {
-  prudent: { name: 'Prudent', faces: [-0.5, 0, 0, 0.5, 0.5, 1], txt: 'Petites variations, rarement des pertes.' },
-  equilibre: { name: 'Équilibré', faces: [-1, -0.5, 0, 0.5, 1, 1.5], txt: 'Des hauts et des bas, comme un vrai placement.' },
-  aventurier: { name: 'Aventurier', faces: [-3, -2, 0, 1, 2, 3.5], txt: 'Ça secoue fort, pour les plus grands.' }
+const POST = {
+  none: { name: 'Je ne joue pas', short: 'Pas de bourse', faces: [0, 0, 0, 0, 0, 0], txt: 'Ton argent ne bouge pas : ni gain, ni perte. Seul le bonus le fait grandir.', like: 'Comme de l’argent rangé dans une boîte' },
+  prudent: { name: 'Prudent', short: 'Prudent', faces: [-0.5, 0, 0, 0, 0.5, 0.6], txt: 'Petits gains, presque jamais de pertes.', like: 'Comme un livret d’épargne' },
+  equilibre: { name: 'Équilibré', short: 'Équilibré', faces: [-1.5, -0.5, 0, 0.5, 1, 1.7], txt: 'Des hauts et des bas, et plus de gains en moyenne.', like: 'Comme un placement mélangé' },
+  aventurier: { name: 'Aventurier', short: 'Aventurier', faces: [-6, -3, -1, 1, 4, 6.8], txt: 'Les plus gros gains possibles, mais tu peux vraiment perdre de l’argent.', like: 'Comme des actions en Bourse' }
 };
+const DICE = POST;
 const CAPS = [20, 50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 20000];
 const PIPS = { 1: [[50, 50]], 2: [[28, 28], [72, 72]], 3: [[28, 28], [50, 50], [72, 72]], 4: [[28, 28], [72, 28], [28, 72], [72, 72]], 5: [[28, 28], [72, 28], [50, 50], [28, 72], [72, 72]], 6: [[28, 26], [72, 26], [28, 50], [72, 50], [28, 74], [72, 74]] };
 const LOGO = `<svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><path d="M30.5 32C30 26 30.6 21 32 16.5" stroke="#0b5e33" stroke-width="3.2" stroke-linecap="round" fill="none"/><path d="M31 22.5C24.5 23.5 18.5 20.5 16.5 13.5 23.5 12 29.5 15.5 31 22.5Z" fill="#2fc275" stroke="#0b5e33" stroke-width="2.2" stroke-linejoin="round"/><path d="M31.8 18C33.5 11 39.5 6.5 47 7 46 14.5 39.5 18.5 31.8 18Z" fill="#13a05a" stroke="#0b5e33" stroke-width="2.2" stroke-linejoin="round"/><defs><clipPath id="nc"><path d="M6.5 46 10 36.5 20 31 29.5 33 38 28 50.5 29.5 57.5 38 58 48.5 50 55 36 57.5 22 56.5 11 54Z"/></clipPath></defs><g clip-path="url(#nc)"><rect width="64" height="64" fill="#f0a71a"/><path d="M10 36.5 20 31 29.5 33 25 41.5 13 42.5Z" fill="#ffd95a"/><path d="M29.5 33 38 28 50.5 29.5 44 38.5 33 39.5Z" fill="#ffe991"/><path d="M50.5 29.5 57.5 38 58 48.5 47 46 44 38.5Z" fill="#e39a10"/><path d="M25 41.5 29.5 33 33 39.5 44 38.5 47 46 34 48.5Z" fill="#f5b323"/><path d="M6.5 46 10 36.5 13 42.5 25 41.5 34 48.5 22 56.5 11 54Z" fill="#eba216"/><path d="M34 48.5 47 46 58 48.5 50 55 36 57.5 22 56.5Z" fill="#c27c00"/></g><path d="M6.5 46 10 36.5 20 31 29.5 33 38 28 50.5 29.5 57.5 38 58 48.5 50 55 36 57.5 22 56.5 11 54Z" fill="none" stroke="#6e4400" stroke-width="3" stroke-linejoin="round"/><path d="M13.5 39 19 34.5" stroke="#fffbe6" stroke-width="2.6" stroke-linecap="round"/><path d="M33 32.5 37 30.5" stroke="#fffbe6" stroke-width="2.2" stroke-linecap="round"/><path d="M54 14l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5z" fill="#ffc531" stroke="#6e4400" stroke-width="1.3" stroke-linejoin="round"/></svg>`;
@@ -72,7 +74,20 @@ const kids = () => (F && F.kids) || [];
 const kidOf = id => kids().find(k => k.id === id);
 const P = () => PAR[(F && F.parents) || 'parents'] || PAR.parents;
 const evs = id => EV[id] || [];
-const mean = () => F.dice.reduce((a, b) => a + b, 0) / 6;
+const postOf = id => { const k = kidOf(id); return k && POST[k.posture] ? k.posture : (POST[F.diceName] ? F.diceName : 'equilibre'); };
+const facesOf = id => POST[postOf(id)].faces;
+const meanOf = id => facesOf(id).reduce((a, b) => a + b, 0) / 6;
+const simCache = {};
+function simYear(post, start) {
+  const key = post + ':' + start; if (simCache[key]) return simCache[key];
+  const faces = POST[post].faces, n = 1500, out = [];
+  let seed = 12345; const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+  for (let i = 0; i < n; i++) { let x = start; for (let w = 0; w < 52; w++) x *= 1 + faces[Math.floor(rnd() * 6)] / 100; out.push(x); }
+  out.sort((a, b) => a - b);
+  const r = { lo: out[Math.floor(n * 0.1)], mid: out.reduce((a, b) => a + b, 0) / n, hi: out[Math.floor(n * 0.9)], worst: out[0], best: out[n - 1], loss: out.filter(v => v < start - 0.005).length / n };
+  return (simCache[key] = r);
+}
+const lossTxt = p => p <= 0 ? 'jamais' : p < 0.02 ? 'presque jamais' : `environ 1 fois sur ${Math.max(2, Math.round(1 / p))}`;
 const gm = () => (typeof F.giftMatch === 'number' ? F.giftMatch : 10);
 function ensureCur() {
   if (lock && !kidOf(lock)) { lock = null; try { localStorage.removeItem('pepite-lock'); } catch (e) {} }
@@ -100,7 +115,7 @@ const untilTxt = p => p.until ? 'jusqu’au ' + new Date(new Date(p.until).getTi
 const MS = [0.25, 0.5, 0.75, 1];
 function eta(id, perWeek) {
   const g = goalOf(id), t = tot(id); if (!g) return null; if (t.total >= g.budget) return 0;
-  const m = mean() / 100, match = F.match / 100; let x = Math.max(0, t.total);
+  const m = meanOf(id) / 100, match = F.match / 100; let x = Math.max(0, t.total);
   for (let w = 1; w <= 520; w++) { x += x * m + perWeek * (1 + match); if (x >= g.budget) return w; }
   return null;
 }
@@ -114,7 +129,7 @@ function milestone(before, after) {
 }
 function sayMs(before, msg, sub) { const ms = milestone(before, tot(cur).total); if (ms) say(ms, msg); else say(msg, sub); }
 function project(id, perWeek) {
-  const k = kidOf(id), t = tot(id), m = mean() / 100, match = F.match / 100, now = new Date(), birth = new Date(k.birth + 'T12:00:00');
+  const k = kidOf(id), t = tot(id), m = meanOf(id) / 100, match = F.match / 100, now = new Date(), birth = new Date(k.birth + 'T12:00:00');
   let own = t.own, bonus = t.bonus, gains = t.gains, w = 0; const pts = [];
   for (let a = ageAt(k.birth, now) + 1; a <= 18; a++) {
     const bd = new Date(birth); bd.setFullYear(birth.getFullYear() + a);
@@ -197,8 +212,8 @@ ${o.kids.map((k, i) => `<div class="kidform"><header><h3>Enfant ${i + 1}</h3>${o
 <div class="pills">${[10, 25, 50].map(n => `<button class="pill" data-act="obmatch" data-n="${n}" aria-pressed="${o.match === n}">${n} %</button>`).join('')}</div></div>
 <div class="card"><h3>Bonus sur l’argent reçu</h3><p class="soft small" style="margin:0">Cadeaux, anniversaires, petits services. Là aussi, seulement sur la part qu’il fait pousser.</p>
 <div class="pills">${[0, 10, 25].map(n => `<button class="pill" data-act="obgift" data-n="${n}" aria-pressed="${o.giftMatch === n}">${n ? n + ' %' : 'Aucun'}</button>`).join('')}</div></div>
-<div class="card"><h3>Le dé de la bourse</h3><p class="soft small" style="margin:0">Lancé une fois par semaine. Tous rapportent en moyenne +0,25 % par semaine, seul le risque change.</p>
-<div class="preset">${Object.entries(DICE).map(([k, d]) => `<button data-act="obdice" data-n="${k}" aria-pressed="${o.dice === k}"><b>${d.name}</b><span>${d.faces.map(pct).join(' · ')}<br>${d.txt}</span></button>`).join('')}</div></div>
+<div class="card"><h3>La bourse de la semaine</h3><p class="soft small" style="margin:0">Chaque semaine, l’enfant peut lancer un dé qui fait monter ou baisser sa tirelire. Il choisit lui-même sa stratégie dans l’onglet Bourse, et peut aussi décider de ne pas jouer. Plus la stratégie est risquée, plus elle rapporte en moyenne, mais plus elle peut faire perdre. Stratégie de départ :</p>
+<div class="preset">${Object.entries(POST).map(([k, d]) => `<button data-act="obdice" data-n="${k}" aria-pressed="${o.dice === k}"><b>${d.name}</b><span>${d.txt}</span></button>`).join('')}</div></div>
 <div class="card"><h3>Où va l’argent placé ?</h3><p class="soft small" style="margin:0">L’appli tient les comptes, mais l’argent doit exister en vrai. Quand vous le voulez, mettez de côté ce que l’appli indique (Livret A au nom de l’enfant, compte épargne ou boîte fermée à la maison) : l’espace parents vous dit combien, et vous n’aurez pas de surprise le jour d’un projet.</p></div>
 <div class="card"><h3>Code parents</h3><p class="soft small" style="margin:0">4 chiffres pour ouvrir l’espace parents sur l’appareil d’un enfant.</p>
 <label>Code à 4 chiffres<input id="ob-pin" class="secret" type="text" inputmode="numeric" autocomplete="off" maxlength="4" data-ob="pin" value="${esc(o.pin)}"></label></div>`;
@@ -230,7 +245,7 @@ ${t.out > 0 ? `<p class="soft small" style="margin:8px 4px 0">Projets réalisés
 <h3 class="sec">Mon projet</h3><div class="list"><button class="item" data-act="go" data-v="projet"><span class="ic" style="background:var(--kidt);color:var(--kidtxt)">${I.flag}</span><span>${g ? `<b>${esc(g.name)} : ${Math.floor(Math.min(1, Math.max(0, t.total) / g.budget) * 100)} %</b><small>${t.total >= g.budget ? 'Atteint : prépare ta présentation !' : `${f(Math.max(0, t.total))} sur ${f(g.budget)}`}</small>` : '<b>Choisis un projet</b><small>Un vélo, un jeu ? Fixe-toi un objectif.</small>'}</span><span class="end">${I.chev}</span></button></div>
 <h3 class="sec">Cette semaine</h3><div class="list">
 <button class="item" data-act="go" data-v="paie"><span class="ic" style="background:#fff3c4;color:#a87300">${I.coin}</span><span><b>Ma paie</b><small>${pauseOf(cur) ? 'En pause ' + untilTxt(pauseOf(cur)) : paid ? 'Rangée, bravo !' : `${k.weekly} pièce${k.weekly > 1 ? 's' : ''} t’attendent`}</small></span><span class="end ${paid && !pauseOf(cur) ? 'done' : ''}">${paid && !pauseOf(cur) ? I.check : I.chev}</span></button>
-<button class="item" data-act="go" data-v="bourse"><span class="ic" style="background:var(--glass)">${I.die}</span><span><b>La bourse</b><small>${rolled ? `Dé ${t.bourse.face} : ${pct(t.bourse.rate)}` : 'Lance le dé de la semaine'}</small></span><span class="end ${rolled ? 'done' : ''}">${rolled ? I.check : I.chev}</span></button>
+<button class="item" data-act="go" data-v="bourse"><span class="ic" style="background:var(--glass)">${I.die}</span><span><b>La bourse</b><small>${postOf(cur) === 'none' ? 'Tu ne joues pas la bourse' : rolled ? `Dé ${t.bourse.face} : ${pct(t.bourse.rate)}` : 'Lance le dé de la semaine'}</small></span><span class="end ${rolled ? 'done' : ''}">${rolled ? I.check : I.chev}</span></button>
 <button class="item" data-act="go" data-v="recu"><span class="ic" style="background:color-mix(in srgb,var(--grow) 14%,transparent);color:var(--grow)">${I.gift}</span><span><b>J’ai reçu de l’argent</b><small>Un cadeau, un anniversaire ?</small></span><span class="end">${I.chev}</span></button>
 <button class="item" data-act="go" data-v="carnet"><span class="ic" style="background:var(--glass)">${I.book}</span><span><b>Mon carnet</b><small>Tout ce qui est entré et sorti</small></span><span class="end">${I.chev}</span></button></div>`;
 }
@@ -266,16 +281,30 @@ function giftView(k) {
 <div class="list" style="margin-top:16px"><button class="btn ghost" data-act="gift" data-r="0" ${dis}>Tout dans mon porte-monnaie</button><button class="btn gold" data-act="gift" data-r="0.5" ${dis}>Moitié porte-monnaie, moitié tirelire</button><button class="btn gr" data-act="gift" data-r="1" ${dis}>Tout dans ma tirelire</button></div></section>`;
 }
 
+function postureCard(p, sel, start, own) {
+  const d = POST[p], r = simYear(p, start);
+  return `<button class="post ${sel ? 'on' : ''}" data-act="posture" data-n="${p}" aria-pressed="${sel}">
+<span class="ph"><b>${d.name}</b>${sel ? `<span class="tag">Ma stratégie</span>` : ''}</span><span class="pt">${d.txt}</span>
+${p === 'none' ? `<span class="pr">Dans 1 an : <b>${f(start)}</b>, ni plus ni moins.</span>`
+  : `<span class="pfaces">${d.faces.map(v => `<i class="${v < 0 ? 'neg' : v > 0 ? 'g' : ''}">${pct(v)}</i>`).join('')}</span>
+<span class="pr">Dans 1 an, ${own ? 'avec tes' : 'pour'} ${f(start)} : <b>${f(r.mid)}</b> en moyenne. 8 fois sur 10 entre ${f(r.lo)} et ${f(r.hi)}.</span>
+<span class="pr ${r.loss >= 0.15 ? 'neg' : 'soft'}">Finir l’année en perte : ${lossTxt(r.loss)}${r.loss >= 0.15 ? ` (jusqu’à ${f(r.worst)} dans le pire des cas)` : ''}.</span>`}
+<span class="soft small">${d.like}</span></button>`;
+}
 function bourseView(k, t) {
-  const rolled = sameWeek(t.bourse && t.bourse.d), dn = DICE[F.diceName] ? DICE[F.diceName].name : 'Personnalisé';
-  const recent = t.rolls.slice(-8).reverse();
-  return `<h2 class="title">La bourse de la semaine</h2><p class="lead">Comme à la vraie Bourse : parfois ta tirelire baisse, mais en moyenne elle monte. C’est un jeu : ce que ton argent gagne ici, c’est ${P().label.toLowerCase()} qui le paie${F.parents === 'parents' || F.parents === 'papamaman' ? 'nt' : ''}.</p>
-<section class="card dicebox"><div id="die">${die(rolled ? t.bourse.face : 6, 132)}</div>
+  const p = postOf(cur), rolled = sameWeek(t.bourse && t.bourse.d), recent = t.rolls.slice(-8).reverse();
+  const own = t.total >= 20, start = own ? r2(t.total) : 100;
+  const pays = F.parents === 'parents' || F.parents === 'papamaman' ? 'nt' : '';
+  return `<h2 class="title">La bourse de la semaine</h2><p class="lead">Une fois par semaine, un dé fait monter ou baisser ta tirelire. C’est un jeu : ce que ton argent gagne ici, c’est ${P().label.toLowerCase()} qui le paie${pays}.</p>
+<section class="card dicebox">${p === 'none' ? `<p class="result">Tu ne joues pas la bourse.</p><p style="margin:0">Ta tirelire ne bouge pas : pas de gain, pas de perte. Tu peux changer d’avis quand tu veux, juste en dessous.</p>`
+  : `<p class="soft small" style="margin:0">Ta stratégie : <b>${POST[p].name}</b></p><div id="die">${die(rolled ? t.bourse.face : 6, 132)}</div>
 ${rolled ? `<p class="result">Dé ${t.bourse.face} : ${t.bourse.rate < 0 ? 'semaine difficile' : t.bourse.rate === 0 ? 'semaine calme' : 'belle semaine'} !</p><p style="margin:0">Ta tirelire a ${t.bourse.gain < 0 ? 'perdu' : 'gagné'} <b class="${t.bourse.gain < 0 ? 'neg' : 'g'}">${f(Math.abs(t.bourse.gain))}</b>. Prochain lancer lundi.</p>`
     : t.total > 0 ? `<button class="btn full" data-act="roll" ${ready ? '' : 'disabled'}>Lancer le dé</button>` : `<p style="margin:0">Fais d’abord pousser quelques pièces : le dé agit sur ce qu’il y a dans ta tirelire.</p>`}
+${recent.length ? `<div class="recent">${recent.map(e => `<span class="${e.rate < 0 ? 'neg' : e.rate > 0 ? 'g' : ''}">${pct(e.rate)}</span>`).join('')}</div>` : ''}`}
 </section>
-<section class="card"><h3>Ton dé : ${dn}</h3><div class="faces">${F.dice.map((r, i) => `<div>${die(i + 1, 38)}<span class="${r < 0 ? 'neg' : r > 0 ? 'g' : ''}">${pct(r)}</span></div>`).join('')}</div>
-${recent.length ? `<p class="soft small" style="margin:14px 0 0">Tes derniers lancers</p><div class="recent">${recent.map(e => `<span class="${e.rate < 0 ? 'neg' : e.rate > 0 ? 'g' : ''}">${pct(e.rate)}</span>`).join('')}</div>` : ''}</section>`;
+<h3 class="sec">Choisis ta stratégie</h3><p class="lead">Plus tu prends de risques, plus tu peux gagner… ou perdre. ${own ? 'Calculé avec ce qu’il y a dans ta tirelire, si tu n’ajoutes rien.' : 'Exemple pour 100 € placés pendant 1 an.'}</p>
+<div class="list">${Object.keys(POST).map(q => postureCard(q, q === p, start, own)).join('')}</div>
+<p class="soft small" style="margin:10px 4px 0">${rolled && p !== 'none' ? 'Un changement de stratégie comptera pour le prochain lancer. ' : ''}Les pourcentages du jeu sont plus généreux que la réalité, pour qu’on voie l’effet plus vite.</p>`;
 }
 
 function futurView(k, t) {
@@ -296,7 +325,7 @@ ${projInv[cur] > k.weekly ? `<p class="soft small" style="margin:10px 0 0">C’e
 <div class="bars" style="grid-template-columns:repeat(${pts.length},minmax(0,1fr))">${bars}</div>
 <p class="cap">À <b>${Pt.age} ans</b>, ta tirelire contiendrait <b>${f(Pt.total)}</b> : ${f(Pt.own)} de ton argent, ${f(Pt.bonus)} de bonus ${P().de} et <b class="g">${f(Math.max(0, Pt.gains))} gagnés tout seuls</b>.</p>
 <p class="soft" style="margin:0">Regarde le vert : plus tu attends, plus il grossit vite, parce que ce que ton argent a gagné se met à gagner lui aussi.${full ? ` Avec ta paie de ${k.weekly} € chaque semaine, tu aurais ${f(full.total)} à ${full.age} ans.` : ''}</p>
-<p class="soft small" style="margin:8px 0 0">Calcul fait avec la moyenne du dé (${pct(r2(mean()))} par semaine). Le vrai résultat dépendra de tes lancers.</p></section>`;
+<p class="soft small" style="margin:8px 0 0">${postOf(cur) === 'none' ? 'Tu ne joues pas la bourse : seuls ton argent et le bonus comptent.' : `Calcul fait avec la moyenne de ta stratégie ${POST[postOf(cur)].name} (${pct(r2(meanOf(cur)))} par semaine). Le vrai résultat dépendra de tes lancers.`}</p></section>`;
 }
 
 function projetView(k, t) {
@@ -327,6 +356,7 @@ function carnetView(k) {
     if (e.t === 'paie') return `<li><time>${dateFr(e.d)}</time><span>Paie : ${f(e.inv)} placés, ${f(e.dep)} dans le porte-monnaie</span><b class="g">+${f(e.inv + e.bonus)}</b></li>`;
     if (e.t === 'recu') return `<li><time>${dateFr(e.d)}</time><span>Reçu${e.from ? ' de ' + esc(e.from) : ''} : ${f(e.inv)} placés, ${f(e.dep)} dans le porte-monnaie</span><b class="g">+${f(e.inv + e.bonus)}</b></li>`;
     if (e.t === 'bourse') return `<li><time>${dateFr(e.d)}</time><span>Bourse : dé ${e.face} (${pct(e.rate)})</span><b class="${e.gain < 0 ? 'neg' : 'g'}">${e.gain < 0 ? '−' : '+'}${f(Math.abs(e.gain))}</b></li>`;
+    if (e.t === 'posture') return `<li><time>${dateFr(e.d)}</time><span>Stratégie de bourse : ${POST[e.p] ? POST[e.p].name : e.p}</span><b class="soft">—</b></li>`;
     if (e.t === 'pause') return `<li><time>${dateFr(e.d)}</time><span>Paie mise en pause${e.reason ? ' : ' + esc(e.reason) : ''}</span><b class="soft">—</b></li>`;
     if (e.t === 'reprise') return `<li><time>${dateFr(e.d)}</time><span>Paie reprise</span><b class="soft">—</b></li>`;
     if (e.t === 'vire') return `<li><time>${dateFr(e.d)}</time><span>Mis en lieu sûr ${P().de}</span><b class="soft">${f(e.amount)}</b></li>`;
@@ -344,7 +374,7 @@ function pinView() {
 function parentsView() {
   if (lock && !pinOk) return pinView();
   const dis = ready ? '' : 'disabled', K = kidOf(cur), last = evs(cur)[evs(cur).length - 1];
-  const lastTxt = last ? ({ paie: 'la paie du ', bourse: 'le lancer du ', recu: 'l’argent reçu le ', vire: 'le virement du ', projet: 'le projet du ', pause: 'la pause du ', reprise: 'la reprise du ' }[last.t] || '') + dateFr(last.d) : '';
+  const lastTxt = last ? ({ paie: 'la paie du ', bourse: 'le lancer du ', recu: 'l’argent reçu le ', vire: 'le virement du ', projet: 'le projet du ', pause: 'la pause du ', reprise: 'la reprise du ', posture: 'le choix de stratégie du ' }[last.t] || '') + dateFr(last.d) : '';
   const pk = form.pkid && kidOf(form.pkid) ? form.pkid : cur;
   return `<h2 class="title">Espace parents</h2>
 ${lock ? `<div class="msg">Cet appareil est verrouillé sur ${esc(K.name)}.<div class="row" style="margin-top:8px"><button class="btn sm" data-act="unlockdev">Déverrouiller l’appareil</button></div></div>` : ''}
@@ -375,9 +405,8 @@ ${kids().map(k => { const pz = pauseOf(k.id); return `<div style="padding:12px 0
 <label>Les enfants vous appellent<select data-set="parents">${Object.entries(PAR).filter(([k]) => k !== 'papamaman' || F.parents === k).map(([k, v]) => `<option value="${k}" ${F.parents === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>
 <div class="grid2"><label>Bonus argent de poche (%)<input id="r-m" type="number" min="0" max="100" value="${F.match}" data-set="match"></label>
 <label>Bonus argent reçu (%)<input id="r-g" type="number" min="0" max="100" value="${gm()}" data-set="giftMatch"></label></div>
-<label>Le dé de la bourse</label><div class="pills">${Object.entries(DICE).map(([k, d]) => `<button class="pill" data-act="dicepreset" data-n="${k}" aria-pressed="${F.diceName === k}">${d.name}</button>`).join('')}</div>
-<div class="grid2" style="grid-template-columns:repeat(3,minmax(0,1fr))">${F.dice.map((r, i) => `<label>Face ${i + 1}<input id="r-d${i}" type="number" step="0.5" min="-50" max="50" value="${r}" data-set="dice:${i}"></label>`).join('')}</div>
-<p class="soft small" style="margin:8px 0 0">Moyenne : ${pct(r2(mean()))} par semaine.</p></section>
+<p style="margin:14px 0 4px;font-weight:800">La bourse : stratégie de chaque enfant</p><p class="soft small" style="margin:0">L’enfant la choisit lui-même dans l’onglet Bourse ; vous pouvez aussi la changer ici. En moyenne par semaine : ${Object.values(POST).map(d => `${d.short} ${pct(r2(d.faces.reduce((a, b) => a + b, 0) / 6))}`).join(' · ')}.</p>
+${kids().map(k => `<label>${esc(k.name)}<select data-set="kpost:${k.id}">${Object.entries(POST).map(([q, d]) => `<option value="${q}" ${postOf(k.id) === q ? 'selected' : ''}>${d.name}</option>`).join('')}</select></label>`).join('')}</section>
 <section class="card"><h3>Mode enfant</h3><p class="soft small" style="margin:0">Verrouille cet appareil sur un enfant : plus d’accès aux autres bocaux ni à l’espace parents, une paie et un lancer par semaine.</p>
 <label>Code parents (4 chiffres)<input id="r-pin" class="secret" type="text" inputmode="numeric" autocomplete="off" maxlength="4" value="${esc(form.newpin || F.pin || '')}" data-set="pin"></label>
 <div class="row">${kids().map(k => `<button class="btn ghost sm" data-act="lock" data-k="${k.id}" ${/^\d{4}$/.test(F.pin || '') ? '' : 'disabled'}>Verrouiller sur ${esc(k.name)}</button>`).join('')}</div></section>
@@ -488,7 +517,7 @@ async function tryLegacy() {
 /* ---------- actions ---------- */
 function roll() {
   const t0 = tot(cur);
-  if (!ready || rolling || sameWeek(t0.bourse && t0.bourse.d)) return;
+  if (!ready || rolling || postOf(cur) === 'none' || sameWeek(t0.bourse && t0.bourse.d)) return;
   rolling = true;
   const el = document.getElementById('die'), face = 1 + Math.floor(Math.random() * 6), quick = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let i = 0;
@@ -496,7 +525,7 @@ function roll() {
   setTimeout(() => {
     if (spin) clearInterval(spin);
     if (el) el.style.transform = '';
-    const before = tot(cur).total, rate = F.dice[face - 1], gain = r2(Math.max(0, before) * rate / 100);
+    const before = tot(cur).total, rate = facesOf(cur)[face - 1], gain = r2(Math.max(0, before) * rate / 100);
     EV[cur] = [...evs(cur), { t: 'bourse', d: iso(), face, rate, gain }];
     rolling = false; saveK(cur);
     sayMs(before, rate > 0 ? `Dé ${face} : +${f(gain)} dans ta tirelire !` : rate < 0 ? `Dé ${face} : ta tirelire perd ${f(Math.abs(gain))}.` : `Dé ${face} : rien ne bouge cette semaine.`, rate < 0 ? 'Ça arrive, la semaine prochaine sera peut-être meilleure.' : '');
@@ -542,7 +571,7 @@ async function obFinish() {
   if (!obValidate()) return render();
   busy = true; render();
   try {
-    const fam = { v: 1, parents: ob.parents, kids: ob.kids.map(k => ({ id: k.id, name: k.name, birth: k.birth, weekly: k.weekly, color: k.color })), match: ob.match, giftMatch: ob.giftMatch, dice: DICE[ob.dice].faces.slice(), diceName: ob.dice, pin: ob.pin, created: iso() };
+    const fam = { v: 1, parents: ob.parents, kids: ob.kids.map(k => ({ id: k.id, name: k.name, birth: k.birth, weekly: k.weekly, color: k.color, posture: ob.dice })), match: ob.match, giftMatch: ob.giftMatch, dice: POST[ob.dice].faces.slice(), diceName: ob.dice, defaultPosture: ob.dice, pin: ob.pin, created: iso() };
     await Promise.all(fam.kids.map(k => setDoc(doc(fdb, 'familles', user.uid, 'enfants', k.id), { events: (ob.legacy && ob.legacy[k.id]) || [], goal: null, pause: null })));
     await setDoc(doc(fdb, 'familles', user.uid), fam);
     view = 'home'; cur = fam.kids[0].id;
@@ -624,7 +653,7 @@ document.addEventListener('click', ev => {
     case 'pdur': form.pdur = b.dataset.n; break;
     case 'ppause': if (ready) { const n = +form.pdur, until = n ? new Date(wk(new Date()) + n * 7 * 864e5).toISOString() : null, reason = (form['preason:' + k] || '').trim().slice(0, 80); PAUSE[k] = { since: iso(), until, reason }; EV[k] = [...evs(k), { t: 'pause', d: iso(), until, reason }]; saveK(k); form['preason:' + k] = ''; say(`Paie ${de(kidOf(k).name)} en pause ${untilTxt(PAUSE[k])}.`); } break;
     case 'presume': if (ready) { PAUSE[k] = null; EV[k] = [...evs(k), { t: 'reprise', d: iso() }]; saveK(k); say(`La paie ${de(kidOf(k).name)} reprend.`); if (k === cur) resetCoins(); } break;
-    case 'undo': if (ready) { if (!undoArm) undoArm = true; else { const lastEv = evs(cur)[evs(cur).length - 1]; if (lastEv && lastEv.t === 'pause') PAUSE[cur] = null; EV[cur] = evs(cur).slice(0, -1); saveK(cur); undoArm = false; say('Dernière opération annulée.'); } } break;
+    case 'undo': if (ready) { if (!undoArm) undoArm = true; else { const lastEv = evs(cur)[evs(cur).length - 1]; if (lastEv && lastEv.t === 'pause') PAUSE[cur] = null; if (lastEv && lastEv.t === 'posture' && POST[lastEv.prev]) { kidOf(cur).posture = lastEv.prev; saveF(); } EV[cur] = evs(cur).slice(0, -1); saveK(cur); undoArm = false; say('Dernière opération annulée.'); } } break;
     case 'resetopen': resetFor = cur; form.resetname = ''; break;
     case 'resetclose': resetFor = null; form.resetname = ''; break;
     case 'resetdo': {
@@ -635,9 +664,9 @@ document.addEventListener('click', ev => {
       break;
     }
     case 'kcolor': { const x = kidOf(k); if (x && ready) { x.color = b.dataset.c; saveF(); } break; }
-    case 'kadd': if (ready) { const id = uid6(); const used = kids().map(z => z.color); F.kids.push({ id, name: 'Nouvel enfant', birth: '2018-01-01', weekly: 3, color: PAL.find(c => !used.includes(c)) || PAL[0] }); EV[id] = []; KL[id] = true; saveK(id); saveF(); syncKids(); cur = id; say('Enfant ajouté : complétez sa fiche.'); } break;
+    case 'kadd': if (ready) { const id = uid6(); const used = kids().map(z => z.color); F.kids.push({ id, posture: F.defaultPosture || 'equilibre', name: 'Nouvel enfant', birth: '2018-01-01', weekly: 3, color: PAL.find(c => !used.includes(c)) || PAL[0] }); EV[id] = []; KL[id] = true; saveK(id); saveF(); syncKids(); cur = id; say('Enfant ajouté : complétez sa fiche.'); } break;
     case 'kdel': if (ready) { if (delArm !== k) delArm = k; else { F.kids = F.kids.filter(z => z.id !== k); saveF(); queue('del' + k, () => deleteDoc(doc(fdb, 'familles', user.uid, 'enfants', k))); syncKids(); delArm = null; ensureCur(); say('Enfant supprimé.'); } } break;
-    case 'dicepreset': if (ready && DICE[b.dataset.n]) { F.dice = DICE[b.dataset.n].faces.slice(); F.diceName = b.dataset.n; saveF(); } break;
+    case 'posture': if (ready && POST[b.dataset.n] && postOf(cur) !== b.dataset.n) { const x = kidOf(cur), prev = postOf(cur); x.posture = b.dataset.n; saveF(); EV[cur] = [...evs(cur), { t: 'posture', d: iso(), p: b.dataset.n, prev }]; saveK(cur); say(b.dataset.n === 'none' ? 'Tu ne joues plus la bourse.' : `Stratégie ${POST[b.dataset.n].name} choisie !`, b.dataset.n === 'aventurier' ? 'Attention : tu peux gagner gros, mais aussi perdre.' : ''); } break;
     case 'logout': try { localStorage.removeItem('pepite-lock'); } catch (e) {} lock = null; view = 'home'; signOut(auth); return;
   }
   render();
@@ -662,7 +691,7 @@ document.addEventListener('change', ev => {
   else if (key === 'parents' && PAR[v]) { F.parents = v; saveF(); }
   else if (key === 'match') { const n = num(v); if (n >= 0 && n <= 100) { F.match = n; saveF(); } }
   else if (key === 'giftMatch') { const n = num(v); if (n >= 0 && n <= 100) { F.giftMatch = n; saveF(); } }
-  else if (key === 'dice') { const n = num(v); if (n >= -50 && n <= 50) { F.dice[+id] = n; F.diceName = 'perso'; saveF(); } }
+  else if (key === 'kpost' && x && POST[v]) { const prev = postOf(id); if (prev !== v) { x.posture = v; saveF(); EV[id] = [...evs(id), { t: 'posture', d: iso(), p: v, prev }]; saveK(id); } }
   else if (key === 'pin') { const p = v.replace(/\D/g, ''); if (/^\d{4}$/.test(p)) { F.pin = p; form.newpin = ''; saveF(); say('Code parents enregistré.'); } }
   render();
 });
