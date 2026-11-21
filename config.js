@@ -1,9 +1,9 @@
 // Configuration Firebase du projet tresor-famille (identifiants publics, pas des secrets).
 export const firebaseConfig = {
-  apiKey: "A_REMPLIR",
-  authDomain: "A_REMPLIR",
-  projectId: "A_REMPLIR",
-  storageBucket: "A_REMPLIR",
-  messagingSenderId: "A_REMPLIR",
-  appId: "A_REMPLIR"
+  apiKey: "AIzaSyAYJGKrSAobXq-pYAT2nOowyzqiSfhvqlE",
+  authDomain: "tresor-famille.firebaseapp.com",
+  projectId: "tresor-famille",
+  storageBucket: "tresor-famille.firebasestorage.app",
+  messagingSenderId: "139391242691",
+  appId: "1:139391242691:web:5faf5492f06ccc71abed76"
 };
