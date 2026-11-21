@@ -188,8 +188,8 @@ function obView() {
   if (o.step === 1) {
     body = `${st}<div class="welcome">${LOGO}<h1>Bienvenue !</h1><p>Avec leur argent de poche, vos enfants découvrent pourquoi épargner et investir tôt change tout.</p></div>
 <div class="why"><div>${I.coin}<span><b>Une paie chaque semaine</b>Votre enfant décide librement ce qu’il fait de son argent : tout dépenser, tout faire pousser, ou un peu des deux. Et s’il le fait pousser, il découvre peu à peu les arcanes de l’investissement.</span></div>
-<div>${I.die}<span><b>Un bonus et une bourse</b>Vous ajoutez un bonus sur ce qu’il place, puis un dé fait monter ou baisser sa tirelire chaque semaine.</span></div>
-<div>${I.flag}<span><b>Des projets et un horizon</b>Il se fixe un objectif, comme un vélo, et voit son trésor grandir jusqu’à ses 18 ans.</span></div></div>
+<div>${I.die}<span><b>Un bonus et une bourse</b>Vous ajoutez un bonus sur l’argent qu’il place. Ensuite, chaque semaine, il peut lancer un dé qui fait varier sa tirelire, à la hausse ou à la baisse, comme les cours en Bourse. Il choisit lui-même son niveau de risque, ou décide de ne pas jouer.</span></div>
+<div>${I.flag}<span><b>Des projets et un horizon</b>Il se fixe un objectif, comme l’achat d’un vélo, et voit son trésor grandir jusqu’à ses 18 ans.</span></div></div>
 <div class="msg">Ce que l’argent « gagne » dans Pépite (bonus, bourse) est payé par vous : c’est un jeu pour apprendre, pas un vrai placement.</div>
 <div class="card"><h3>Comment vos enfants vous appellent-ils ?</h3><p class="soft small" style="margin:0">C’est le nom utilisé dans l’appli, par exemple « le bonus de papa ».</p>
 <div class="pills">${Object.entries(PAR).filter(([k]) => k !== 'papamaman').map(([k, v]) => `<button class="pill" data-act="obpar" data-k="${k}" aria-pressed="${o.parents === k}">${v.label}</button>`).join('')}</div></div>
