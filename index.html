@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Le trésor d'Erin et Ava</title>
+<meta name="theme-color" content="#d93d4a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: joyeux et clair, à hauteur d'enfant de 8-10 ans, pilotable en deux clics par un parent
+   IDEA: un vrai bocal en verre qui se remplit de pièces, plus un dé de bourse
+   PICTURE: bocal SVG en trois couches (mon argent, bonus de papa, gagné tout seul) et barres du futur
+   COLOUR AND TYPE: crème chaud, corail pour Erin, bleu pour Ava, or bonus, vert croissance ; Baloo 2 + Nunito
+   LAYOUT: bandeau couleur de l'enfant avec onglets, bocal à gauche, paie et dé à droite, futur pleine largeur */
+:root{color-scheme:light dark;--bg:light-dark(#fff6e6,#16152a);--card:light-dark(#fff,#221f3b);--ink:light-dark(#1f1b33,#fbf3e4);--soft:light-dark(#655e7a,#bdb6d0);--line:light-dark(#eedfc4,#3a3660);--glass:light-dark(#f3f8ff,#2a2848);--gold:#f2b01e;--grow:#139a54;--red:#d93d4a;--kid:#d93d4a}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 Nunito,system-ui,sans-serif;overflow-x:clip}
+h1,h2,.big{font-family:"Baloo 2",Nunito,sans-serif;line-height:1.05;text-wrap:balance;margin:0}
+h1{font-size:clamp(32px,5vw,48px);font-weight:800}
+h2{font-size:26px;font-weight:800;margin-bottom:8px}
+.wrap{max-width:1180px;margin:0 auto}
+.band{padding:clamp(22px,3.5vw,48px) max(5vw,16px)}
+.top{background:var(--kid);color:#fff;padding-bottom:28px;padding-top:max(clamp(22px,3.5vw,48px),env(safe-area-inset-top));transition:background .3s}
+.top p{margin:6px 0 18px;font-size:18px;opacity:.95}
+.tabs{display:flex;flex-wrap:wrap;gap:10px}
+.tab{font:800 18px Nunito,sans-serif;border:2px solid rgba(255,255,255,.7);background:transparent;color:#fff;border-radius:999px;padding:10px 20px;min-height:48px;cursor:pointer}
+.tab span{font-weight:700;opacity:.9;margin-left:8px}
+.tab[aria-pressed=true]{background:#fff;color:var(--kid);border-color:#fff}
+.status{background:var(--gold);color:#1f1b33;font-weight:700;padding:10px max(5vw,16px)}
+.grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:24px;align-items:start}
+.col{display:grid;gap:24px}
+.card{background:var(--card);border-radius:24px;padding:clamp(18px,2.4vw,28px);box-shadow:0 2px 0 var(--line),0 14px 34px -22px rgba(0,0,0,.45)}
+.full{margin-top:24px}
+.soft{color:var(--soft)}
+.jarbox{display:grid;justify-items:center;gap:6px}
+.jar{width:min(100%,260px);height:auto}
+.big{font-size:clamp(40px,7vw,56px);font-weight:800;color:var(--kid)}
+.leg{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:8px;width:100%}
+.leg li{display:flex;align-items:center;gap:10px}
+.leg i{width:16px;height:16px;border-radius:5px;flex:none}
+.leg b{margin-left:auto;white-space:nowrap}
+.neg{color:var(--red)}.g{color:var(--grow)}
+.pig{margin-top:12px;padding-top:12px;border-top:2px dashed var(--line);width:100%;display:flex;gap:10px;justify-content:space-between}
+.coin{width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff0b8,#f2b01e 58%,#c98a00);border:2px solid #a87300;font:800 17px "Baloo 2",sans-serif;color:#5d4000;display:inline-grid;place-items:center;flex:none;padding:0}
+button.coin{cursor:pointer}
+.tray{display:flex;flex-wrap:wrap;gap:8px;min-height:54px;align-items:center;margin:12px 0}
+.moves{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.zones{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.zone{border:2px dashed var(--line);border-radius:18px;min-height:110px;padding:10px;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}
+.zone strong{width:100%;font-size:15px}
+.zone.gr{border-color:var(--grow)}
+.chip{background:var(--gold);color:#3d2a00;border-radius:999px;padding:4px 10px;font-weight:800;font-size:14px;align-self:center}
+.btn{font:800 17px Nunito,sans-serif;border:0;border-radius:999px;padding:12px 20px;min-height:46px;background:var(--kid);color:#fff;cursor:pointer}
+.btn.alt{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.btn.gr{background:var(--grow)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:14px}
+.flash{background:light-dark(#e7f7ee,#173a29);border-radius:14px;padding:10px 14px;margin-top:12px;font-weight:700}
+.flash small{display:block;font-weight:400;color:var(--soft)}
+.dicebox{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+#die{transition:transform .09s}
+.faces{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-top:14px;text-align:center;font-size:14px;font-weight:800}
+.faces div{display:grid;justify-items:center;gap:2px}
+.step{display:inline-flex;flex-wrap:wrap;align-items:center;gap:10px;font-weight:800}.step .big{white-space:nowrap}
+.step button{width:44px;height:44px;border-radius:50%;border:2px solid var(--line);background:var(--card);color:var(--ink);font:800 22px Nunito;cursor:pointer}
+.bars{display:grid;gap:6px;height:260px;margin-top:18px}
+.bar{display:grid;grid-template-rows:1fr auto;border:0;background:none;padding:0;cursor:pointer;color:var(--ink);height:100%}
+.area{display:flex;align-items:flex-end;border-bottom:2px solid var(--line)}
+.stk{width:100%;display:flex;flex-direction:column-reverse;border-radius:8px 8px 0 0;overflow:hidden;opacity:.55;transition:height .4s}
+.stk i{display:block;width:100%}
+.bar.on .stk{opacity:1;box-shadow:0 0 0 3px var(--ink)}
+.age{font:800 15px "Baloo 2",sans-serif;padding-top:4px}
+.bar.on .age{color:var(--kid)}
+.cap{font-size:19px;margin:16px 0 4px}
+.log{list-style:none;padding:0;margin:0}
+.log li{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.log time{color:var(--soft);width:62px;flex:none;white-space:nowrap}
+.log b{margin-left:auto;white-space:nowrap}
+details.card summary{font:800 22px "Baloo 2",sans-serif;cursor:pointer;min-height:44px;display:flex;align-items:center}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;margin-top:12px}
+.pgrid h3{margin:0 0 8px;font-size:17px}
+label{display:grid;gap:4px;font-size:15px;font-weight:700;margin-bottom:10px}
+input,select{font:16px Nunito,sans-serif;padding:10px 12px;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--ink);min-height:44px;width:100%}
+.gform{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:10px;margin-top:12px}
+.gbtns{display:flex;flex-wrap:wrap;gap:8px}
+.chk{display:flex;align-items:center;gap:10px;font-weight:700;margin-top:12px}.chk input{width:22px;min-height:22px;height:22px;flex:none}
+.dgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media(max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:520px){.moves,.zones,.gform{grid-template-columns:1fr}.bars{height:200px}.age{font-size:13px}.coin{width:40px;height:40px}}
+@media(prefers-reduced-motion:reduce){.stk,.top,#die{transition:none}}
+</style>
+</head>
+<body>
+<div id="app"><div class="band"><p>Ouverture de la banque…</p></div></div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { firebaseConfig } from "./config.js";
+{
+const EUR = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'});
+const r2 = n => Math.round(n*100)/100;
+const f = n => EUR.format(r2(n));
+const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+const IDS = ['erin','ava'];
+const COL = {erin:'#d93d4a',ava:'#2a63d6'};
+const DEF = {erin:{name:'Erin',birth:'2017-01-02',weekly:5,events:[]},ava:{name:'Ava',birth:'2019-01-28',weekly:4,events:[]},regles:{match:25,dice:[-1,-0.5,0,0.5,1,1.5],pin:'',giftMatch:10}};
+const S = clone(DEF);
+const CAPS = [20,50,100,200,300,500,750,1000,1500,2000,3000,5000,7500,10000,15000,20000];
+const PIPS = {1:[[50,50]],2:[[28,28],[72,72]],3:[[28,28],[50,50],[72,72]],4:[[28,28],[72,28],[28,72],[72,72]],5:[[28,28],[72,28],[50,50],[28,72],[72,72]],6:[[28,26],[72,26],[28,50],[72,50],[28,74],[72,74]]};
+let cur = 'erin';
+try { const c = localStorage.getItem('tresor-cur'); if (IDS.includes(c)) cur = c; } catch(e) {}
+let lock = null, unlockAsk = false, pinTry = '', badPin = false, wipeArm = false;
+{ const h = location.hash.slice(1); if (IDS.includes(h)) lock = h; else { try { const l = localStorage.getItem('tresor-lock'); if (IDS.includes(l)) lock = l; } catch(e) {} } if (lock) cur = lock; }
+const BASE = location.origin + location.pathname;
+let user, fdb, doLogin = ()=>{}, doLogout = ()=>{}, loginErr = '';
+const login = {email:'', pass:''};
+let gflash = '';
+let tray = 0, inv = 0, dep = 0, flash = '', status = '', ready = false, rolling = false, undoArm = false, parentsOpen = false;
+const loaded = {}, chains = {}, projInv = {}, sel = {}, proj = {k:'', label:'', amount:''}, gift = {gamount:'', gfrom:''};
+
+const de = n => (/^[aeiouyéèh]/i.test(n) ? "d’" : 'de ') + esc(n);
+const iso = () => new Date().toISOString();
+const dateFr = d => new Date(d).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+const daysSince = d => Math.floor((Date.now() - new Date(d)) / 864e5);
+const wk = d => { const x = new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-((x.getDay()+6)%7)); return x.getTime(); };
+const sameWeek = d => !!d && wk(d)===wk(new Date());
+const pct = r => (r>0?'+':r<0?'−':'') + String(Math.abs(r)).replace('.',',') + ' %';
+const dlabel = r => r<0 ? 'mauvaise semaine' : r===0 ? 'semaine calme' : r<=0.5 ? 'petit gain' : r<=1 ? 'belle semaine' : 'super semaine';
+const gm = () => (typeof S.regles.giftMatch==='number' ? S.regles.giftMatch : 10);
+const mean = () => S.regles.dice.reduce((a,b)=>a+b,0)/6;
+function ageAt(birth, date){ const b = new Date(birth+'T12:00:00'); let a = date.getFullYear()-b.getFullYear(); const m = date.getMonth()-b.getMonth(); if (m<0 || (m===0 && date.getDate()<b.getDate())) a--; return a; }
+function resetCoins(){ tray = S[cur].weekly; inv = 0; dep = 0; }
+function die(n, size){ return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" role="img" aria-label="Dé : ${n}"><rect x="5" y="5" width="90" height="90" rx="20" fill="#fff" stroke="#1f1b33" stroke-width="5"/>${PIPS[n].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="9" fill="#1f1b33"/>`).join('')}</svg>`; }
+
+function tot(k){
+  const t = {own:0,bonus:0,gains:0,out:0,pig:0,vire:0,paie:null,bourse:null,pays:[]};
+  for (const e of S[k].events){
+    if (e.t==='paie'){ t.own+=e.inv; t.bonus+=e.bonus; t.pig+=e.dep; t.paie=e.d; t.pays.push(e.inv); }
+    else if (e.t==='recu'){ t.own+=e.inv; t.bonus+=e.bonus; t.pig+=e.dep; }
+    else if (e.t==='bourse'){ t.gains+=e.gain; t.bourse=e; }
+    else if (e.t==='projet'){ t.out+=e.amount; t.fromL=(t.fromL||0)+(e.fromLivret ?? e.amount); }
+    else if (e.t==='vire'){ t.vire+=e.amount; }
+  }
+  t.total = r2(t.own+t.bonus+t.gains-t.out);
+  t.livret = r2(t.vire-(t.fromL||0)); t.due = r2(t.total-t.livret);
+  return t;
+}
+
+function project(k, perWeek){
+  const t = tot(k), m = mean()/100, match = S.regles.match/100, now = new Date(), birth = new Date(S[k].birth+'T12:00:00');
+  let own=t.own, bonus=t.bonus, gains=t.gains, week=0; const pts=[];
+  for (let a = ageAt(S[k].birth, now)+1; a <= 18; a++){
+    const bd = new Date(birth); bd.setFullYear(birth.getFullYear()+a);
+    const target = Math.max(0, Math.round((bd-now)/(7*864e5)));
+    while (week < target){ gains += Math.max(0, own+bonus+gains-t.out)*m; own += perWeek; bonus += perWeek*match; week++; }
+    pts.push({age:a, own, bonus, gains, total:Math.max(0, own+bonus+gains-t.out)});
+  }
+  return pts;
+}
+
+function jar(t){
+  const cap = t.total<=0 ? 20 : (CAPS.find(c=>c>=t.total) || Math.ceil(t.total/10000)*10000);
+  const pos = t.own+t.bonus+Math.max(0,t.gains), k = pos>0 ? Math.max(0,t.total)/pos : 0, H = 206;
+  const h = [t.own*k/cap*H, t.bonus*k/cap*H, Math.max(0,t.gains)*k/cap*H];
+  const fills = ['var(--kid)','var(--gold)','var(--grow)'];
+  let y = 270, layers = '';
+  h.forEach((v,i)=>{ y -= v; layers += `<rect x="20" y="${y}" width="180" height="${v}" style="fill:${fills[i]}"/>`; });
+  return { cap, svg: `<svg class="jar" viewBox="0 0 220 290" role="img" aria-label="Bocal rempli à ${Math.round((270-y)/H*100)} %">
+  <defs><clipPath id="jc"><rect x="22" y="52" width="176" height="220" rx="34"/></clipPath>
+  <pattern id="pc" width="24" height="16" patternUnits="userSpaceOnUse"><circle cx="12" cy="8" r="6.5" fill="#fff" fill-opacity=".22"/></pattern></defs>
+  <rect x="22" y="52" width="176" height="220" rx="34" style="fill:var(--glass)"/>
+  <g clip-path="url(#jc)">${layers}<rect x="20" y="${y}" width="180" height="${270-y}" fill="url(#pc)"/></g>
+  <line x1="30" x2="190" y1="64" y2="64" stroke-dasharray="6 6" style="stroke:var(--soft)" stroke-width="2"/>
+  <rect x="38" y="76" width="13" height="150" rx="6.5" fill="#fff" fill-opacity=".5"/>
+  <rect x="22" y="52" width="176" height="220" rx="34" fill="none" style="stroke:var(--ink)" stroke-width="5"/>
+  <rect x="58" y="20" width="104" height="32" rx="9" style="fill:var(--kid);stroke:var(--ink)" stroke-width="5"/></svg>` };
+}
+
+function renderLogin(){
+  document.documentElement.style.setProperty('--kid', COL.erin);
+  document.getElementById('app').innerHTML = `<header class="top band"><div class="wrap"><h1>Le trésor ${de(S.erin.name)} et ${de(S.ava.name)}</h1><p>Connexion de cet appareil au compte famille.</p></div></header>
+<main class="band"><div class="wrap" style="max-width:460px"><form class="card" id="loginf"><h2>Compte famille</h2>
+<label>E-mail<input type="email" autocomplete="username" data-in="email" value="${esc(login.email)}" required></label>
+<label>Mot de passe<input type="password" autocomplete="current-password" data-in="pass" required></label>
+${loginErr ? `<p class="neg" style="margin:0 0 10px">${loginErr}</p>` : ''}<button class="btn" type="submit">Se connecter</button>
+<p class="soft" style="font-size:15px;margin:12px 0 0">À faire une seule fois par appareil, par un parent.</p></form></div></main>`;
+}
+
+function render(){
+  if (user === undefined){ document.getElementById('app').innerHTML = '<div class="band"><p>Ouverture de la banque…</p></div>'; return; }
+  if (!user) return renderLogin();
+  const K = S[cur], t = tot(cur), dis = ready ? '' : 'disabled', match = S.regles.match;
+  document.documentElement.style.setProperty('--kid', COL[cur]);
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', COL[cur]);
+  const J = jar(t);
+  const tabs = lock ? '' : IDS.map(k=>`<button class="tab" data-act="kid" data-k="${k}" aria-pressed="${k===cur}">${esc(S[k].name)}<span>${f(tot(k).total)}</span></button>`).join('');
+  const coin = (act, lbl) => `<button class="coin" data-act="${act}" aria-label="${lbl}" ${dis}>1&nbsp;€</button>`;
+  const since = t.paie ? daysSince(t.paie) : null;
+  const bonusNow = r2(inv*match/100);
+  const rolled = sameWeek(t.bourse && t.bourse.d);
+  const payBlocked = !!lock && sameWeek(t.paie);
+  if (projInv[cur] === undefined){ const p = t.pays.slice(-8); projInv[cur] = p.length ? Math.round(p.reduce((a,b)=>a+b,0)/p.length) : K.weekly; }
+  projInv[cur] = Math.min(projInv[cur], K.weekly);
+  const pts = project(cur, projInv[cur]);
+  if (!pts.some(p=>p.age===sel[cur])) sel[cur] = pts.length ? pts[pts.length-1].age : 18;
+  const max = Math.max(1, ...pts.map(p=>p.total));
+  const P = pts.find(p=>p.age===sel[cur]);
+  const bars = pts.map(p=>{
+    const pos = p.own+p.bonus+Math.max(0,p.gains) || 1;
+    const s = v => (Math.max(0,v)/pos*100).toFixed(2);
+    return `<button class="bar ${p.age===sel[cur]?'on':''}" data-act="bar" data-age="${p.age}" aria-label="À ${p.age} ans : ${f(p.total)}"><span class="area"><span class="stk" style="height:${(p.total/max*100).toFixed(2)}%"><i style="height:${s(p.own)}%;background:var(--kid)"></i><i style="height:${s(p.bonus)}%;background:var(--gold)"></i><i style="height:${s(p.gains)}%;background:var(--grow)"></i></span></span><span class="age">${p.age}</span></button>`;
+  }).join('');
+  const full = projInv[cur] < K.weekly ? project(cur, K.weekly).find(p=>p.age===sel[cur]) : null;
+  const ev = K.events.slice(-10).reverse().map(e=>{
+    if (e.t==='paie') return `<li><time>${dateFr(e.d)}</time><span>Paie : ${f(e.inv)} placés, ${f(e.dep)} dans la tirelire</span><b class="g">+${f(e.inv+e.bonus)}</b></li>`;
+    if (e.t==='bourse') return `<li><time>${dateFr(e.d)}</time><span>Bourse : dé ${e.face}, ${dlabel(e.rate)} (${pct(e.rate)})</span><b class="${e.gain<0?'neg':'g'}">${e.gain<0?'−':'+'}${f(Math.abs(e.gain))}</b></li>`;
+    if (e.t==='recu') return `<li><time>${dateFr(e.d)}</time><span>Reçu${e.from?' de '+esc(e.from):''} : ${f(e.inv)} placés, ${f(e.dep)} dans la tirelire</span><b class="g">+${f(e.inv+e.bonus)}</b></li>`;
+    if (e.t==='vire') return `<li><time>${dateFr(e.d)}</time><span>Rangé à la banque, sur ton Livret A</span><b class="soft">${f(e.amount)}</b></li>`;
+    return `<li><time>${dateFr(e.d)}</time><span>Projet : ${esc(e.label)}</span><b class="neg">−${f(e.amount)}</b></li>`;
+  }).join('') || '<li class="soft">Rien encore : la première paie arrive bientôt.</li>';
+  const last = K.events[K.events.length-1];
+  const lastTxt = last ? (last.t==='paie' ? 'la paie du ' : last.t==='bourse' ? 'le lancer du ' : last.t==='recu' ? 'l’argent reçu le ' : last.t==='vire' ? 'le virement du ' : 'le projet du ') + dateFr(last.d) : '';
+  const pk = proj.k || cur;
+
+  document.getElementById('app').innerHTML = `
+<header class="top band"><div class="wrap">
+  <h1>${lock ? `Le trésor ${de(K.name)}` : `Le trésor ${de(S.erin.name)} et ${de(S.ava.name)}`}</h1>
+  <p>Chaque semaine, tu choisis : je dépense, ou je fais pousser mon argent.</p>
+  <nav class="tabs">${tabs}</nav>
+</div></header>
+${status ? `<div class="status">${status}</div>` : ''}
+<main class="band"><div class="wrap">
+<div class="grid">
+  <section class="card jarbox">
+    <h2>Le bocal ${de(K.name)}</h2>
+    ${J.svg}
+    <div class="big">${f(t.total)}</div>
+    <div class="soft">${t.total>=J.cap ? `Palier de ${f(J.cap)} atteint !` : `Encore ${f(J.cap-t.total)} pour atteindre le palier de ${f(J.cap)}`}</div>
+    <ul class="leg">
+      <li><i style="background:var(--kid)"></i>Mon argent placé<b>${f(t.own)}</b></li>
+      <li><i style="background:var(--gold)"></i>Le bonus des parents<b>${f(t.bonus)}</b></li>
+      <li><i style="background:var(--grow)"></i>Gagné tout seul<b class="${t.gains<0?'neg':'g'}">${f(t.gains)}</b></li>
+      ${t.out>0 ? `<li><i style="background:var(--line)"></i>Projets réalisés<b class="neg">−${f(t.out)}</b></li>` : ''}
+    </ul>
+    <div class="pig"><span>Déjà mis dans ma tirelire</span><b>${f(t.pig)}</b></div>
+  </section>
+  <div class="col">
+    <section class="card">
+      <h2>Jour de paie</h2>
+      <p class="soft" style="margin:0">Cette semaine : ${K.weekly} pièces de 1 €. Range chacune : tu la dépenses, ou tu la fais pousser et tes parents ajoutent ${String(match).replace('.',',')} %.${payBlocked ? ' <b>Ta paie de cette semaine est déjà rangée : rendez-vous lundi !</b>' : since!==null && since<5 ? ` <b>Attention : déjà payée il y a ${since===0?'moins d’un jour':since+' jour'+(since>1?'s':'')}.</b>` : ''}</p>
+      <div class="tray" aria-label="Pièces à ranger">${Array.from({length:tray},()=>'<span class="coin">1&nbsp;€</span>').join('') || '<span class="soft">Toutes les pièces sont rangées.</span>'}</div>
+      <div class="moves">
+        <button class="btn alt" data-act="toPig" ${tray&&ready?'':'disabled'}>Une pièce dans ma tirelire</button>
+        <button class="btn gr" data-act="toGrow" ${tray&&ready?'':'disabled'}>Une pièce à faire pousser</button>
+      </div>
+      <div class="zones">
+        <div class="zone"><strong>Ma tirelire : ${f(dep)}</strong>${Array.from({length:dep},()=>coin('backPig','Reprendre cette pièce')).join('')}</div>
+        <div class="zone gr"><strong class="g">Je fais pousser : ${f(inv)}</strong>${Array.from({length:inv},()=>coin('backGrow','Reprendre cette pièce')).join('')}${inv?`<span class="chip">+${f(bonusNow)} parents</span>`:''}</div>
+      </div>
+      <div class="row"><button class="btn" data-act="pay" ${tray===0&&ready&&!payBlocked?'':'disabled'}>Valider ma paie</button><span class="soft">${tray?`Encore ${tray} pièce${tray>1?'s':''} à ranger`:'Touche une pièce rangée pour la reprendre'}</span></div>
+      ${flash ? `<div class="flash">${flash}</div>` : ''}
+    </section>
+    <section class="card">
+      <h2>J’ai reçu de l’argent</h2>
+      <p class="soft" style="margin:0">Un cadeau, un anniversaire, un petit service ? Ajoute-le quand tu veux${gm()>0 ? `, et ce que tu fais pousser reçoit un bonus des parents de ${String(gm()).replace('.',',')} %` : ''}.</p>
+      <div class="gform"><label>Combien (€)<input type="text" inputmode="decimal" data-in="gamount" value="${esc(gift.gamount)}" placeholder="Ex. : 10"></label><label>De qui ?<input type="text" maxlength="40" data-in="gfrom" value="${esc(gift.gfrom)}" placeholder="Mamie, Papi, anniversaire…"></label></div>
+      <div class="gbtns"><button class="btn alt" data-act="gift" data-r="0" ${dis}>Tout dans ma tirelire</button><button class="btn alt" data-act="gift" data-r="0.5" ${dis}>Moitié-moitié</button><button class="btn gr" data-act="gift" data-r="1" ${dis}>Tout faire pousser</button></div>
+      ${gflash ? `<div class="flash">${gflash}</div>` : ''}
+    </section>
+    <section class="card">
+      <h2>La bourse de la semaine</h2>
+      <div class="dicebox">
+        <div id="die">${die(rolled ? t.bourse.face : 6, 110)}</div>
+        <div style="flex:1 1 220px">${rolled
+          ? `<p style="margin:0">Cette semaine : dé ${t.bourse.face}, ${dlabel(t.bourse.rate)} (${pct(t.bourse.rate)}). Ton bocal a ${t.bourse.gain<0?'perdu':'gagné'} <b class="${t.bourse.gain<0?'neg':'g'}">${f(Math.abs(t.bourse.gain))}</b>.</p><p class="soft" style="margin:6px 0 0">Prochain lancer lundi.</p>`
+          : t.total>0 ? `<p style="margin:0">Une fois par semaine, lance le dé : comme à la Bourse, il décide si ton bocal grossit ou rétrécit un peu.</p><div class="row"><button class="btn" data-act="roll" ${dis}>Lancer le dé</button></div>`
+          : `<p style="margin:0">Fais d’abord pousser quelques pièces : le dé agit sur ce qu’il y a dans ton bocal.</p>`}</div>
+      </div>
+      <div class="faces">${S.regles.dice.map((r,i)=>`<div>${die(i+1,34)}<span class="${r<0?'neg':r>0?'g':''}">${pct(r)}</span></div>`).join('')}</div>
+    </section>
+  </div>
+</div>
+<section class="card full">
+  <h2>Et si tu continuais jusqu’à tes 18 ans ?</h2>
+  ${pts.length ? `<div class="step">Si je fais pousser <button data-act="pm" aria-label="Moins">−</button><span class="big" style="font-size:34px">${projInv[cur]} €</span><button data-act="pp" aria-label="Plus">+</button> chaque semaine</div>
+  <div class="bars" style="grid-template-columns:repeat(${pts.length},minmax(0,1fr))">${bars}</div>
+  <p class="cap">À <b>${P.age} ans</b>, ton bocal contiendrait <b>${f(P.total)}</b> : ${f(P.own)} de ton argent, ${f(P.bonus)} de bonus des parents et <b class="g">${f(Math.max(0,P.gains))} gagnés tout seuls</b>.</p>
+  <p class="soft" style="margin:0">Regarde le vert : plus tu attends, plus il grossit vite, parce que ce que ton argent gagne se met à gagner lui aussi.${full ? ` En faisant pousser tes ${K.weekly} € chaque semaine, tu aurais ${f(full.total)} à ${full.age} ans.` : ''}</p>
+  <p class="soft" style="margin:8px 0 0;font-size:14px">Calcul fait avec la moyenne du dé (${pct(r2(mean()))} par semaine). Le vrai résultat dépendra de tes lancers.</p>` : '<p>Tu as 18 ans : le trésor est à toi !</p>'}
+</section>
+<section class="card full">
+  <h2>Mon carnet</h2>
+  <ul class="log">${ev}</ul>
+</section>
+${lock ? `<section class="card full">${unlockAsk ? `<label>Code parents<input type="password" inputmode="numeric" maxlength="4" data-in="pin" value="${esc(pinTry)}"></label><div class="row" style="margin-top:0"><button class="btn alt" data-act="unlock">Ouvrir l’espace parents</button>${badPin ? '<span class="neg">Mauvais code</span>' : ''}</div>` : '<button class="btn alt" data-act="unlockAsk">Espace parents</button>'}</section>` : `
+<details class="card full" id="par" ${parentsOpen?'open':''}>
+  <summary>Espace parents</summary>
+  <div class="pgrid">
+    ${IDS.map(k=>`<div><h3>${esc(S[k].name)}</h3>
+      <label>Argent de poche par semaine (€)<input type="number" min="1" max="50" step="1" value="${S[k].weekly}" data-set="weekly:${k}"></label>
+      <label>Date de naissance<input type="date" value="${S[k].birth}" data-set="birth:${k}"></label>
+      ${(()=>{ const T = tot(k); return `<p style="margin:0">Déjà versé sur son Livret A : <b>${f(T.livret)}</b></p><p style="margin:4px 0 0">À virer maintenant : <b class="${T.due>0?'g':''}">${f(Math.max(0,T.due))}</b></p>${T.due<0?`<p class="soft" style="margin:4px 0 0;font-size:15px">Le Livret A a ${f(-T.due)} d’avance après de mauvaises semaines : rien à virer.</p>`:''}<div class="row"><button class="btn gr" data-act="vire" data-k="${k}" ${T.due>0&&ready?'':'disabled'}>Argent versé</button></div>`; })()}</div>`).join('')}
+    <div><h3>Règles du jeu</h3>
+      <label>Bonus des parents sur l’argent de poche placé (%)<input type="number" min="0" max="100" step="1" value="${match}" data-set="match"></label>
+      <p style="margin:0 0 6px;font-size:15px;font-weight:700">Effet de chaque face du dé (% par semaine)</p>
+      <div class="dgrid">${S.regles.dice.map((r,i)=>`<label>Face ${i+1}<input type="number" min="-50" max="50" step="0.5" value="${r}" data-set="dice:${i}"></label>`).join('')}</div>
+      <p class="soft" style="margin:0;font-size:15px">Moyenne : ${pct(r2(mean()))} par semaine.</p>
+      <label style="margin-top:12px">Bonus sur l’argent reçu, cadeaux et anniversaires (%)<input type="number" min="0" max="100" step="1" value="${gm()}" data-set="giftMatch"></label></div>
+    <div><h3>Mode enfant</h3>
+      <label>Code parents (4 chiffres)<input type="password" inputmode="numeric" maxlength="4" value="${esc(S.regles.pin||'')}" data-set="pin"></label>
+      <p class="soft" style="margin:0 0 10px;font-size:15px">Verrouille cet appareil sur une seule fille : plus d’onglets ni d’espace parents, une paie et un lancer par semaine. Le code rouvre tout.</p>
+      <div class="row" style="margin-top:0">${IDS.map(k=>`<button class="btn alt" data-act="lock" data-k="${k}" ${/^\d{4}$/.test(S.regles.pin||'')?'':'disabled'}>Verrouiller sur ${esc(S[k].name)}</button>`).join('')}</div>
+      <p class="soft" style="margin:10px 0 0;font-size:14px;overflow-wrap:anywhere">Liens directs : ${IDS.map(k=>`${esc(S[k].name)} : ${BASE}#${k}`).join(' · ')}</p></div>
+    <div><h3>Débloquer pour un projet</h3>
+      <label>Pour<select data-set="projKid">${IDS.map(k=>`<option value="${k}" ${k===pk?'selected':''}>${esc(S[k].name)} (${f(tot(k).total)})</option>`).join('')}</select></label>
+      <label>Le projet présenté<input type="text" maxlength="60" value="${esc(proj.label)}" data-in="label" placeholder="Un vélo, un cadeau, une sortie…"></label>
+      <label>Montant (€)<input type="text" inputmode="decimal" value="${esc(proj.amount)}" data-in="amount"></label>
+      <button class="btn" data-act="project" ${dis}>Débloquer le montant</button></div>
+    <div><h3>Une erreur ?</h3>
+      ${last ? `<button class="btn alt" data-act="undo" ${dis}>${undoArm ? 'Confirmer : annuler '+lastTxt : 'Annuler la dernière opération '+de(K.name)}</button>
+      <div class="row"><button class="btn alt" data-act="wipe" ${dis}>${wipeArm ? 'Confirmer : tout effacer pour '+esc(K.name) : 'Effacer tout l’historique '+de(K.name)}</button></div>` : '<p class="soft">Rien à annuler.</p>'}
+      </div>
+    <div><h3>Cet appareil</h3><p class="soft" style="margin:0 0 10px;font-size:15px">Connecté avec ${esc(user.email||'')}.</p><button class="btn alt" data-act="logout">Déconnecter cet appareil</button></div>
+  </div>
+</details>`}
+</div></main>`;
+}
+
+function save(k){
+  const body = clone(S[k]);
+  chains[k] = (chains[k] || Promise.resolve()).then(()=>setDoc(doc(fdb,'tresor',k), body)).catch(e=>{
+    status = 'Enregistrement impossible : vérifie ta connexion puis relance l’application.';
+    render();
+  });
+}
+
+function roll(){
+  if (!ready || rolling || sameWeek(tot(cur).bourse && tot(cur).bourse.d)) return;
+  rolling = true;
+  const el = document.getElementById('die'), face = 1 + Math.floor(Math.random()*6);
+  const quick = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let i = 0;
+  const spin = quick ? null : setInterval(()=>{ el.innerHTML = die(1+Math.floor(Math.random()*6),110); el.style.transform = `rotate(${(i++%2?-1:1)*14}deg) scale(1.06)`; }, 90);
+  setTimeout(()=>{
+    if (spin) clearInterval(spin);
+    const rate = S.regles.dice[face-1], gain = r2(Math.max(0, tot(cur).total)*rate/100);
+    S[cur].events.push({t:'bourse', d:iso(), face, rate, gain});
+    rolling = false; save(cur); render();
+  }, quick ? 30 : 1200);
+}
+
+function doGift(ratio){
+  const amt = r2(parseFloat(String(gift.gamount).replace(',','.')));
+  if (!(amt>0) || amt>1000){ gflash = 'Écris d’abord combien tu as reçu.'; return; }
+  const inv = r2(amt*ratio), dep = r2(amt-inv), bonus = r2(inv*gm()/100), from = gift.gfrom.trim();
+  S[cur].events.push({t:'recu', d:iso(), from, inv, dep, bonus});
+  save(cur);
+  gflash = (inv ? `Super ! ${f(inv+bonus)} rejoignent ton bocal.` : `${f(dep)} rangés dans ta tirelire.`) + (inv ? `<small>Donne ${f(inv)} à tes parents : ils les rangeront sur ton Livret A.</small>` : '');
+  gift.gamount = ''; gift.gfrom = '';
+}
+
+function doProject(){
+  const k = proj.k || cur, a = r2(parseFloat(String(proj.amount).replace(',','.')));
+  const label = proj.label.trim();
+  if (!label){ flash = 'Indique le projet présenté avant de débloquer.'; return; }
+  if (!(a>0) || a > tot(k).total){ flash = `Montant impossible : entre 0 et ${f(tot(k).total)}.`; return; }
+  const fromLivret = r2(Math.max(0, a - Math.max(0, tot(k).due)));
+  S[k].events.push({t:'projet', d:iso(), label, amount:a, fromLivret});
+  save(k); flash = `Projet « ${esc(label)} » validé : ${f(a)} débloqués pour ${esc(S[k].name)}.` + (fromLivret>0 ? `<small>Parents : retirez ${f(fromLivret)} du Livret A.</small>` : '');
+  proj.label = ''; proj.amount = '';
+}
+
+document.addEventListener('click', ev=>{
+  const b = ev.target.closest('[data-act]'); if (!b || b.disabled) return;
+  const a = b.dataset.act;
+  if (a==='roll'){ roll(); return; }
+  if (a!=='undo') undoArm = false;
+  if (a!=='wipe') wipeArm = false;
+  if (a==='kid'){ cur = b.dataset.k; resetCoins(); flash=''; gflash=''; proj.k=''; try { localStorage.setItem('tresor-cur', cur); } catch(e) {} }
+  else if (a==='toPig' && tray){ tray--; dep++; flash=''; }
+  else if (a==='toGrow' && tray){ tray--; inv++; flash=''; }
+  else if (a==='backPig' && dep){ dep--; tray++; }
+  else if (a==='backGrow' && inv){ inv--; tray++; }
+  else if (a==='pay' && ready && tray===0 && !(lock && sameWeek(tot(cur).paie))){
+    const bonus = r2(inv*S.regles.match/100);
+    S[cur].events.push({t:'paie', d:iso(), inv, dep, bonus});
+    save(cur);
+    flash = (inv ? `Bravo ! ${f(inv+bonus)} rejoignent ton bocal.` : 'Paie enregistrée : tout est dans ta tirelire.') + (dep ? `<small>Parents : donnez ${f(dep)} en pièces.</small>` : '');
+    resetCoins();
+  }
+  else if (a==='pm') projInv[cur] = Math.max(0, projInv[cur]-1);
+  else if (a==='pp') projInv[cur] = Math.min(S[cur].weekly, projInv[cur]+1);
+  else if (a==='bar') sel[cur] = +b.dataset.age;
+  else if (a==='undo' && ready){ if (!undoArm) undoArm = true; else { S[cur].events.pop(); save(cur); undoArm = false; flash = 'Dernière opération annulée.'; } }
+  else if (a==='project' && ready) doProject();
+  else if (a==='logout'){ doLogout(); return; }
+  else if (a==='gift' && ready) doGift(parseFloat(b.dataset.r));
+  else if (a==='wipe' && ready){ if (!wipeArm) wipeArm = true; else { S[cur].events = []; save(cur); wipeArm = false; flash = 'Historique effacé.'; } }
+  else if (a==='vire' && ready){ const k = b.dataset.k, T = tot(k); if (T.due>0){ S[k].events.push({t:'vire', d:iso(), amount:T.due}); save(k); } }
+  else if (a==='lock' && /^\d{4}$/.test(S.regles.pin||'')){ lock = cur = b.dataset.k; parentsOpen = false; unlockAsk = false; pinTry = ''; resetCoins(); flash = ''; try { localStorage.setItem('tresor-lock', lock); } catch(e) {} window.scrollTo(0,0); }
+  else if (a==='unlockAsk'){ unlockAsk = true; pinTry = ''; badPin = false; }
+  else if (a==='unlock'){ if (pinTry === S.regles.pin){ lock = null; unlockAsk = false; pinTry = ''; try { localStorage.removeItem('tresor-lock'); } catch(e) {} if (location.hash) location.hash = ''; } else { badPin = true; pinTry = ''; } }
+  render();
+});
+
+document.addEventListener('input', ev=>{ const k = ev.target.dataset.in; if (k==='email' || k==='pass') login[k] = ev.target.value; else if (k==='pin') pinTry = ev.target.value; else if (k==='gamount' || k==='gfrom') gift[k] = ev.target.value; else if (k) proj[k] = ev.target.value; });
+addEventListener('hashchange', ()=>{ const h = location.hash.slice(1); if (IDS.includes(h)){ lock = cur = h; resetCoins(); render(); } });
+document.addEventListener('submit', ev=>{ if (ev.target.id==='loginf'){ ev.preventDefault(); doLogin(); } });
+document.addEventListener('toggle', ev=>{ if (ev.target.id==='par') parentsOpen = ev.target.open; }, true);
+document.addEventListener('change', ev=>{
+  const s = ev.target.dataset.set; if (!s || !ready) return;
+  const v = ev.target.value, [key, k] = s.split(':');
+  if (key==='weekly'){ const n = parseInt(v,10); if (n>=1 && n<=50){ S[k].weekly = n; save(k); if (k===cur) resetCoins(); } }
+  else if (key==='birth'){ if (/^\d{4}-\d{2}-\d{2}$/.test(v)){ S[k].birth = v; save(k); } }
+  else if (key==='match'){ const n = parseFloat(v); if (n>=0 && n<=100){ S.regles.match = n; save('regles'); } }
+  else if (key==='dice'){ const n = parseFloat(v); if (n>=-50 && n<=50){ S.regles.dice[+k] = n; save('regles'); } }
+  else if (key==='projKid'){ proj.k = v; }
+  else if (key==='giftMatch'){ const n = parseFloat(v); if (n>=0 && n<=100){ S.regles.giftMatch = n; save('regles'); } }
+  else if (key==='pin'){ if (/^\d{4}$/.test(v)){ S.regles.pin = v; save('regles'); } }
+  render();
+});
+
+resetCoins(); render();
+
+/* ---------- Firebase : connexion famille et synchronisation ---------- */
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+fdb = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+let unsubs = [], timer = null;
+function startSync(){
+  unsubs.forEach(u=>u()); unsubs = []; ready = false; for (const k in loaded) delete loaded[k];
+  clearTimeout(timer);
+  timer = setTimeout(()=>{ if (!ready){ status = 'Pas de connexion : tu peux regarder ton trésor, les actions reviendront avec Internet.'; render(); } }, 10000);
+  for (const k of [...IDS,'regles']){
+    unsubs.push(onSnapshot(doc(fdb,'tresor',k), { includeMetadataChanges: true }, snap=>{
+      if (snap.exists()) Object.assign(S[k], clone(snap.data()));
+      if (!snap.metadata.fromCache) loaded[k] = true;
+      if (!ready && [...IDS,'regles'].every(x=>loaded[x])){ ready = true; clearTimeout(timer); status = ''; resetCoins(); }
+      if (!rolling) render();
+    }, err=>{ ready = false; status = err && err.code==='permission-denied' ? 'Ce compte n’a pas accès au trésor.' : 'La banque ne répond plus : relance l’application.'; render(); }));
+  }
+}
+onAuthStateChanged(auth, u=>{
+  user = u;
+  if (u){ status = ''; startSync(); }
+  else { unsubs.forEach(x=>x()); unsubs = []; ready = false; }
+  render();
+});
+doLogin = async ()=>{
+  loginErr = '';
+  try { await signInWithEmailAndPassword(auth, login.email.trim(), login.pass); login.pass = ''; }
+  catch(e){ loginErr = 'E-mail ou mot de passe incorrect.'; render(); }
+};
+doLogout = ()=>{ try { localStorage.removeItem('tresor-lock'); } catch(e) {} lock = null; signOut(auth); };
+addEventListener('online', ()=>{ if (user && !ready) startSync(); });
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
