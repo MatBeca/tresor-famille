@@ -207,8 +207,9 @@ input:focus,select:focus{border-color:var(--kid);outline:none}
 @media(min-width:700px){.modal{place-items:center}}
 
 /* logo et nom */
-.wm{display:inline-block;font-family:Fredoka,Nunito,sans-serif;font-weight:700;letter-spacing:.3px;line-height:1}
-.wm .e{position:relative;display:inline-block}
-.wm .e::before{content:"";position:absolute;left:52%;top:-.12em;width:.34em;height:.27em;transform:translateX(-35%) rotate(-28deg);background:#13a05a;border-radius:0 100% 0 100%}
-.brand .wm{font-size:26px;padding-top:4px}
-.splash svg.logo,.welcome svg.logo{width:104px;height:104px}
+.wm{display:inline-block;height:1em;width:auto;vertical-align:-.12em;color:var(--ink)}
+.brand .wm{height:27px;width:auto;margin-top:2px}
+.splash svg.logo,.welcome svg.logo{width:116px;height:116px}
+.welcome h1 .wm,.splash h1 .wm{height:56px}
+.intro{background:var(--card);border:2px solid var(--line);border-radius:20px;padding:14px 16px;margin-top:16px;text-align:center}
+.intro p{margin:0;font-size:16px}.intro p+p{margin-top:6px}
