@@ -17,7 +17,7 @@ const daysSince = d => Math.floor((Date.now() - new Date(d)) / 864e5);
 const wk = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x.getTime(); };
 const sameWeek = d => !!d && wk(d) === wk(new Date());
 const pct = r => (r > 0 ? '+' : r < 0 ? '−' : '') + String(Math.abs(r)).replace('.', ',') + ' %';
-const num = v => parseFloat(String(v).replace(',', '.'));
+const num = v => parseFloat(String(v).replace(/[\s\u00a0\u202f]/g, '').replace(',', '.'));
 const de = n => (/^[aeiouyéèêh]/i.test(n) ? 'd’' : 'de ') + esc(n);
 function ageAt(birth, date) { const b = new Date(birth + 'T12:00:00'); let a = date.getFullYear() - b.getFullYear(); const m = date.getMonth() - b.getMonth(); if (m < 0 || (m === 0 && date.getDate() < b.getDate())) a--; return a; }
 const validBirth = b => /^\d{4}-\d{2}-\d{2}$/.test(b || '') && !isNaN(new Date(b)) && ageAt(b, new Date()) >= 3 && ageAt(b, new Date()) < 18;
@@ -535,7 +535,8 @@ function roll() {
 }
 function doGift(ratio) {
   const amt = r2(num(form.gamount));
-  if (!(amt > 0) || amt > 2000) { say('Écris d’abord combien tu as reçu.'); return; }
+  if (!(amt > 0)) { say('Écris d’abord combien tu as reçu.'); return; }
+  if (amt > 100000) { say('Montant trop élevé : 100 000 € maximum.'); return; }
   const inv2 = r2(amt * ratio), dep2 = r2(amt - inv2), bonus = r2(inv2 * gm() / 100), from = form.gfrom.trim();
   const before = tot(cur).total;
   EV[cur] = [...evs(cur), { t: 'recu', d: iso(), from, inv: inv2, dep: dep2, bonus }];
