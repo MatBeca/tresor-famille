@@ -381,3 +381,5 @@ main.view.guided{padding-bottom:300px}
 .guide .gmascot svg{width:42px;height:36px}
 .guide .gact{margin-top:6px}.guide .gbody .tdots{margin-top:6px}
 .demoin .post .tag{display:none}
+.guide .gbody p.gpar{font:700 13px/1.35 Nunito,sans-serif;color:var(--soft);margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
+.guide .gbody p.gpar b{color:var(--ink)}

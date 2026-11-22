@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '65'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '66'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -89,7 +89,7 @@ const projInv = {}, sel = {};
 const form = { preason: '', pdur: '1', resetname: '', goalname: '', goalbudget: '', gamount: '', gfrom: '', plabel: '', pamount: '', pkid: '', email: '', pass: '', newpin: '' };
 let loginMode = 'in', loginMsg = '', loginErr = '', busy = false;
 let ob = null, artId = null, tour = null, tourAuto = false, guide = null, guideKind = 'pay', guidePaid = false, guideShown = -1, guideOff = {};
-const BOURSE_MIN = 10; // la bourse s'ouvre quand la tirelire atteint 10 €
+const BOURSE_MIN = 15; // la bourse s'ouvre quand la tirelire atteint 15 € (dès là, Équilibré et Aventurier font bouger le dé)
 try { lock = localStorage.getItem('pepite-lock'); cur = localStorage.getItem('pepite-cur'); } catch (e) {}
 
 const kids = () => (F && F.kids) || [];
@@ -600,18 +600,21 @@ ${T.livret > 0 ? `<p class="msg">Vous avez déjà mis ${f(T.livret)} de côté p
 
 /* ---------- Première paie guidée (onboarding de l'enfant) ---------- */
 const bourseOpen = id => tot(id).total >= BOURSE_MIN || evs(id).some(e => e.t === 'bourse');
+function bonusTxt() { const m = F.match, n = 100 / m; return Number.isInteger(n) && n > 1 ? `pour ${n} pièces placées dans ta tirelire, ${P().aj} 1 pièce` : `${P().aj} ${m} % de ce que tu places dans ta tirelire`; }
 function guideSteps(k) {
   const t = tot(cur), ow = owed(cur), noPay = !ow.length || !!pauseOf(cur), rolled = sameWeek(t.bourse && t.bourse.d);
   if (guideKind === 'bourse') return [
-    { text: 'La bourse est ouverte ! Chaque semaine, tu lances un dé : il fait gagner ou perdre un petit bout de ta tirelire.', target: '.post.on', next: 'Suivant' },
+    { text: 'La bourse est ouverte ! Chaque semaine, tu lances un dé : il fait gagner ou perdre un petit bout de ta tirelire.', parent: 'lancez ce premier dé ensemble et parlez des faces rouges : perdre un peu fait partie du jeu.', target: '.post.on', next: 'Suivant' },
     { text: 'Les faces vertes te font gagner, les rouges te font perdre. Compte-les et choisis ta stratégie.', target: '.post.on', next: 'J’ai choisi' },
     { text: 'Maintenant, lance le dé !', target: '.dicebox', done: () => sameWeek(tot(cur).bourse && tot(cur).bourse.d), skip: () => postOf(cur) === 'none', next: 'Plus tard' },
     { text: 'Bravo ! Tu relanceras le dé chaque semaine. Plus ta tirelire grossit, plus il compte.', target: '.dicebox', next: 'Terminer', end: true }
   ];
   return [
-    { text: `Salut ${esc(k.name)} ! Moi, c’est Pépite. Voici ta tirelire : elle va se remplir, semaine après semaine.`, target: '.hero > svg', next: 'C’est parti !' },
+    { text: `Salut ${esc(k.name)} ! Moi, c’est Pépite. Voici ta tirelire : elle va se remplir, semaine après semaine.`, parent: 'faites ce premier tour avec votre enfant, il dure deux minutes.', target: '.hero > svg', next: 'C’est parti !' },
     { text: 'Ta paie t’attend : appuie sur « Paie ».', target: '.tab[data-v=paie]', done: () => view === 'paie', skip: () => noPay },
     { text: 'Lis l’explication en haut. Puis range chaque pièce avec ces deux boutons.', target: '.moves', done: () => view === 'paie' && tray.length === 0, skip: () => noPay },
+    { text: invC.length ? `Regarde la pastille dorée : +${f(r2(sumC(invC) * F.match / 100))} ! C’est le bonus : ${bonusTxt()}. L’argent du porte-monnaie, lui, n’a pas de bonus.` : `Ici, pas de bonus : tout est dans ton porte-monnaie. Si tu mets des pièces dans ta tirelire, ${bonusTxt().replace('pour ', 'pour ')}. Tu peux reprendre une pièce pour essayer !`,
+      parent: 'c’est le moment de lui expliquer votre bonus, avec de vraies pièces si vous en avez sous la main.', target: invC.length ? '.zone.gz .chip' : '.zone.gz', skip: () => noPay || guidePaid, next: 'Compris !' },
     { text: 'Bien rangé ! Appuie sur « Valider ma paie ».', target: '[data-act=pay]', done: () => guidePaid, skip: () => noPay && !guidePaid },
     { text: 'Et maintenant, ton rêve : appuie sur « Projet ».', target: '.tab[data-v=projet]', done: () => view === 'projet', skip: () => !!goalOf(cur) },
     { text: 'Choisis ton projet et son prix, puis valide.', target: 'section.card:has(#go-name)', done: () => !!goalOf(cur), next: 'Plus tard' },
@@ -627,7 +630,7 @@ function guideEnd(k) { const field = guideKind === 'bourse' ? 'bguided' : 'guide
 function guideView(k) {
   const S = guideSync(k), s = S[guide], n = S.length;
   return `<div class="guide low" role="dialog" aria-label="Guide de Pépite" aria-live="polite"><div class="gmascot">${NUG('', '')}</div><div class="gbody">
-<p>${s.text}</p>
+<p>${s.text}</p>${s.parent ? `<p class="gpar"><b>Parent :</b> ${s.parent}</p>` : ''}
 <div class="gact"><button class="link gspeak" data-act="gspeak">${I.speak}Écoute</button><button class="link" data-act="gskip">${s.end ? '' : 'Passer le guide'}</button>${s.next ? `<button class="btn sm" data-act="${s.end ? 'gend' : 'gnext'}">${s.next}</button>` : ''}</div>
 <div class="tdots" aria-hidden="true">${S.map((_, j) => `<i class="${j === guide ? 'on' : ''}"></i>`).join('')}</div></div></div>`;
 }
