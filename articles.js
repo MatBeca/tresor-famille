@@ -116,7 +116,7 @@ ${keep(['On démarre à 5 ans avec 1 € par semaine, puis 50 centimes de plus 
       lead: 'Tout ce que fait l’appli, écran par écran. Les aperçus ci-dessous sont dessinés par l’appli elle-même : ils évoluent avec elle.',
       body: () => {
         const t = { own: 40, bonus: 10, gains: 6, total: 56 };
-        const faces = [-1.5, -0.5, 0, 0.5, 1, 1.7].map(x => Math.round(50 * x) / 100);
+        const faces = [-1.5, -0.5, 0, 0.5, 1, 1.7].map(x => h.r50(x));
         return `
 <h3>1. La paie, pièce par pièce</h3>
 <p>Chaque lundi, la paie arrive en pièces de 1 €. L’enfant les range une par une : dans son porte-monnaie pour les dépenser, ou dans sa tirelire pour les placer. Le bonus s’affiche aussitôt sur les pièces placées. S’il a oublié une semaine, ses paies l’attendent jusqu’à quatre semaines.</p>
@@ -129,7 +129,7 @@ ${demo(`<div class="demojar">${h.jar(t, { budget: 100 }).svg}<div class="tiles">
 ${demo(`<div class="nugrow">${[0, 25, 50, 75, 100].map(p => h.growNug(p)).join('')}</div>`, 'De la petite pépite à « C’est pépite ! »')}
 <h3>4. La bourse au dé</h3>
 <p>Une fois par semaine, l’enfant choisit sa stratégie puis lance le dé. Chaque face affiche ce qu’elle ferait gagner ou perdre sur sa vraie tirelire, sans un seul pourcentage. « Je ne joue pas » est un choix respecté.</p>
-${demo(`<div class="post on" style="pointer-events:none"><span class="ph"><b>Équilibré</b></span><span class="dfaces">${faces.map((x, i) => `<span class="df ${x > 0 ? 'up' : x < 0 ? 'dn' : ''}">${h.miniDie(i + 1, x > 0 ? '#13a05a' : x < 0 ? '#e0434f' : '#a39cb8')}<b>${h.eurS(x)}</b></span>`).join('')}</span><span class="pr"><span class="g">3 faces sur 6 font gagner</span> · 1 ne change rien · <span class="neg">2 font perdre</span></span></div>`, 'Avec une tirelire de 50 € : on compte les faces, on choisit.')}
+${demo(`<div class="post on" style="pointer-events:none"><span class="ph"><b>Équilibré</b></span><span class="dfaces">${faces.map((x, i) => `<span class="df ${x > 0 ? 'up' : x < 0 ? 'dn' : ''}">${h.miniDie(i + 1, x > 0 ? '#13a05a' : x < 0 ? '#e0434f' : '#a39cb8')}<b>${h.eurS(x)}</b></span>`).join('')}</span><span class="pr"><span class="g">3 faces sur 6 font gagner</span> · 1 ne change rien · <span class="neg">2 font perdre</span></span></div>`, 'Avec une tirelire de 100 € : on compte les faces, on choisit.')}
 <h3>5. « J’ai reçu de l’argent »</h3>
 <p>Un billet de mamie, un anniversaire ? L’enfant l’ajoute lui-même et choisit : tout dépenser, moitié-moitié ou tout placer. Vous décidez si l’argent reçu a droit à un bonus, et à combien.</p>
 ${demo(`<div class="item"><span class="ic" style="background:color-mix(in srgb,var(--grow) 14%,transparent);color:var(--grow)">${h.I.gift}</span><span><b>J’ai reçu de l’argent</b><small>Un cadeau, un anniversaire ?</small></span><span class="end">${h.I.chev}</span></div>`, 'Depuis l’écran d’accueil de l’enfant.')}

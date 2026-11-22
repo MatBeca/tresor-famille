@@ -17,7 +17,8 @@ const dateFr = d => new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', mo
 const daysSince = d => Math.floor((Date.now() - new Date(d)) / 864e5);
 const wk = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x.getTime(); };
 const sameWeek = d => !!d && wk(d) === wk(new Date());
-const eurS = v => { const a = Math.abs(v); return a === 0 ? 'rien' : a < 0.1 ? 'presque rien' : (v > 0 ? '+' : '−') + f(a); };
+const r50 = v => Math.sign(v) * Math.round(Math.abs(v) * 2) / 2 || 0; // le dé ne compte qu'en pièces de 50 centimes
+const eurS = v => { const a = Math.abs(v); return a === 0 ? 'rien' : (v > 0 ? '+' : '−') + f(a); };
 const pct = r => (r > 0 ? '+' : r < 0 ? '−' : '') + String(Math.abs(r)).replace('.', ',') + ' %';
 const num = v => parseFloat(String(v).replace(/[\s\u00a0\u202f]/g, '').replace(',', '.'));
 const de = n => (/^[aeiouyéèêh]/i.test(n) ? 'd’' : 'de ') + esc(n);
@@ -346,7 +347,7 @@ function miniDie(n, c) { return `<svg viewBox="0 0 100 100" width="30" height="3
 function postureCard(p, sel, start, own) {
   const d = POST[p];
   if (p === 'none') return `<button class="post ${sel ? 'on' : ''}" data-act="posture" data-n="none" aria-pressed="${sel}"><span class="ph"><b>${d.name}</b>${sel ? `<span class="tag">Ma stratégie</span>` : ''}</span><span class="pt">${d.txt}</span><span class="pr">Les 6 faces ne changent rien : ta tirelire ne bouge pas.</span><span class="soft small">${d.like}</span></button>`;
-  const v = d.faces.map(x => r2(start * x / 100)), up = v.filter(x => x > 0).length, dn = v.filter(x => x < 0).length, eq = 6 - up - dn;
+  const v = d.faces.map(x => r50(start * x / 100)), up = v.filter(x => x > 0).length, dn = v.filter(x => x < 0).length, eq = 6 - up - dn;
   const cnt = [up ? `<span class="g">${up} face${up > 1 ? 's' : ''} sur 6 ${up > 1 ? 'font' : 'fait'} gagner</span>` : '', eq ? `${eq} ne change${eq > 1 ? 'nt' : ''} rien` : '', dn ? `<span class="neg">${dn} ${dn > 1 ? 'font' : 'fait'} perdre</span>` : ''].filter(Boolean).join(' · ');
   return `<button class="post ${sel ? 'on' : ''}" data-act="posture" data-n="${p}" aria-pressed="${sel}">
 <span class="ph"><b>${d.name}</b>${sel ? `<span class="tag">Ma stratégie</span>` : ''}</span><span class="pt">${d.txt}</span>
@@ -487,7 +488,7 @@ ${last ? `<div class="row" style="margin-top:4px"><button class="btn ghost sm" d
 }
 
 
-function artList() { return articles({ jar, miniDie, growNug, f, eurS, I, coinEl }); }
+function artList() { return articles({ jar, miniDie, growNug, f, eurS, r50, I, coinEl }); }
 function lireView() {
   const back = user ? 'parents' : 'home';
   return `<button class="backlink" data-act="go" data-v="${back}">${I.chev}<span>${user ? 'Espace parents' : 'Retour'}</span></button>
@@ -613,7 +614,7 @@ function roll() {
   setTimeout(() => {
     if (spin) clearInterval(spin);
     if (el) el.style.transform = '';
-    const before = tot(cur).total, rate = facesOf(cur)[face - 1], gain = r2(Math.max(0, before) * rate / 100);
+    const before = tot(cur).total, rate = facesOf(cur)[face - 1], gain = r50(Math.max(0, before) * rate / 100);
     EV[cur] = [...evs(cur), { t: 'bourse', d: iso(), face, rate, gain }];
     rolling = false; saveK(cur);
     sayMs(before, rate > 0 ? `Dé ${face} : +${f(gain)} dans ta tirelire !` : rate < 0 ? `Dé ${face} : ta tirelire perd ${f(Math.abs(gain))}.` : `Dé ${face} : rien ne bouge cette semaine.`, rate < 0 ? 'Ça arrive, la semaine prochaine sera peut-être meilleure.' : '');
