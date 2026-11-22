@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '50'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '51'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -25,7 +25,7 @@ const num = v => parseFloat(String(v).replace(/[\s\u00a0\u202f]/g, '').replace('
 const de = n => (/^[aeiouyéèêh]/i.test(n) ? 'd’' : 'de ') + esc(n);
 function ageAt(birth, date) { const b = new Date(birth + 'T12:00:00'); let a = date.getFullYear() - b.getFullYear(); const m = date.getMonth() - b.getMonth(); if (m < 0 || (m === 0 && date.getDate() < b.getDate())) a--; return a; }
 const validBirth = b => /^\d{4}-\d{2}-\d{2}$/.test(b || '') && !isNaN(new Date(b)) && ageAt(b, new Date()) >= 3 && ageAt(b, new Date()) < 18;
-const suggest = b => validBirth(b) ? Math.min(50, Math.max(1, 1 + 0.5 * (ageAt(b, new Date()) - 5))) : 2;
+const suggest = b => validBirth(b) ? Math.min(50, Math.max(1, 1 + 0.5 * (ageAt(b, new Date()) - 6))) : 2;
 
 const PAL = ['#f0505a', '#2f6feb', '#8e5ce6', '#f07c00', '#e0438f', '#139fb5'];
 const PAR = {
@@ -266,7 +266,7 @@ ${o.kids.map((k, i) => `<div class="kidform"><header><h3>Enfant ${i + 1}</h3>${o
 <label>Argent de poche par semaine (€)<input id="ob-w-${k.id}" type="number" inputmode="decimal" min="1" max="50" step="0.5" data-ob="weekly:${k.id}" value="${esc(k.weekly)}" placeholder="${String(suggest(k.birth)).replace('.', ',')}"></label></div>
 <label>Sa couleur</label><div class="swatches">${PAL.map(c => `<button class="sw" style="--c:${c}" data-act="obcolor" data-k="${k.id}" data-c="${c}" aria-pressed="${k.color === c}" aria-label="Couleur"></button>`).join('')}</div></div>`).join('')}
 <div class="row"><button class="btn ghost full" data-act="obadd">Ajouter un enfant</button></div>
-<button class="item art-item" data-act="art" data-n="rythme" style="margin-top:12px"><span class="ic artn">3</span><span><small>Notre repère : 1 € par semaine à 5 ans, puis 50 centimes de plus chaque année</small><b>Quand commencer, combien donner ?</b></span><span class="end">${I.chev}</span></button>`;
+<button class="item art-item" data-act="art" data-n="rythme" style="margin-top:12px"><span class="ic artn">3</span><span><small>Notre repère : 1 € par semaine à 6 ans, puis 50 centimes de plus chaque année</small><b>Quand commencer, combien donner ?</b></span><span class="end">${I.chev}</span></button>`;
   } else {
     body = `${st}<h2 class="title">Les règles du jeu</h2><p class="lead">Tout reste modifiable plus tard dans l’espace parents.</p>
 <div class="card"><h3>Bonus sur l’argent de poche placé</h3><p class="soft small" style="margin:0">Versé uniquement sur les pièces que l’enfant place. Rien sur celles qu’il met dans son porte-monnaie pour les dépenser : c’est ce qui rend le choix intéressant.</p>
