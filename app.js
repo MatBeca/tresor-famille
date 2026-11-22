@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '87'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '88'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -713,7 +713,7 @@ function guideView(k) {
   guideViews[guide] = view;
   return `<div class="guide low" role="dialog" aria-label="Guide de Pépite" aria-live="polite"><div class="gmascot">${NUG('', '')}</div><div class="gbody">
 <p>${s.text}</p>${s.parent ? `<p class="gpar"><b>Parent :</b> ${s.parent}</p>` : ''}
-<div class="gact"><button class="link gspeak" data-act="gspeak">${I.speak}Écoute</button>${guide > 0 ? '<button class="link" data-act="gprev">Retour</button>' : ''}<button class="link" data-act="gskip">${s.end ? '' : 'Passer le guide'}</button>${s.next || held ? `<button class="btn sm" data-act="${s.end ? 'gend' : 'gnext'}">${held ? 'Suivant' : s.next}</button>` : ''}</div>
+<div class="gact">${guide > 0 ? `<button class="gprev" data-act="gprev" aria-label="Étape précédente">${I.chev}</button>` : ''}<button class="link gspeak" data-act="gspeak">${I.speak}Écoute</button><button class="link" data-act="gskip">${s.end ? '' : 'Passer le guide'}</button>${s.next || held ? `<button class="btn sm" data-act="${s.end ? 'gend' : 'gnext'}">${held ? 'Suivant' : s.next}</button>` : ''}</div>
 <div class="tdots" aria-hidden="true">${S.map((_, j) => `<i class="${j === guide ? 'on' : ''}"></i>`).join('')}</div></div></div>`;
 }
 function guideMark() {
