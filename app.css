@@ -383,7 +383,8 @@ main.view.guided{padding-bottom:300px}
 .guide.low .gbody{padding:9px 12px}.guide .gbody p{font-size:15.5px;line-height:1.35}
 .guide .gmascot svg{width:42px;height:36px}
 .guide .gact{margin-top:6px}
-.gprev{display:inline-grid;place-items:center;width:30px;height:30px;margin-left:-6px;border:0;border-radius:50%;background:none;color:var(--soft);padding:0;opacity:.75}.gprev:active{background:var(--line)}
+.gprev{display:inline-grid;place-items:center;width:30px;height:30px;border:0;border-radius:50%;background:none;color:var(--soft);padding:0;opacity:.75}.gprev:active{background:var(--line)}
+.gnav{margin-left:auto;display:flex;align-items:center;gap:4px}.gnav:empty{display:none}.gnav .btn{margin-left:0}
 .gprev svg{width:18px;height:18px;transform:rotate(180deg)}.guide .gbody .tdots{margin-top:6px}
 .demoin .post .tag{display:none}
 .guide .gbody p.gpar{font:700 13px/1.35 Nunito,sans-serif;color:var(--soft);margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
