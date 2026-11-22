@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '62'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '64'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -55,6 +55,7 @@ const LOGOBIG = `<svg class="logo big" viewBox="0 14 124 50" aria-hidden="true">
 const WM = `<svg class="wm" role="img" aria-label="Pépite" viewBox="-10 -1010 2892 1260"><path d="M126 8Q81 8 62.0 -5.5Q43 -19 39.0 -40.5Q35 -62 35 -84V-600Q35 -622 39.0 -643.0Q43 -664 62.0 -677.5Q81 -691 127 -691H326Q364 -691 408.0 -675.5Q452 -660 491.5 -628.0Q531 -596 556.0 -548.0Q581 -500 581 -434Q581 -369 556.0 -321.0Q531 -273 491.5 -241.5Q452 -210 408.0 -194.5Q364 -179 325 -179H218V-83Q218 -61 214.0 -40.0Q210 -19 191.0 -5.5Q172 8 126 8ZM218 -362H326Q339 -362 356.0 -368.5Q373 -375 386.0 -391.0Q399 -407 399 -435Q399 -456 389.0 -472.5Q379 -489 362.5 -498.5Q346 -508 325 -508H218Z M883 20Q808 20 756.0 -4.5Q704 -29 672.0 -68.5Q640 -108 625.0 -154.0Q610 -200 610 -243Q610 -322 645.0 -382.0Q680 -442 742.0 -476.0Q804 -510 884 -510Q946 -510 990.0 -490.0Q1034 -470 1061.5 -439.0Q1089 -408 1102.0 -373.0Q1115 -338 1115 -308Q1115 -251 1087.0 -221.0Q1059 -191 1015 -191H802Q806 -175 818.5 -163.5Q831 -152 850.0 -145.5Q869 -139 891 -139Q913 -139 930.0 -141.5Q947 -144 959.5 -148.0Q972 -152 982.5 -156.0Q993 -160 1001.5 -162.5Q1010 -165 1018 -165Q1036 -165 1051.0 -153.0Q1066 -141 1078 -117Q1085 -104 1088.0 -92.5Q1091 -81 1091 -71Q1091 -41 1066.5 -21.0Q1042 -1 996.0 9.5Q950 20 883 20ZM802 -285H914Q928 -285 934.5 -291.0Q941 -297 941 -309Q941 -322 933.5 -331.0Q926 -340 913.0 -344.5Q900 -349 882 -349Q858 -349 840.0 -339.5Q822 -330 812.5 -315.5Q803 -301 802 -285Z M1430 -3Q1381 -3 1345 -23Q1340 -26 1335 -29V132Q1337 154 1332.5 174.5Q1328 195 1309.0 208.0Q1290 221 1245 221Q1201 221 1182.0 208.0Q1163 195 1159.5 175.0Q1156 155 1156 133V-410Q1156 -432 1159.5 -452.0Q1163 -472 1181.5 -485.5Q1200 -499 1244 -499Q1279 -499 1302 -490Q1321 -482 1331 -467Q1339 -473 1347 -478Q1382 -498 1430 -498Q1474 -498 1515.5 -477.0Q1557 -456 1590.0 -420.5Q1623 -385 1642.0 -340.0Q1661 -295 1661 -247Q1661 -197 1642.0 -152.5Q1623 -108 1590.5 -74.5Q1558 -41 1516.5 -22.0Q1475 -3 1430 -3ZM1406 -173Q1426 -173 1442.5 -183.0Q1459 -193 1469.0 -209.5Q1479 -226 1479 -245Q1479 -265 1469.5 -281.5Q1460 -298 1443.5 -307.5Q1427 -317 1407.0 -317.0Q1387 -317 1370.5 -307.0Q1354 -297 1344.5 -281.0Q1335 -265 1335 -245Q1335 -226 1345.0 -209.5Q1355 -193 1371.0 -183.0Q1387 -173 1406 -173Z M1789 9Q1744 9 1725.0 -4.5Q1706 -18 1702.5 -39.0Q1699 -60 1699 -82V-408Q1699 -430 1703.0 -450.5Q1707 -471 1726.0 -484.5Q1745 -498 1790 -498Q1835 -498 1853.5 -484.5Q1872 -471 1876.0 -450.0Q1880 -429 1880 -406V-81Q1880 -59 1876.0 -38.0Q1872 -17 1853.5 -4.0Q1835 9 1789 9Z M2210 9Q2157 9 2118.0 -3.0Q2079 -15 2053.5 -40.0Q2028 -65 2015.5 -103.0Q2003 -141 2003 -192V-319H1978Q1944 -321 1931.0 -341.0Q1918 -361 1918 -407Q1918 -450 1934.0 -471.5Q1950 -493 1982 -493H2003V-580Q2003 -603 2007.0 -622.5Q2011 -642 2030.0 -654.5Q2049 -667 2094 -667Q2138 -667 2157.0 -653.5Q2176 -640 2180.0 -619.0Q2184 -598 2184 -576V-496L2237 -498Q2259 -498 2279.5 -494.0Q2300 -490 2313.5 -471.0Q2327 -452 2327 -406Q2327 -364 2313.5 -345.0Q2300 -326 2279.5 -321.0Q2259 -316 2236 -316L2184 -317V-201Q2184 -190 2185.5 -182.5Q2187 -175 2190.0 -171.0Q2193 -167 2198.0 -165.0Q2203 -163 2211 -163Q2237 -163 2257.5 -159.0Q2278 -155 2289.5 -138.0Q2301 -121 2301 -81Q2301 -36 2287.0 -17.0Q2273 2 2252.0 5.5Q2231 9 2210 9Z M2625 20Q2550 20 2498.0 -4.5Q2446 -29 2414.0 -68.5Q2382 -108 2367.0 -154.0Q2352 -200 2352 -243Q2352 -322 2387.0 -382.0Q2422 -442 2484.0 -476.0Q2546 -510 2626 -510Q2688 -510 2732.0 -490.0Q2776 -470 2803.5 -439.0Q2831 -408 2844.0 -373.0Q2857 -338 2857 -308Q2857 -251 2829.0 -221.0Q2801 -191 2757 -191H2544Q2548 -175 2560.5 -163.5Q2573 -152 2592.0 -145.5Q2611 -139 2633 -139Q2655 -139 2672.0 -141.5Q2689 -144 2701.5 -148.0Q2714 -152 2724.5 -156.0Q2735 -160 2743.5 -162.5Q2752 -165 2760 -165Q2778 -165 2793.0 -153.0Q2808 -141 2820 -117Q2827 -104 2830.0 -92.5Q2833 -81 2833 -71Q2833 -41 2808.5 -21.0Q2784 -1 2738.0 9.5Q2692 20 2625 20ZM2544 -285H2656Q2670 -285 2676.5 -291.0Q2683 -297 2683 -309Q2683 -322 2675.5 -331.0Q2668 -340 2655.0 -344.5Q2642 -349 2624 -349Q2600 -349 2582.0 -339.5Q2564 -330 2554.5 -315.5Q2545 -301 2544 -285Z" fill="currentColor"/><path d="M816 -520Q798 -520 785.0 -535.0Q772 -550 762 -581Q749 -623 757.0 -643.5Q765 -664 801 -675L985 -729Q1003 -729 1016.0 -714.0Q1029 -699 1038 -668Q1052 -628 1043.0 -607.0Q1034 -586 1000 -575Z" fill="currentColor"/><g transform="translate(1623.1 -846.0) scale(5.2)"><g transform=""><path d="M14 24 30 15 28 30Z" fill="#ffe68a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M30 15 46 17 42 32 28 30Z" fill="#fff4bd" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M46 17 58 30 42 32Z" fill="#ffd24a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M6 40 14 24 28 30 30 44Z" fill="#f7b52a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M28 30 42 32 30 44Z" fill="#ffcb3a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M58 30 56 46 42 32Z" fill="#e39a10" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M42 32 56 46 42 55 30 44Z" fill="#d08a00" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M6 40 30 44 20 54Z" fill="#eba216" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M30 44 42 55 20 54Z" fill="#b87400" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/></g><path transform="" d="M6 40 14 24 30 15 46 17 58 30 56 46 42 55 20 54Z" fill="none" stroke="#6e4400" stroke-width="3" stroke-linejoin="round"/><path d="M20 27 26 21" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></g></svg>`;
 const WMFULL = `<span class="wmfull" role="img" aria-label="C’est Pépite"><span class="cest" aria-hidden="true">c’est</span>${WM.replace('role="img" aria-label="Pépite"', 'aria-hidden="true"')}</span>`;
 const I = {
+  speak: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
   jar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2.5" width="8" height="3" rx="1"/><path d="M6.5 7.5c0-1.1.9-2 2-2h7c1.1 0 2 .9 2 2V19a2.5 2.5 0 0 1-2.5 2.5h-6A2.5 2.5 0 0 1 6.5 19z"/><path d="M6.5 13.5h11"/></svg>',
   coin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/></svg>',
   die: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></svg>',
@@ -87,7 +88,7 @@ let toast = null, toastT = null, undoArm = false, wipeArm = false, delArm = null
 const projInv = {}, sel = {};
 const form = { preason: '', pdur: '1', resetname: '', goalname: '', goalbudget: '', gamount: '', gfrom: '', plabel: '', pamount: '', pkid: '', email: '', pass: '', newpin: '' };
 let loginMode = 'in', loginMsg = '', loginErr = '', busy = false;
-let ob = null, artId = null, tour = null, tourAuto = false;
+let ob = null, artId = null, tour = null, tourAuto = false, guide = null, guidePaid = false, guideShown = -1, guideOff = {};
 try { lock = localStorage.getItem('pepite-lock'); cur = localStorage.getItem('pepite-cur'); } catch (e) {}
 
 const kids = () => (F && F.kids) || [];
@@ -316,7 +317,7 @@ function homeView(k, t) {
 ${t.out > 0 ? `<p class="soft small" style="margin:8px 4px 0">Projets réalisés : ${f(t.out)}</p>` : ''}
 <h3 class="sec">Mon projet</h3><div class="list"><button class="item" data-act="go" data-v="projet"><span class="ic" style="background:var(--kidt);color:var(--kidtxt)">${I.flag}</span><span>${g ? `<b>${esc(g.name)} : ${Math.floor(Math.min(1, Math.max(0, t.total) / g.budget) * 100)} %</b><small>${t.total >= g.budget ? 'Atteint : prépare ta présentation !' : `${f(Math.max(0, t.total))} sur ${f(g.budget)}`}</small>` : '<b>Choisis un projet</b><small>Un vélo, un jeu ? Fixe-toi un objectif.</small>'}</span><span class="end">${I.chev}</span></button></div>
 <h3 class="sec">Cette semaine</h3><div class="list">
-<button class="item" data-act="go" data-v="paie"><span class="ic" style="background:#fff3c4;color:#a87300">${I.coin}</span><span><b>Ma paie</b><small>${pauseOf(cur) ? 'En pause ' + untilTxt(pauseOf(cur)) : paid ? 'Rangée, bravo !' : due > 1 ? `${due} paies t’attendent` : `${k.weekly} pièce${k.weekly > 1 ? 's' : ''} t’attendent`}</small></span><span class="end ${paid && !pauseOf(cur) ? 'done' : ''}">${paid && !pauseOf(cur) ? I.check : I.chev}</span></button>
+<button class="item" data-act="go" data-v="paie"><span class="ic" style="background:#fff3c4;color:#a87300">${I.coin}</span><span><b>Ma paie</b><small>${pauseOf(cur) ? 'En pause ' + untilTxt(pauseOf(cur)) : paid ? 'Rangée, bravo !' : due > 1 ? `${due} paies t’attendent` : `${f(k.weekly)} t’attendent`}</small></span><span class="end ${paid && !pauseOf(cur) ? 'done' : ''}">${paid && !pauseOf(cur) ? I.check : I.chev}</span></button>
 <button class="item" data-act="go" data-v="bourse"><span class="ic" style="background:var(--glass)">${I.die}</span><span><b>La bourse</b><small>${postOf(cur) === 'none' ? 'Tu ne joues pas la bourse' : rolled ? `Dé ${t.bourse.face} : ${eurS(t.bourse.gain)}` : 'Lance le dé de la semaine'}</small></span><span class="end ${rolled ? 'done' : ''}">${rolled ? I.check : I.chev}</span></button>
 <button class="item" data-act="go" data-v="recu"><span class="ic" style="background:color-mix(in srgb,var(--grow) 14%,transparent);color:var(--grow)">${I.gift}</span><span><b>J’ai reçu de l’argent</b><small>Un cadeau, un anniversaire ?</small></span><span class="end">${I.chev}</span></button>
 <button class="item" data-act="go" data-v="carnet"><span class="ic" style="background:var(--glass)">${I.book}</span><span><b>Mon carnet</b><small>Tout ce qui est entré et sorti</small></span><span class="end">${I.chev}</span></button></div>`;
@@ -468,6 +469,7 @@ function lockedView() {
 <section class="card"><h3>Corriger une erreur</h3>
 ${!last ? `<p class="soft" style="margin:0">Rien à annuler.</p>` : can ? `<p class="soft small" style="margin:0">Une erreur en rangeant tes pièces\u00a0? Tu peux annuler ${lastTxtOf(last)} et recommencer.</p><div class="row"><button class="btn ghost sm" data-act="undo" ${dis}>${undoArm ? 'Confirmer : annuler ' + lastTxtOf(last) : 'Annuler ' + lastTxtOf(last)}</button></div>`
   : `<p class="soft small" style="margin:0">Seul un parent peut annuler ${lastTxtOf(last)}.</p>`}</section>
+<section class="card"><h3>Le guide de Pépite</h3><p class="soft small" style="margin:0">Pépite te remontre tout, pas à pas.</p><div class="row"><button class="btn ghost sm" data-act="gstart">Revoir le guide</button></div></section>
 <section class="card"><h3>Ma couleur</h3><p class="soft small" style="margin:0">Choisis la couleur de ta tirelire et de ton appli.</p>
 <div class="swatches">${PAL.map((c, ci) => `<button class="sw" style="--c:${c}" title="${PALN[ci]}" data-act="mycolor" data-c="${c}" aria-pressed="${K.color === c}" aria-label="${PALN[ci]}" ${dis}></button>`).join('')}</div></section>
 <section class="card"><h3>Apparence</h3><p class="soft small" style="margin:0">Réglage propre à cet appareil.</p>
@@ -501,7 +503,7 @@ ${kids().map(k => { const pz = pauseOf(k.id); return `<div style="padding:12px 0
 <label>Le projet présenté<input id="p-label" type="text" autocomplete="off" maxlength="60" data-f="plabel" value="${esc(form.plabel)}" placeholder="Un vélo, un cadeau, une sortie…"></label>
 <label>Montant (€)<input id="p-amount" type="text" inputmode="decimal" autocomplete="off" data-f="pamount" value="${esc(form.pamount)}"></label>
 <div class="row"><button class="btn" data-act="project" ${dis}>Débloquer le montant</button></div></section>
-<section class="card"><h3>Les enfants</h3>${kids().map(k => `<div class="kidform"><header><h3 style="font-size:19px">${esc(k.name)}</h3>${kids().length > 1 ? `<button class="link" data-act="kdel" data-k="${k.id}">${delArm === k.id ? 'Confirmer la suppression' : 'Supprimer'}</button>` : ''}</header>
+<section class="card"><h3>Les enfants</h3>${kids().map(k => `<div class="kidform"><header><h3 style="font-size:19px">${esc(k.name)}</h3><button class="link" data-act="gstart" data-k="${k.id}">Lancer le guide</button>${kids().length > 1 ? `<button class="link" data-act="kdel" data-k="${k.id}">${delArm === k.id ? 'Confirmer la suppression' : 'Supprimer'}</button>` : ''}</header>
 <label>Prénom<input id="k-n-${k.id}" type="text" autocomplete="off" maxlength="20" value="${esc(k.name)}" data-set="kname:${k.id}"></label>
 <div class="grid2"><label>Naissance<input id="k-b-${k.id}" type="date" value="${esc(k.birth)}" data-set="kbirth:${k.id}"></label>
 <label>Par semaine (€)<input id="k-w-${k.id}" type="number" inputmode="decimal" min="1" max="50" step="0.5" value="${k.weekly}" data-set="kweekly:${k.id}"></label></div>
@@ -585,13 +587,55 @@ ${T.livret > 0 ? `<p class="msg">Vous avez déjà mis ${f(T.livret)} de côté p
 <div class="row"><button class="btn ghost" data-act="resetclose">Annuler</button><button class="btn danger" data-act="resetdo" ${okName && ready ? '' : 'disabled'}>Tout remettre à zéro</button></div></div></div>`;
 }
 
+
+/* ---------- Première paie guidée (onboarding de l'enfant) ---------- */
+function guideSteps(k) {
+  const t = tot(cur), ow = owed(cur), noPay = !ow.length || !!pauseOf(cur), rolled = sameWeek(t.bourse && t.bourse.d);
+  return [
+    { text: `Salut ${esc(k.name)} ! Moi, c’est Pépite. Voici ta tirelire : elle va se remplir, semaine après semaine.`, target: '.hero > svg', next: 'C’est parti !', low: true },
+    { text: 'Ta paie de la semaine t’attend. Appuie sur « Paie », en bas.', target: '.tab[data-v=paie]', done: () => view === 'paie', skip: () => noPay },
+    { text: 'Voici tes pièces. Pour chacune, choisis : le porte-monnaie pour la dépenser, ou la tirelire pour la placer.', target: '.tray', done: () => view === 'paie' && tray.length === 0, skip: () => noPay },
+    { text: invC.length ? `Regarde : pour les pièces placées dans ta tirelire, ${P().aj} un bonus ! Appuie sur « Valider ma paie ».` : `Si tu places des pièces dans ta tirelire, ${P().aj} un bonus. Tu peux encore changer d’avis, puis appuie sur « Valider ma paie ».`, target: '.zone.gz', done: () => guidePaid, skip: () => noPay && !guidePaid },
+    { text: 'Maintenant, la bourse ! Appuie sur « Bourse », en bas.', target: '.tab[data-v=bourse]', done: () => view === 'bourse', skip: () => rolled },
+    { text: 'Choisis ta stratégie en comptant les faces vertes et les faces rouges. Puis lance le dé !', target: '.post.on', done: () => sameWeek(tot(cur).bourse && tot(cur).bourse.d), skip: () => rolled && view !== 'bourse', next: 'Plus tard' },
+    { text: 'Dernière étape : choisis ton rêve ! Appuie sur « Projet », en bas.', target: '.tab[data-v=projet]', done: () => view === 'projet', skip: () => !!goalOf(cur) },
+    { text: 'Choisis ou écris ton projet, indique son prix, puis valide. Ta pépite grandira à chaque palier !', target: 'section.card:has(#go-name)', done: () => !!goalOf(cur), next: 'Plus tard' },
+    { text: `Bravo ${esc(k.name)}, tu sais tout ! Reviens chaque semaine ranger ta paie et lancer le dé. C’est comme ça qu’une tirelire devient une pépite.`, target: '.hero > svg', next: 'Terminer', end: true, low: true }
+  ];
+}
+function guideSync(k) {
+  const S = guideSteps(k);
+  while (guide !== null && guide < S.length - 1) { const s = S[guide]; if ((s.skip && s.skip()) || (s.done && s.done())) guide++; else break; }
+  return S;
+}
+function guideEnd(k) { guide = null; guidePaid = false; guideShown = -1; try { speechSynthesis.cancel(); } catch (e) {} if (k && !k.guided) { k.guided = true; if (ready) saveF(); } }
+function guideView(k) {
+  const S = guideSync(k), s = S[guide], n = S.length;
+  return `<div class="guide${s.low ? ' low' : ''}" role="dialog" aria-label="Guide de Pépite" aria-live="polite"><div class="gmascot">${NUG('', '')}</div><div class="gbody">
+<p>${s.text}</p>
+<div class="gact"><button class="link gspeak" data-act="gspeak">${I.speak}Écoute</button><button class="link" data-act="gskip">${s.end ? '' : 'Passer le guide'}</button>${s.next ? `<button class="btn sm" data-act="${s.end ? 'gend' : 'gnext'}">${s.next}</button>` : ''}</div>
+<div class="tdots" aria-hidden="true">${S.map((_, j) => `<i class="${j === guide ? 'on' : ''}"></i>`).join('')}</div></div></div>`;
+}
+function guideMark() {
+  document.querySelectorAll('.gtarget').forEach(e => e.classList.remove('gtarget'));
+  if (guide === null || !F) return;
+  const k = kidOf(cur); if (!k) return;
+  const s = guideSteps(k)[guide]; const el = s && document.querySelector(s.target);
+  if (el) { el.classList.add('gtarget'); if (guideShown !== guide) { guideShown = guide; if (!el.closest('.tabbar')) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); } }
+}
+function guideSpeak() {
+  const k = kidOf(cur); if (!k || guide === null) return;
+  const txt = guideSteps(k)[guide].text.replace(/<[^>]+>/g, '').replace(/&#39;|’/g, '\'');
+  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(txt); u.lang = 'fr-FR'; u.rate = 0.95; const v = speechSynthesis.getVoices().find(x => /^fr/i.test(x.lang)); if (v) u.voice = v; speechSynthesis.speak(u); } catch (e) {}
+}
 function mainView() {
   ensureCur();
   const k = kidOf(cur);
   if (!k) return splash('Aucun enfant');
+  if (guide === null && ready && !k.guided && !guideOff[cur] && !evs(cur).length && !goalOf(cur) && view === 'home') guide = 0;
   const t = tot(cur);
   const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : view === 'lire' ? lireView() : view === 'art' ? artView() : view === 'apropos' ? aproposView() : homeView(k, t);
-  return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view">${content}</main>${tabbar()}${resetFor ? resetModal() : ''}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
+  return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view${guide !== null ? ' guided' : ''}">${content}</main>${guide !== null && ['home', 'paie', 'bourse', 'projet'].includes(view) ? guideView(k) : ''}${tabbar()}${resetFor ? resetModal() : ''}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
 }
 
 let lastKey = '';
@@ -609,6 +653,7 @@ function render() {
   // Changement d'écran : on remplace tout ; sinon on ne met à jour que ce qui change (clics et saisies préservés).
   if (key !== lastKey) { app.innerHTML = html; lastKey = key; }
   else Idiomorph.morph(app, html, { morphStyle: 'innerHTML', ignoreActiveValue: true });
+  guideMark();
 }
 
 /* ---------- données ---------- */
@@ -757,6 +802,11 @@ document.addEventListener('click', ev => {
   if (a !== 'kdel') delArm = null;
   if (a !== 'goaldrop') goalDropArm = false;
   switch (a) {
+    case 'gnext': { const k = kidOf(cur); if (k && guide !== null) { guide++; } break; }
+    case 'gskip': { const k = kidOf(cur); guideOff[cur] = true; guideEnd(k); break; }
+    case 'gend': { const k = kidOf(cur); guideEnd(k); break; }
+    case 'gspeak': guideSpeak(); return;
+    case 'gstart': { const id = b.dataset.k || cur; if (kidOf(id)) { cur = id; resetCoins(); view = 'home'; guide = 0; guidePaid = false; guideShown = -1; pinOk = false; pinAsk = false; window.scrollTo(0, 0); } break; }
     case 'tour': tour = 0; break;
     case 'tnext': tour = Math.min(tourLen() - 1, tour + 1); break;
     case 'tprev': tour = Math.max(0, tour - 1); break;
@@ -794,6 +844,7 @@ document.addEventListener('click', ev => {
       const bonus = r2(inv * F.match / 100);
       const before = t.total;
       EV[cur] = [...evs(cur), { t: 'paie', d: iso(), w: new Date(ow[0]).toISOString(), inv, dep, bonus }];
+      if (guide !== null) guidePaid = true;
       saveK(cur);
       sayMs(before, inv ? `Bravo ! ${f(inv + bonus)} rejoignent ta tirelire.` : 'Paie rangée : tout est dans ton porte-monnaie.', dep ? `${f(dep)} pour ton porte-monnaie : ${P().label.toLowerCase()} ${F.parents === 'parents' ? 'te les donneront' : 'te les donnera'}.` : '');
       resetCoins(); if (ow.length <= 1) { view = 'home'; window.scrollTo(0, 0); } break;
