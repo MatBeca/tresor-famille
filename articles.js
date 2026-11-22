@@ -171,7 +171,7 @@ ${keep(['On démarre à 6 ans avec 1,50 € par semaine, puis 50 centimes de pl
     {
       id: 'fonctions', n: 4, theme: 'Les fonctionnalités', min: 3,
       title: 'Pépite, mode d’emploi en images',
-      lead: 'Tout ce que fait l’appli, écran par écran. Les aperçus ci-dessous sont dessinés par l’appli elle-même : ils évoluent avec elle.',
+      lead: 'Tout ce que fait l’appli, écran par écran.',
       body: () => features(h).map((x, i) => `<h3>${i + 1}. ${x.title}</h3>\n<p>${x.long}</p>\n${demo(x.visual, x.cap)}`).join('\n') + `
 <h3>${features(h).length + 1}. Et aussi</h3>
 <p>La paie mise en pause en cas de conflit, avec un message pour l’enfant. L’onglet Futur qui projette la tirelire jusqu’à ses 18\u00a0ans. Le carnet qui garde tout l’historique. Plusieurs enfants, chacun sa couleur. Un mode sombre. Et un bouton pour annuler la dernière opération quand quelqu’un s’est trompé.</p>`,
