@@ -449,3 +449,6 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .kv{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:6px}
 .kv li{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed var(--line);padding-bottom:6px}
 .kv li span{color:var(--ink)}
+
+.avislist{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:10px}.avislist li{border-bottom:1px dashed var(--line);padding-bottom:8px}.avislist p{margin:2px 0 0;white-space:pre-wrap}
+textarea{width:100%;font:inherit;font-size:16px;font-weight:600;border-radius:14px;border:2px solid var(--line);background:var(--bg);padding:11px 13px;resize:vertical;color:var(--ink)}textarea:focus{border-color:var(--kid);outline:none}

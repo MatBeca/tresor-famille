@@ -18,6 +18,14 @@ service cloud.firestore {
     match /{chemin=**}/enfants/{enfant} {
       allow read: if isAdmin();
     }
+    // Avis envoyés depuis l'appli : chaque famille peut en déposer, seul le créateur les lit.
+    match /avis/{id} {
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 2000;
+      allow read, delete: if isAdmin();
+    }
     // Anciennes données de la première version, lues une fois pour l'import.
     match /tresor/{doc} {
       allow read: if isAdmin();

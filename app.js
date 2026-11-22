@@ -5,7 +5,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc, collection, collectionGroup, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
-const VERSION = '94'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '95'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -87,9 +87,9 @@ const KID_UNDO = ['paie', 'recu', 'posture']; // ce qu'un enfant peut annuler se
 let tray = [], invC = [], depC = [], rolling = false;
 let toast = null, toastT = null, undoArm = false, wipeArm = false, delArm = null;
 const projInv = {}, sel = {}, projStrat = {}; // projStrat : stratégie essayée dans Futur (simulation, ne change pas la vraie)
-const form = { ok: false, delpass: '', preason: '', pdur: '1', resetname: '', goalname: '', goalbudget: '', gamount: '', gfrom: '', plabel: '', pamount: '', pkid: '', email: '', pass: '', newpin: '' };
+const form = { avis: '', ok: false, delpass: '', preason: '', pdur: '1', resetname: '', goalname: '', goalbudget: '', gamount: '', gfrom: '', plabel: '', pamount: '', pkid: '', email: '', pass: '', newpin: '' };
 let loginMode = 'in', loginMsg = '', loginErr = '', busy = false;
-let installEv = null, installed = false, relatedApp = false, delAcct = false, delErr = '', adminData = null, adminErr = '';
+let avisSent = false, avisMood = '', installEv = null, installed = false, relatedApp = false, delAcct = false, delErr = '', adminData = null, adminErr = '';
 const UA = navigator.userAgent;
 const isMobile = /Android|iPhone|iPad|iPod/i.test(UA) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(UA));
 const isIOS = /iPhone|iPad|iPod/i.test(UA) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(UA));
@@ -561,6 +561,7 @@ function parentsView() {
   return `<h2 class="title">Espace parents</h2>${okCard}
 <button class="item art-item parentread" data-act="go" data-v="lire"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent · 5 lectures courtes</small><b>La méthode Pépite, pour bien accompagner votre enfant</b></span><span class="end">${I.chev}</span></button>
 <button class="item art-item parentkid" data-act="go" data-v="lecons" data-from="parents"><span class="ic artn">${I.book}</span><span><small>Côté enfant · 6 leçons et quiz</small><b>Ce que lit votre enfant, pour en parler ensemble</b></span><span class="end">${I.chev}</span></button>
+<button class="item art-item" data-act="go" data-v="avis"><span class="ic artn">${I.gift}</span><span><small>Ton avis compte</small><b>Donner mon avis sur Pépite</b></span><span class="end">${I.chev}</span></button>
 ${lock ? `<div class="msg">Cet appareil est verrouillé sur ${esc(K.name)}.<div class="row" style="margin-top:8px"><button class="btn sm" data-act="unlockdev">Déverrouiller l’appareil</button></div></div>` : ''}
 <section class="card"><h3>L’argent, en vrai</h3>
 <p class="soft small" style="margin:0">Pépite tient les comptes, et vous réglez quand vous voulez : chaque semaine, une fois par mois… Deux compteurs par enfant :</p>
@@ -708,11 +709,12 @@ async function loadAdmin() {
   if (!isAdmin()) return;
   adminErr = ''; adminData = null; render();
   try {
-    const [fs, ks] = await Promise.all([getDocs(collection(fdb, 'familles')), getDocs(collectionGroup(fdb, 'enfants'))]);
+    const [fs, ks, av] = await Promise.all([getDocs(collection(fdb, 'familles')), getDocs(collectionGroup(fdb, 'enfants')), getDocs(collection(fdb, 'avis')).catch(() => null)]);
     const fams = [], kd = {};
     fs.forEach(d => fams.push({ id: d.id, ...d.data() }));
     ks.forEach(d => { const fid = d.ref.parent.parent.id; (kd[fid] = kd[fid] || {})[d.id] = d.data(); });
-    adminData = { at: Date.now(), fams, kd };
+    const avis = []; if (av) av.forEach(d => avis.push(d.data())); avis.sort((a, b) => (b.d || '').localeCompare(a.d || ''));
+    adminData = { at: Date.now(), fams, kd, avis };
   } catch (e) { adminErr = 'Lecture impossible : publiez d’abord les nouvelles règles Firestore (accès du tableau de bord).'; }
   render();
 }
@@ -761,7 +763,32 @@ function adminView() {
 <section class="card"><h3>Rétention</h3><ul class="kv">${line('Encore actives après 1 semaine', `${s.ret1} <small class="soft">(${s.old7} familles)</small>`)}${line('Encore actives après 4 semaines', `${s.ret4} <small class="soft">(${s.old28} familles)</small>`)}${line('Enfants qui ont rangé leur paie 3 semaines de suite', s.habit)}</ul></section>
 <section class="card"><h3>Ce qui est utilisé</h3><ul class="kv">${line('Enfants inscrits', `${s.kids} <small class="soft">(${s.perFam} par famille)</small>`)}${s.ages.map(([l, v]) => line('· ' + l, v)).join('')}${line('Guide terminé', s.guided)}${line('Au moins un quiz réussi', s.lq)}${line('Un projet en cours', s.goal)}${line('Projets achetés', s.bought)}${line('Bourse ouverte (15 € atteints)', s.open)}${line('Dé lancé, parmi les bourses ouvertes', s.rolled)}${s.posts.map(([p, v]) => line('· ' + (POST[p] ? POST[p].name : p), v)).join('')}${line('Tirelire moyenne', s.avg)}${line('Bonus moyen des parents', s.match)}</ul></section>
 <section class="card"><h3>D’où viennent les familles</h3><ul class="kv">${s.srcs.map(([k, v]) => line(esc(k), v)).join('') || '<li><span class="soft">Aucune donnée</span></li>'}</ul><p class="soft small" style="margin:8px 0 0">Ajoute <b>?src=nom</b> à tes liens (ex. ?src=whatsapp, ?src=instagram) pour savoir lesquels marchent.</p></section>
+<section class="card"><h3>Avis des familles (${adminData.avis.length})</h3>${adminData.avis.length ? `<ul class="avislist">${adminData.avis.slice(0, 40).map(a => `<li><small class="soft">${dateFr(a.d)} · v${esc(a.v)} · ${a.kids} enfant(s)${a.mood ? ' · ' + esc((MOODS.find(m => m[0] === a.mood) || [, a.mood])[1]) : ''}</small><p>${esc(a.text || '(sans message)')}</p></li>`).join('')}</ul>` : '<p class="soft" style="margin:0">Aucun avis pour l’instant.</p>'}</section>
 <section class="card"><h3>Comment lire ces chiffres</h3><p class="small" style="margin:0">Repères indicatifs, à ajuster avec l’expérience. Le chiffre qui compte le plus est la rétention à 4 semaines : au-delà de 40 %, l’habitude est installée et tu peux tester une offre payante. Si l’installation reste sous 50 %, travaille l’écran d’installation avant tout. Si beaucoup de familles s’inscrivent mais peu d’enfants rangent leur paie trois semaines de suite, c’est la promesse ou l’accompagnement des parents qui coince, pas l’acquisition.</p>${s.optout ? `<p class="soft small" style="margin:8px 0 0">${s.optout} famille(s) ont désactivé les statistiques : leurs repères d’usage manquent.</p>` : ''}</section>`;
+}
+
+
+/* ---------- avis des familles (enregistrés dans la base, lus seulement par le créateur) ---------- */
+const MOODS = [['top', 'J’adore'], ['ok', 'Pas mal'], ['bof', 'Bof']];
+function avisView() {
+  const back = `<button class="backlink" data-act="go" data-v="parents">${I.chev}<span>Espace parents</span></button>`;
+  if (avisSent) return back + `<section class="card"><h2 class="title" style="margin:0 0 6px">Merci !</h2><p style="margin:0">Ton avis est bien arrivé. Chaque retour est lu, et c’est comme ça que Pépite s’améliore.</p><div class="row"><button class="btn sm" data-act="go" data-v="parents">Retour à l’Espace parents</button></div></section>`;
+  return back + `<p class="kicker">Ton avis compte</p><h2 class="title">Donner mon avis</h2><p class="lead">Ce qui marche, ce qui coince, ce que ton enfant a compris ou pas, une idée… Tout est utile.</p>
+<section class="card"><h3>Ton impression</h3><div class="pills">${MOODS.map(([v, l]) => `<button class="pill" data-act="amood" data-n="${v}" aria-pressed="${avisMood === v}">${l}</button>`).join('')}</div>
+<label style="margin-top:12px">Ton message<textarea id="avis-txt" data-f="avis" rows="6" maxlength="2000" placeholder="Par exemple : ma fille a compris le bonus tout de suite, mais pas la bourse…">${esc(form.avis)}</textarea></label>
+<p class="soft small" style="margin:6px 0 0">Ton message est lu par le créateur de Pépite, avec la version de l’appli et le nombre d’enfants. Évite d’y mettre des informations personnelles.</p>
+<div class="row"><button class="btn full" data-act="avissend" ${busy || !ready ? 'disabled' : ''}>Envoyer</button></div></section>`;
+}
+async function sendAvis() {
+  const txt = (form.avis || '').trim().slice(0, 2000);
+  if (!txt && !avisMood) { say('Écris un petit mot ou choisis une impression.'); return render(); }
+  busy = true; render();
+  try {
+    const id = user.uid.slice(0, 8) + '-' + Date.now();
+    await setDoc(doc(fdb, 'avis', id), { uid: user.uid, d: iso(), mood: avisMood || null, text: txt, v: VERSION, kids: kids().length, inst: standalone() });
+    form.avis = ''; avisMood = ''; avisSent = true;
+  } catch (e) { say('Envoi impossible pour le moment : vérifie la connexion.'); }
+  busy = false; render();
 }
 
 const H = () => ({ jar, miniDie, growNug, f, eurS, r50, I, coinEl });
@@ -898,7 +925,7 @@ function mainView() {
     else if (!k.bguided && view === 'bourse' && bourseOpen(cur) && !evs(cur).some(e => e.t === 'bourse')) { guideKind = 'bourse'; guide = 0; guideHold = null; guideViews = []; }
   }
   const t = tot(cur);
-  const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : view === 'lire' ? lireView() : view === 'art' ? artView() : view === 'apropos' ? aproposView() : view === 'lecons' ? leconsView() : view === 'lecon' ? leconView() : view === 'confidentialite' ? privacyView() : view === 'admin' ? (lock && !pinOk ? lockedView() : adminView()) : homeView(k, t);
+  const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : view === 'lire' ? lireView() : view === 'art' ? artView() : view === 'apropos' ? aproposView() : view === 'lecons' ? leconsView() : view === 'lecon' ? leconView() : view === 'confidentialite' ? privacyView() : view === 'avis' ? (lock && !pinOk ? lockedView() : avisView()) : view === 'admin' ? (lock && !pinOk ? lockedView() : adminView()) : homeView(k, t);
   return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view${guide !== null ? ' guided' : ''}">${content}</main>${guide !== null && (guideKind === 'bourse' ? view === 'bourse' : ['home', 'paie', 'bourse', 'projet'].includes(view)) ? guideView(k) : ''}${tabbar()}${resetFor ? resetModal() : ''}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
 }
 
@@ -1122,7 +1149,7 @@ document.addEventListener('click', ev => {
     case 'obnext': if (obValidate()) { ob.step++; window.scrollTo(0, 0); } break;
     case 'obprev': ob.step--; ob.err = ''; window.scrollTo(0, 0); break;
     case 'obfinish': obFinish(); return;
-    case 'go': pinFor = null; view = b.dataset.v; if (view === 'admin') loadAdmin(); if (view !== 'parents') { delAcct = false; delErr = ''; } if (b.dataset.from) lessonFrom = b.dataset.from; else if (!['lecons', 'lecon'].includes(view)) lessonFrom = null; if (!['parents', 'lire', 'art', 'apropos', 'confidentialite', 'admin'].includes(view) && !(lessonFrom === 'parents' && ['lecons', 'lecon'].includes(view))) { pinOk = false; } pinAsk = false; pinBuf = ''; pinBad = false; window.scrollTo(0, 0); break;
+    case 'go': pinFor = null; view = b.dataset.v; if (view === 'admin') loadAdmin(); if (view !== 'parents') { delAcct = false; delErr = ''; } if (view === 'avis') { avisSent = false; } if (b.dataset.from) lessonFrom = b.dataset.from; else if (!['lecons', 'lecon'].includes(view)) lessonFrom = null; if (!['parents', 'lire', 'art', 'apropos', 'confidentialite', 'admin', 'avis'].includes(view) && !(lessonFrom === 'parents' && ['lecons', 'lecon'].includes(view))) { pinOk = false; } pinAsk = false; pinBuf = ''; pinBad = false; window.scrollTo(0, 0); break;
     case 'kid': cur = k; goalEdit = false; resetCoins(); try { localStorage.setItem('pepite-cur', cur); } catch (e) {} break;
     case 'toPig': if (tray.length) depC.push(tray.shift()); break;
     case 'toGrow': if (tray.length) invC.push(tray.shift()); break;
@@ -1195,6 +1222,8 @@ document.addEventListener('click', ev => {
     case 'gno': okGift(b.dataset.k, b.dataset.d, false); break;
     case 'giftcheck': if (ready) { F.giftCheck = b.dataset.n === 'true'; saveF(); } break;
     case 'pstrat': if (POST[b.dataset.n]) projStrat[cur] = b.dataset.n; break;
+    case 'amood': avisMood = b.dataset.n; break;
+    case 'avissend': sendAvis(); return;
     case 'install': if (installEv) { const e = installEv; installEv = null; e.prompt(); e.userChoice.finally(() => render()); } break;
     case 'stats': if (ready) { if (b.dataset.n === 'off') { F.noStats = true; delete F.stats; } else { delete F.noStats; touchStats(true); } saveF(); } break;
     case 'export': exportData(); break;

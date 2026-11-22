@@ -16,6 +16,7 @@ export function privacyHTML({ contact, I, user }) {
 <p><b>La famille</b>${N}: le prénom, la date de naissance et la couleur de chaque enfant, sa paie, vos règles de bonus et le code parents. Jamais de nom de famille, de photo, d’adresse ou de localisation.</p>
 <p><b>L’historique de la tirelire</b>${N}: paies rangées, bonus, lancers de dé, projets, argent reçu et corrections.</p>
 <p><b>Des repères d’usage</b>${N}: la date de création du compte, le nombre de jours d’utilisation, si l’appli est installée sur l’écran d’accueil, le lien par lequel vous êtes arrivé et les quiz réussis. Ils servent uniquement à des statistiques d’ensemble pour améliorer Pépite.</p>
+<p><b>Vos avis</b>${N}: les messages envoyés depuis «${N}Donner mon avis${N}», avec la date, la version de l’appli et le nombre d’enfants. Seul le créateur de Pépite les lit.</p>
 <p><b>Sur votre téléphone seulement</b>${N}: le thème clair ou sombre, le verrouillage de l’appareil et le tutoriel déjà vu. Ces réglages restent sur l’appareil et ne nous sont jamais envoyés.</p>
 
 <h3>Pourquoi</h3>
@@ -31,7 +32,7 @@ export function privacyHTML({ contact, I, user }) {
 <p>Tant que votre compte existe. Quand vous le supprimez, toutes les données de la famille sont effacées immédiatement et définitivement. Un compte resté inactif pendant trois ans est supprimé, après un e-mail de prévenance.</p>
 
 <h3>Vos droits</h3>
-<p>Vous pouvez à tout moment consulter, corriger, exporter ou supprimer vos données, et vous opposer aux statistiques d’usage. Depuis l’appli${N}: Espace parents, carte «${N}Compte${N}». Ou par e-mail${N}: ${mail}. Si vous estimez que vos droits ne sont pas respectés, vous pouvez saisir la CNIL (<a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener">cnil.fr</a>).</p>
+<p>Vous pouvez à tout moment consulter, corriger, exporter ou supprimer vos données, et vous opposer aux statistiques d’usage. Depuis l’appli${N}: Espace parents, carte «${N}Compte${N}», ou un message via «${N}Donner mon avis${N}». Ou par e-mail${N}: ${mail}. Si vous estimez que vos droits ne sont pas respectés, vous pouvez saisir la CNIL (<a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener">cnil.fr</a>).</p>
 
 <h3 id="suppression">Supprimer votre compte</h3>
 <p>Dans l’appli${N}: ouvrez l’Espace parents, puis la carte «${N}Compte${N}», et touchez «${N}Supprimer le compte de la famille${N}». Votre mot de passe vous est demandé pour confirmer. Le compte et toutes les données des enfants sont effacés aussitôt.</p>
