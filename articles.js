@@ -64,7 +64,7 @@ export function articles(h) {
   return [
     {
       id: 'pedagogie', n: 1, theme: 'La pédagogie', min: 3,
-      title: 'On ne nous a pas appris l’argent. Eux, si.',
+      title: 'L’école ne leur apprend pas l’argent. Vous, si.',
       lead: 'À l’école, on apprend à calculer l’aire d’un trapèze. Personne ne nous apprend à faire travailler 100 €. Résultat : un pays qui épargne beaucoup… et investit peu.',
       body: `
 <div class="figs">${fig('12,8/20', 'la note de culture financière des Français')}${fig('4 sur 10', 'foyers sans aucun produit d’investissement')}${fig('7 sur 10', 'Français jugent la Bourse réservée aux initiés')}</div>
