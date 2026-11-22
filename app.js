@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '45'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '46'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -230,7 +230,7 @@ function loginView() {
   return `<main class="view full"><div class="welcome">${LOGOBIG}<h1>${WMFULL}</h1><p>Pièce après pièce, ta pépite grandit</p></div>
 <div class="intro"><p class="story">Semaine après semaine, la tirelire se remplit… jusqu’à devenir une vraie pépite.</p><p>Pépite aide les parents à montrer à leurs enfants, avec leur argent de poche, pourquoi épargner et investir tôt change tout.</p><p class="soft small">Bonus, bourse et intérêts sont un jeu financé par vous, les parents : ce n’est pas un vrai placement.</p></div>
 <div class="row" style="margin-top:14px"><button class="btn gold full" data-act="tour">Découvrir Pépite en 1 minute</button></div>
-<button class="item art-item" data-act="go" data-v="lire" style="margin:10px 0 4px"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent</small><b>Pourquoi Pépite ? 4 articles pour comprendre</b></span><span class="end">${I.chev}</span></button>
+<button class="item art-item" data-act="go" data-v="lire" style="margin:10px 0 4px"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent · 4 lectures courtes</small><b>Pourquoi ça marche\u00a0: la méthode Pépite expliquée</b></span><span class="end">${I.chev}</span></button>
 <div class="tabs2"><button data-act="lmode" data-m="in" aria-pressed="${!up}">J’ai un compte</button><button data-act="lmode" data-m="up" aria-pressed="${up}">Créer un compte</button></div>
 <form class="card" id="loginf" autocomplete="on">
 <h3>${up ? 'Créer le compte de la famille' : 'Connexion de cet appareil'}</h3>
@@ -445,7 +445,7 @@ function parentsView() {
   const lastTxt = last ? ({ paie: 'la paie du ', bourse: 'le lancer du ', recu: 'l’argent reçu le ', vire: 'le virement du ', donne: 'le porte-monnaie donné le ', projet: 'le projet du ', pause: 'la pause du ', reprise: 'la reprise du ', posture: 'le choix de stratégie du ' }[last.t] || '') + dateFr(last.d) : '';
   const pk = form.pkid && kidOf(form.pkid) ? form.pkid : cur;
   return `<h2 class="title">Espace parents</h2>
-<button class="item art-item parentread" data-act="go" data-v="lire"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent</small><b>4 articles pour comprendre Pépite</b></span><span class="end">${I.chev}</span></button>
+<button class="item art-item parentread" data-act="go" data-v="lire"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent · 4 lectures courtes</small><b>La méthode Pépite, pour bien accompagner votre enfant</b></span><span class="end">${I.chev}</span></button>
 ${lock ? `<div class="msg">Cet appareil est verrouillé sur ${esc(K.name)}.<div class="row" style="margin-top:8px"><button class="btn sm" data-act="unlockdev">Déverrouiller l’appareil</button></div></div>` : ''}
 <section class="card"><h3>L’argent, en vrai</h3>
 <p class="soft small" style="margin:0">Pépite tient les comptes, et vous réglez quand vous voulez : chaque semaine, une fois par mois… Deux compteurs par enfant :</p>
@@ -498,28 +498,28 @@ function tourSeen() { tour = null; try { localStorage.setItem('pepite-tour', '1'
 function tourModal() {
   const fs = features(H()), n = fs.length + 2, i = Math.max(0, Math.min(n - 1, tour)), last = i === n - 1;
   const s = i === 0 ? { title: 'Bienvenue dans Pépite\u00a0!', short: 'L’appli qui apprend à vos enfants à épargner et à investir, avec leur vrai argent de poche. Le tour complet en une minute.', visual: `<div class="tintro">${LOGOBIG}<div class="wmfull">${WMFULL}</div></div>` }
-    : last ? { title: 'C’est parti\u00a0?', short: 'Créez le compte de la famille en deux minutes. Vous retrouverez tout ça, et plus encore, dans «\u00a0Toi, parent\u00a0».', visual: `<div class="nugrow big">${growNug(100)}</div>` }
+    : last ? { title: 'C’est parti\u00a0?', short: 'Créez le compte de la famille en deux minutes. Et pour aller plus loin, la méthode complète vous attend dans «\u00a0Toi, parent\u00a0».', visual: `<div class="nugrow big">${growNug(100)}</div>` }
     : fs[i - 1];
   return `<div class="modal tourm" role="dialog" aria-modal="true" aria-labelledby="tt"><div class="sheet tour">
 <div class="ttop"><span class="tcount">${last ? 'Prêt\u00a0?' : i ? `${i} / ${n - 2}` : 'Le tour en 1 minute'}</span><button class="link" data-act="tskip">${last ? 'Fermer' : 'Passer'}</button></div>
 <div class="tvis"><div class="demoin" inert aria-hidden="true">${s.visual}</div></div>
 <h3 id="tt">${s.title}</h3><p>${s.short}</p>
 <div class="tdots" aria-hidden="true">${Array.from({ length: n }, (_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div>
-${last ? `<div class="list"><button class="btn full" data-act="tend">Créer le compte de ma famille</button><button class="btn ghost full" data-act="tread">Lire d’abord les 4 articles</button></div>`
+${last ? `<div class="list"><button class="btn full" data-act="tend">Créer le compte de ma famille</button><button class="btn ghost full" data-act="tread">Comprendre la méthode avant de me lancer</button></div>`
   : `<div class="row"><button class="btn ghost" data-act="tprev" ${i ? '' : 'disabled'}>Retour</button><button class="btn" data-act="tnext">${i ? 'Suivant' : 'C’est parti'}</button></div>`}
 </div></div>`;
 }
 function lireView() {
   const back = user ? 'parents' : 'home';
   return `<button class="backlink" data-act="go" data-v="${back}">${I.chev}<span>${user ? 'Espace parents' : 'Retour'}</span></button>
-<p class="kicker">Toi, parent</p><h2 class="title">4 articles pour comprendre</h2><p class="lead">Pourquoi apprendre l’argent si tôt, comment marchent les intérêts composés, combien donner, et ce que fait l’appli. Quelques minutes chacun.</p>
+<p class="kicker">Toi, parent</p><h2 class="title">La méthode Pépite, expliquée aux parents</h2><p class="lead">Pourquoi commencer si tôt, comment l’argent fait des petits, combien donner, et tout ce que fait l’appli. Quatre lectures courtes pour tout comprendre et bien accompagner votre enfant.</p>
 <div class="list">${artList().map(x => `<button class="item art-item" data-act="art" data-n="${x.id}"><span class="ic artn">${x.n}</span><span><small>${x.theme} · ${x.min} min</small><b>${x.title}</b></span><span class="end">${I.chev}</span></button>`).join('')}</div>`;
 }
 function artView() {
   const L = artList(), i = Math.max(0, L.findIndex(x => x.id === artId)), x = L[i], next = L[i + 1];
   const body = typeof x.body === 'function' ? x.body() : x.body;
   const inOb = user && !F;
-  return `<button class="backlink" data-act="go" data-v="${inOb ? 'home' : 'lire'}">${I.chev}<span>${inOb ? 'Revenir à l’inscription' : 'Les 4 articles'}</span></button>
+  return `<button class="backlink" data-act="go" data-v="${inOb ? 'home' : 'lire'}">${I.chev}<span>${inOb ? 'Revenir à l’inscription' : 'La méthode'}</span></button>
 <article class="art"><p class="kicker">Article ${x.n} sur ${L.length} · ${x.theme} · ${x.min} min</p><h2>${x.title}</h2><p class="alead">${x.lead}</p>${body}
 ${x.sources.length ? `<details class="src"><summary>Sources (${x.sources.length})</summary><ol>${x.sources.map(([t, u]) => `<li><a href="${u}" target="_blank" rel="noopener">${t}</a></li>`).join('')}</ol></details>` : ''}</article>
 ${next ? `<button class="item art-item nextart" data-act="art" data-n="${next.id}"><span class="ic artn">${next.n}</span><span><small>Article suivant</small><b>${next.title}</b></span><span class="end">${I.chev}</span></button>` : `<div class="row"><button class="btn full" data-act="${user ? 'go' : 'signup'}" data-v="${inOb ? 'home' : 'parents'}">${inOb ? 'Revenir à l’inscription' : user ? 'Retour à l’espace parents' : 'Créer le compte de ma famille'}</button></div>`}`;
