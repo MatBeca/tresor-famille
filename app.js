@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '52'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '53'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -76,7 +76,8 @@ let F = null, famLoaded = false, famServer = false, lastF = '';
 const EV = {}, GOAL = {}, PAUSE = {}, KL = {}, lastK = {}, kidUnsubs = {};
 let goalEdit = false, goalDropArm = false, resetFor = null, payHelp = null;
 let famUnsub = null, ready = false, status = '', offlineTimer = null;
-let view = 'home', cur = null, lock = null, pinOk = false, pinBuf = '', pinBad = false;
+let view = 'home', cur = null, lock = null, pinOk = false, pinBuf = '', pinBad = false, pinAsk = false;
+const KID_UNDO = ['paie', 'recu', 'posture']; // ce qu'un enfant peut annuler seul sur un appareil verrouillé
 let tray = [], invC = [], depC = [], rolling = false;
 let toast = null, toastT = null, undoArm = false, wipeArm = false, delArm = null;
 const projInv = {}, sel = {};
@@ -285,7 +286,7 @@ ${o.kids.map((k, i) => `<div class="kidform"><header><h3>Enfant ${i + 1}</h3>${o
 
 function topbar() {
   const av = lock ? '' : kids().map(k => `<button class="av" style="--c:${k.color}" data-act="kid" data-k="${k.id}" aria-pressed="${k.id === cur}" aria-label="${esc(k.name)}">${esc(k.name.slice(0, 1).toUpperCase())}</button>`).join('');
-  return `<header class="topbar"><div class="brand">${LOGO}${WM}</div>${kids().length > 1 ? av : ''}<button class="iconbtn" data-act="go" data-v="parents" aria-label="Espace parents">${I.gear}</button></header>`;
+  return `<header class="topbar"><div class="brand">${LOGO}${WM}</div>${kids().length > 1 ? av : ''}<button class="iconbtn" data-act="go" data-v="parents" aria-label="${lock ? 'Paramètres' : 'Espace parents'}">${I.gear}</button></header>`;
 }
 function tabbar() {
   const tabs = [['home', 'Tirelire', I.jar], ['paie', 'Paie', I.coin], ['bourse', 'Bourse', I.die], ['projet', 'Projet', I.flag], ['futur', 'Futur', I.chart]];
@@ -433,16 +434,28 @@ function carnetView(k) {
   return `<h2 class="title">Mon carnet</h2><p class="lead">Tout ce qui est entré et sorti de ta tirelire.</p><section class="card"><ul class="log">${ev}</ul></section>`;
 }
 
+const lastTxtOf = last => last ? ({ paie: 'la paie du ', bourse: 'le lancer du ', recu: 'l’argent reçu le ', vire: 'le virement du ', donne: 'le porte-monnaie donné le ', projet: 'le projet du ', pause: 'la pause du ', reprise: 'la reprise du ', posture: 'le choix de stratégie du ' }[last.t] || '') + dateFr(last.d) : '';
 function pinView() {
-  return `<section class="pin"><h2 class="title">Espace parents</h2><p class="lead">Tape le code parents.</p>
+  return `<section class="pin">${lock && pinAsk ? `<button class="backlink" data-act="pinout">${I.chev}<span>Paramètres</span></button>` : ''}<h2 class="title">${lock && pinAsk ? 'Déverrouiller l’appareil' : 'Espace parents'}</h2><p class="lead">Tape le code parents.</p>
 <div class="dots">${[0, 1, 2, 3].map(i => `<i class="${i < pinBuf.length ? 'on' : ''}"></i>`).join('')}</div>${pinBad ? '<p class="neg" style="margin:0;font-weight:800">Mauvais code</p>' : ''}
 <div class="keys">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button class="key" data-act="pin" data-n="${n}">${n}</button>`).join('')}<span></span><button class="key" data-act="pin" data-n="0">0</button><button class="key" data-act="pinback" style="font-size:16px">Effacer</button></div></section>`;
 }
 
+function lockedView() {
+  const dis = ready ? '' : 'disabled', K = kidOf(cur), last = evs(cur)[evs(cur).length - 1], can = last && KID_UNDO.includes(last.t);
+  return `<h2 class="title">Paramètres</h2>
+<section class="card"><h3>Cet appareil est verrouillé</h3><p class="soft small" style="margin:0">Il est réservé à ${esc(K.name)}. Pour revenir à l’espace parents, un parent tape son code.</p>
+<div class="row"><button class="btn sm" data-act="askpin">Déverrouiller l’appareil</button></div></section>
+<section class="card"><h3>Corriger une erreur</h3>
+${!last ? `<p class="soft" style="margin:0">Rien à annuler.</p>` : can ? `<p class="soft small" style="margin:0">Une erreur en rangeant tes pièces\u00a0? Tu peux annuler ${lastTxtOf(last)} et recommencer.</p><div class="row"><button class="btn ghost sm" data-act="undo" ${dis}>${undoArm ? 'Confirmer : annuler ' + lastTxtOf(last) : 'Annuler ' + lastTxtOf(last)}</button></div>`
+  : `<p class="soft small" style="margin:0">Seul un parent peut annuler ${lastTxtOf(last)}.</p>`}</section>
+<section class="card"><h3>Apparence</h3><p class="soft small" style="margin:0">Réglage propre à cet appareil.</p>
+<div class="pills">${[['light', 'Clair'], ['dark', 'Sombre']].map(([v, l]) => `<button class="pill" data-act="theme" data-n="${v}" aria-pressed="${theme === v}">${l}</button>`).join('')}</div></section>`;
+}
 function parentsView() {
-  if (lock && !pinOk) return pinView();
+  if (lock && !pinOk) return pinAsk ? pinView() : lockedView();
   const dis = ready ? '' : 'disabled', K = kidOf(cur), last = evs(cur)[evs(cur).length - 1];
-  const lastTxt = last ? ({ paie: 'la paie du ', bourse: 'le lancer du ', recu: 'l’argent reçu le ', vire: 'le virement du ', donne: 'le porte-monnaie donné le ', projet: 'le projet du ', pause: 'la pause du ', reprise: 'la reprise du ', posture: 'le choix de stratégie du ' }[last.t] || '') + dateFr(last.d) : '';
+  const lastTxt = lastTxtOf(last);
   const pk = form.pkid && kidOf(form.pkid) ? form.pkid : cur;
   return `<h2 class="title">Espace parents</h2>
 <button class="item art-item parentread" data-act="go" data-v="lire"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent · 4 lectures courtes</small><b>La méthode Pépite, pour bien accompagner votre enfant</b></span><span class="end">${I.chev}</span></button>
@@ -554,7 +567,7 @@ function render() {
   else if (!user) { if (!tourAuto && view === 'home') { tourAuto = true; let seen = null; try { seen = localStorage.getItem('pepite-tour'); } catch (e) {} if (!seen) tour = 0; } const pub = view === 'lire' || view === 'art'; html = pub ? `<main class="view full">${view === 'lire' ? lireView() : artView()}</main>` : loginView() + (tour !== null ? tourModal() : ''); key = 'login:' + (pub ? view + ':' + artId : '') + (!pub && tour !== null ? ':tour' + tour : ''); }
   else if (!famLoaded) { html = splash('Ouverture de la banque…'); key = 'splash2'; }
   else if (!F) { if (!ob) { ob = newOb(); tryLegacy(); } if (view === 'art') { key = 'obart:' + artId; html = `<main class="view full">${artView()}</main>`; } else { key = 'ob' + ob.step; html = obView(); } color = ob.step === 2 && ob.kids[0] ? ob.kids[0].color : PAL[1]; }
-  else { html = mainView(); key = 'main:' + view + ':' + (view === 'art' ? artId : '') + ':' + cur + ':' + (lock && !pinOk ? 'pin' : '') + (resetFor ? ':modal' : ''); const k = kidOf(cur); if (k) color = k.color; }
+  else { html = mainView(); key = 'main:' + view + ':' + (view === 'art' ? artId : '') + ':' + cur + ':' + (lock && !pinOk ? (pinAsk ? 'pin' : 'lk') : '') + (resetFor ? ':modal' : ''); const k = kidOf(cur); if (k) color = k.color; }
   document.documentElement.style.setProperty('--kid', color);
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', color);
   const app = document.getElementById('app');
@@ -732,7 +745,7 @@ document.addEventListener('click', ev => {
     case 'obnext': if (obValidate()) { ob.step++; window.scrollTo(0, 0); } break;
     case 'obprev': ob.step--; ob.err = ''; window.scrollTo(0, 0); break;
     case 'obfinish': obFinish(); return;
-    case 'go': view = b.dataset.v; if (!['parents', 'lire', 'art'].includes(view)) { pinOk = false; } pinBuf = ''; pinBad = false; window.scrollTo(0, 0); break;
+    case 'go': view = b.dataset.v; if (!['parents', 'lire', 'art'].includes(view)) { pinOk = false; } pinAsk = false; pinBuf = ''; pinBad = false; window.scrollTo(0, 0); break;
     case 'kid': cur = k; goalEdit = false; resetCoins(); try { localStorage.setItem('pepite-cur', cur); } catch (e) {} break;
     case 'toPig': if (tray.length) depC.push(tray.shift()); break;
     case 'toGrow': if (tray.length) invC.push(tray.shift()); break;
@@ -758,9 +771,11 @@ document.addEventListener('click', ev => {
     case 'bar': sel[cur] = +b.dataset.age; break;
     case 'pin':
       if (pinBuf.length < 4) pinBuf += b.dataset.n; pinBad = false;
-      if (pinBuf.length === 4) { if (pinBuf === F.pin) pinOk = true; else pinBad = true; pinBuf = ''; }
+      if (pinBuf.length === 4) { if (pinBuf === F.pin) { if (pinAsk) { lock = null; pinAsk = false; pinOk = false; try { localStorage.removeItem('pepite-lock'); } catch (e) {} say('Appareil déverrouillé.'); } else pinOk = true; } else pinBad = true; pinBuf = ''; }
       break;
     case 'pinback': pinBuf = pinBuf.slice(0, -1); break;
+    case 'askpin': pinAsk = true; pinBuf = ''; pinBad = false; window.scrollTo(0, 0); break;
+    case 'pinout': pinAsk = false; pinBuf = ''; pinBad = false; break;
     case 'unlockdev': lock = null; pinOk = false; try { localStorage.removeItem('pepite-lock'); } catch (e) {} say('Appareil déverrouillé.'); break;
     case 'lock': if (/^\d{4}$/.test(F.pin || '')) { lock = cur = k; pinOk = false; view = 'home'; resetCoins(); try { localStorage.setItem('pepite-lock', lock); } catch (e) {} window.scrollTo(0, 0); say(`Appareil réservé à ${esc(kidOf(k).name)}.`, 'Le code parents rouvre tout.'); } break;
     case 'donne': if (ready) { const T = tot(k); if (T.purseDue > 0) { EV[k] = [...evs(k), { t: 'donne', d: iso(), amount: T.purseDue }]; saveK(k); say(`${f(T.purseDue)} donnés à ${esc(kidOf(k).name)} pour son porte-monnaie.`, 'Le compteur repart de zéro.'); } } break;
@@ -786,7 +801,7 @@ document.addEventListener('click', ev => {
     case 'pdur': form.pdur = b.dataset.n; break;
     case 'ppause': if (ready) { const n = +form.pdur, until = n ? new Date(wk(new Date()) + n * 7 * 864e5).toISOString() : null, reason = (form['preason:' + k] || '').trim().slice(0, 80); PAUSE[k] = { since: iso(), until, reason }; EV[k] = [...evs(k), { t: 'pause', d: iso(), until, reason }]; saveK(k); form['preason:' + k] = ''; say(`Paie ${de(kidOf(k).name)} en pause ${untilTxt(PAUSE[k])}.`); } break;
     case 'presume': if (ready) { PAUSE[k] = null; EV[k] = [...evs(k), { t: 'reprise', d: iso() }]; saveK(k); say(`La paie ${de(kidOf(k).name)} reprend.`); if (k === cur) resetCoins(); } break;
-    case 'undo': if (ready) { if (!undoArm) undoArm = true; else { const lastEv = evs(cur)[evs(cur).length - 1]; if (lastEv && lastEv.t === 'pause') PAUSE[cur] = null; if (lastEv && lastEv.t === 'posture' && POST[lastEv.prev]) { kidOf(cur).posture = lastEv.prev; saveF(); } EV[cur] = evs(cur).slice(0, -1); saveK(cur); undoArm = false; say('Dernière opération annulée.'); } } break;
+    case 'undo': if (lock && !pinOk) { const le = evs(cur)[evs(cur).length - 1]; if (!le || !KID_UNDO.includes(le.t)) break; } if (ready) { if (!undoArm) undoArm = true; else { const lastEv = evs(cur)[evs(cur).length - 1]; if (lastEv && lastEv.t === 'pause') PAUSE[cur] = null; if (lastEv && lastEv.t === 'posture' && POST[lastEv.prev]) { kidOf(cur).posture = lastEv.prev; saveF(); } EV[cur] = evs(cur).slice(0, -1); saveK(cur); undoArm = false; say('Dernière opération annulée.'); } } break;
     case 'resetopen': resetFor = cur; form.resetname = ''; break;
     case 'resetclose': resetFor = null; form.resetname = ''; break;
     case 'resetdo': {
