@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '55'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '56'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -27,7 +27,11 @@ function ageAt(birth, date) { const b = new Date(birth + 'T12:00:00'); let a = d
 const validBirth = b => /^\d{4}-\d{2}-\d{2}$/.test(b || '') && !isNaN(new Date(b)) && ageAt(b, new Date()) >= 3 && ageAt(b, new Date()) < 18;
 const suggest = b => validBirth(b) ? Math.min(50, Math.max(1, 1.5 + 0.5 * (ageAt(b, new Date()) - 6))) : 2;
 
-const PAL = ['#f0505a', '#2f6feb', '#8e5ce6', '#f07c00', '#e0438f', '#139fb5'];
+const PAL = ['#f0505a', '#2f6feb', '#8e5ce6', '#f07c00', '#e0438f', '#139fb5',
+  '#7cc242', '#f7c600', '#38aef0', '#24408e', '#a3214f', '#8a5a35'];
+const PALN = ['Rouge', 'Bleu', 'Violet', 'Orange', 'Rose', 'Turquoise', 'Vert pomme', 'Jaune', 'Bleu ciel', 'Bleu marine', 'Bordeaux', 'Chocolat'];
+// Texte lisible sur la couleur de l'enfant : foncé sur les couleurs claires (jaune, vert pomme, ciel), blanc sinon.
+const onColor = c => { const n = parseInt(c.slice(1), 16), l = [n >> 16, n >> 8 & 255, n & 255].map(v => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * l[0] + 0.7152 * l[1] + 0.0722 * l[2] > 0.36 ? '#22203a' : '#fff'; };
 const PAR = {
   parents: { label: 'Les parents', de: 'des parents', a: 'à tes parents', aj: 'tes parents ajoutent' },
   papa: { label: 'Papa', de: 'de papa', a: 'à papa', aj: 'papa ajoute' },
@@ -202,7 +206,7 @@ function jar(t, g) {
   const h = [t.own * k / cap * H, t.bonus * k / cap * H, Math.max(0, t.gains) * k / cap * H];
   const fills = ['var(--kid)', 'var(--gold)', 'var(--grow)'];
   let y = 266, layers = '', gy = 266;
-  h.forEach((v, i) => { y -= v; if (i === 2) gy = y; layers += `<rect x="16" y="${y.toFixed(1)}" width="188" height="${v.toFixed(1)}" style="fill:${fills[i]}"/>`; });
+  h.forEach((v, i) => { y -= v; if (i === 2) gy = y; layers += `<rect x="16" y="${y.toFixed(1)}" width="188" height="${v.toFixed(1)}" style="fill:${fills[i]}"/>`; if (v > 0.5 && y < 268) layers += `<rect x="16" y="${(y - 1).toFixed(1)}" width="188" height="2" style="fill:#fff;opacity:.9"/>`; });
   const yb = y + h[2]; // bas de la couche « gagné tout seul »
   const reached = !!g && t.total >= g.budget;
   const star = (x, yy, r) => `<path d="M${x} ${yy - r}l${r * 0.28} ${r * 0.72} ${r * 0.72} ${r * 0.28}-${r * 0.72} ${r * 0.28}-${r * 0.28} ${r * 0.72}-${r * 0.28}-${r * 0.72}-${r * 0.72}-${r * 0.28} ${r * 0.72}-${r * 0.28}z" fill="#fff3b0" stroke="#6e4400" stroke-width="2" stroke-linejoin="round"/>`;
@@ -265,7 +269,7 @@ ${o.kids.map((k, i) => `<div class="kidform"><header><h3>Enfant ${i + 1}</h3>${o
 <label>Prénom<input id="ob-n-${k.id}" type="text" autocomplete="off" maxlength="20" data-ob="name:${k.id}" value="${esc(k.name)}"></label>
 <div class="grid2"><label>Date de naissance<input id="ob-b-${k.id}" type="date" data-ob="birth:${k.id}" value="${esc(k.birth)}"></label>
 <label>Argent de poche par semaine (€)<input id="ob-w-${k.id}" type="number" inputmode="decimal" min="1" max="50" step="0.5" data-ob="weekly:${k.id}" value="${esc(k.weekly)}" placeholder="${String(suggest(k.birth)).replace('.', ',')}"></label></div>
-<label>Sa couleur</label><div class="swatches">${PAL.map(c => `<button class="sw" style="--c:${c}" data-act="obcolor" data-k="${k.id}" data-c="${c}" aria-pressed="${k.color === c}" aria-label="Couleur"></button>`).join('')}</div></div>`).join('')}
+<label>Sa couleur</label><div class="swatches">${PAL.map((c, ci) => `<button class="sw" style="--c:${c}" title="${PALN[ci]}" data-act="obcolor" data-k="${k.id}" data-c="${c}" aria-pressed="${k.color === c}" aria-label="${PALN[ci]}"></button>`).join('')}</div></div>`).join('')}
 <div class="row"><button class="btn ghost full" data-act="obadd">Ajouter un enfant</button></div>
 <button class="item art-item" data-act="art" data-n="rythme" style="margin-top:12px"><span class="ic artn">3</span><span><small>Notre repère : 1,50 € par semaine à 6 ans, puis 50 centimes de plus chaque année</small><b>Quand commencer, combien donner ?</b></span><span class="end">${I.chev}</span></button>`;
   } else {
@@ -285,7 +289,7 @@ ${o.kids.map((k, i) => `<div class="kidform"><header><h3>Enfant ${i + 1}</h3>${o
 }
 
 function topbar() {
-  const av = lock ? '' : kids().map(k => `<button class="av" style="--c:${k.color}" data-act="kid" data-k="${k.id}" aria-pressed="${k.id === cur}" aria-label="${esc(k.name)}">${esc(k.name.slice(0, 1).toUpperCase())}</button>`).join('');
+  const av = lock ? '' : kids().map(k => `<button class="av" style="--c:${k.color};color:${onColor(k.color)}" data-act="kid" data-k="${k.id}" aria-pressed="${k.id === cur}" aria-label="${esc(k.name)}">${esc(k.name.slice(0, 1).toUpperCase())}</button>`).join('');
   return `<header class="topbar"><div class="brand">${LOGO}${WM}</div>${kids().length > 1 ? av : ''}<button class="iconbtn" data-act="go" data-v="parents" aria-label="${lock ? 'Paramètres' : 'Espace parents'}">${I.gear}</button></header>`;
 }
 function tabbar() {
@@ -495,7 +499,7 @@ ${kids().map(k => { const pz = pauseOf(k.id); return `<div style="padding:12px 0
 <label>Prénom<input id="k-n-${k.id}" type="text" autocomplete="off" maxlength="20" value="${esc(k.name)}" data-set="kname:${k.id}"></label>
 <div class="grid2"><label>Naissance<input id="k-b-${k.id}" type="date" value="${esc(k.birth)}" data-set="kbirth:${k.id}"></label>
 <label>Par semaine (€)<input id="k-w-${k.id}" type="number" inputmode="decimal" min="1" max="50" step="0.5" value="${k.weekly}" data-set="kweekly:${k.id}"></label></div>
-<div class="swatches">${PAL.map(c => `<button class="sw" style="--c:${c}" data-act="kcolor" data-k="${k.id}" data-c="${c}" aria-pressed="${k.color === c}" aria-label="Couleur"></button>`).join('')}</div></div>`).join('')}
+<div class="swatches">${PAL.map((c, ci) => `<button class="sw" style="--c:${c}" title="${PALN[ci]}" data-act="kcolor" data-k="${k.id}" data-c="${c}" aria-pressed="${k.color === c}" aria-label="${PALN[ci]}"></button>`).join('')}</div></div>`).join('')}
 <div class="row"><button class="btn ghost full" data-act="kadd" ${dis}>Ajouter un enfant</button></div></section>
 <section class="card"><h3>Les règles du jeu</h3><p class="soft small" style="margin:0">Une paie par semaine, du lundi au dimanche. Si vous la versez en retard, les paies non rangées restent disponibles ${BACKLOG} semaines, puis elles sont perdues. </p><p class="soft small" style="margin:6px 0 0">Les bonus ne s’appliquent qu’à l’argent placé (les pièces que l’enfant place), jamais à celui qui va dans le porte-monnaie.</p>
 <label>Les enfants vous appellent<select data-set="parents">${Object.entries(PAR).filter(([k]) => k !== 'papamaman' || F.parents === k).map(([k, v]) => `<option value="${k}" ${F.parents === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>
@@ -579,7 +583,7 @@ function render() {
   else if (!famLoaded) { html = splash('Ouverture de la banque…'); key = 'splash2'; }
   else if (!F) { if (!ob) { ob = newOb(); tryLegacy(); } if (view === 'art') { key = 'obart:' + artId; html = `<main class="view full">${artView()}</main>`; } else { key = 'ob' + ob.step; html = obView(); } color = ob.step === 2 && ob.kids[0] ? ob.kids[0].color : PAL[1]; }
   else { html = mainView(); key = 'main:' + view + ':' + (view === 'art' ? artId : '') + ':' + cur + ':' + (lock && !pinOk ? (pinAsk ? 'pin' : 'lk') : '') + (resetFor ? ':modal' : ''); const k = kidOf(cur); if (k) color = k.color; }
-  document.documentElement.style.setProperty('--kid', color);
+  document.documentElement.style.setProperty('--kid', color); document.documentElement.style.setProperty('--kidon', onColor(color));
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', color);
   const app = document.getElementById('app');
   // Changement d'écran : on remplace tout ; sinon on ne met à jour que ce qui change (clics et saisies préservés).
