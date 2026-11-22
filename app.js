@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '78'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '79'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -88,7 +88,7 @@ let toast = null, toastT = null, undoArm = false, wipeArm = false, delArm = null
 const projInv = {}, sel = {}, projStrat = {}; // projStrat : stratégie essayée dans Futur (simulation, ne change pas la vraie)
 const form = { preason: '', pdur: '1', resetname: '', goalname: '', goalbudget: '', gamount: '', gfrom: '', plabel: '', pamount: '', pkid: '', email: '', pass: '', newpin: '' };
 let loginMode = 'in', loginMsg = '', loginErr = '', busy = false;
-let ob = null, artId = null, lessonId = null, kq = {}, tour = null, tourAuto = false, guide = null, guidePlan = null, guideKind = 'pay', guidePaid = false, guideShown = -1, guideOff = {};
+let ob = null, artId = null, lessonId = null, lessonFrom = null, kq = {}, tour = null, tourAuto = false, guide = null, guidePlan = null, guideKind = 'pay', guidePaid = false, guideShown = -1, guideOff = {};
 const BOURSE_MIN = 15; // la bourse s'ouvre quand la tirelire atteint 15 € (dès là, Équilibré et Aventurier font bouger le dé)
 try { lock = localStorage.getItem('pepite-lock'); cur = localStorage.getItem('pepite-cur'); } catch (e) {}
 
@@ -508,19 +508,20 @@ function pinView() {
 const lessonList = () => lessons({ ...H(), bonusKid, match: F.match });
 function leconsView() {
   const L = lessonList();
-  return `<h2 class="title">Comprendre l’argent</h2><p class="lead">${L.length} petites leçons pour devenir un as de l’argent. Chacune se lit, ou s’écoute, en deux minutes.</p>
+  const par = lessonFrom === 'parents';
+  return `${par ? `<button class="backlink" data-act="go" data-v="parents">${I.chev}<span>Espace parents</span></button><p class="kicker">Côté enfant</p>` : ''}<h2 class="title">Comprendre l’argent</h2><p class="lead">${par ? `Les ${L.length} leçons que lit votre enfant, avec leur quiz. Les mêmes notions que vos articles, à hauteur d’enfant : de quoi en reparler ensemble à table.` : `${L.length} petites leçons pour devenir un as de l’argent. Chacune se lit, ou s’écoute, en deux minutes.`}</p>
 <div class="list">${L.map(x => { const done = kq[x.id] === x.quiz.ok; return `<button class="item art-item" data-act="lecon" data-n="${x.id}"><span class="ic artn">${done ? I.check : x.n}</span><span><small>${x.term}</small><b>${x.title}</b></span><span class="end">${I.chev}</span></button>`; }).join('')}</div>`;
 }
 function leconView() {
   const L = lessonList(), i = Math.max(0, L.findIndex(x => x.id === lessonId)), x = L[i], next = L[i + 1], ans = kq[x.id];
-  return `<button class="backlink" data-act="go" data-v="lecons">${I.chev}<span>Mes leçons</span></button>
+  return `<button class="backlink" data-act="go" data-v="lecons">${I.chev}<span>${lessonFrom === 'parents' ? 'Les leçons' : 'Mes leçons'}</span></button>
 <article class="art lesson"><p class="kicker">Leçon ${x.n} · ${x.term}</p><h2>${x.title}</h2>
 <button class="link gspeak" data-act="kread" style="margin:6px 0 4px">${I.speak}Écoute la leçon</button>
 <p class="alead">${x.intro}</p>${x.body}
 <div class="keep"><h4>Le savais-tu ?</h4><p style="margin:0">${x.know}</p></div>
 <section class="quiz"><h4>Petit quiz</h4><p>${x.quiz.q}</p><div class="list">${x.quiz.a.map((t, j) => `<button class="btn ${ans === j ? (j === x.quiz.ok ? 'gr' : 'danger') : 'ghost'} full" data-act="kq" data-n="${j}">${t}</button>`).join('')}</div>
 ${ans !== undefined ? `<p class="qfb ${ans === x.quiz.ok ? 'g' : 'neg'}">${ans === x.quiz.ok ? x.quiz.yes : x.quiz.no + ' Essaie encore !'}</p>` : ''}</section>
-<div class="row"><button class="btn gold full" data-act="go" data-v="${x.act[0]}">À essayer dans Pépite : ${x.act[1]}</button></div></article>
+${lessonFrom === 'parents' ? '' : `<div class="row"><button class="btn gold full" data-act="go" data-v="${x.act[0]}">À essayer dans Pépite : ${x.act[1]}</button></div>`}</article>
 ${next ? `<button class="item art-item nextart" data-act="lecon" data-n="${next.id}"><span class="ic artn">${next.n}</span><span><small>Leçon suivante</small><b>${next.title}</b></span><span class="end">${I.chev}</span></button>` : `<div class="row"><button class="btn full" data-act="go" data-v="lecons">Toutes mes leçons</button></div>`}`;
 }
 function lockedView() {
@@ -547,6 +548,7 @@ function parentsView() {
   const okCard = toOk.length ? `<section class="card waitcard"><h3>À valider</h3><p class="soft small" style="margin:0">Argent reçu déclaré par les enfants. Il ne compte qu’une fois validé.</p><ul class="log">${toOk.map(({ k, e }) => `<li><span><b>${esc(k.name)}</b> · ${dateFr(e.d)}<br>${giftLine(e)}</span><span class="row" style="margin:0;gap:6px;flex-wrap:nowrap"><button class="btn gr sm" data-act="gok" data-k="${k.id}" data-d="${e.d}" ${ready ? '' : 'disabled'}>Valider</button><button class="btn ghost sm" data-act="gno" data-k="${k.id}" data-d="${e.d}" ${ready ? '' : 'disabled'}>Refuser</button></span></li>`).join('')}</ul></section>` : '';
   return `<h2 class="title">Espace parents</h2>${okCard}
 <button class="item art-item parentread" data-act="go" data-v="lire"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent · 5 lectures courtes</small><b>La méthode Pépite, pour bien accompagner votre enfant</b></span><span class="end">${I.chev}</span></button>
+<button class="item art-item parentkid" data-act="go" data-v="lecons" data-from="parents"><span class="ic artn">${I.book}</span><span><small>Côté enfant · 6 leçons et quiz</small><b>Ce que lit votre enfant, pour en parler ensemble</b></span><span class="end">${I.chev}</span></button>
 ${lock ? `<div class="msg">Cet appareil est verrouillé sur ${esc(K.name)}.<div class="row" style="margin-top:8px"><button class="btn sm" data-act="unlockdev">Déverrouiller l’appareil</button></div></div>` : ''}
 <section class="card"><h3>L’argent, en vrai</h3>
 <p class="soft small" style="margin:0">Pépite tient les comptes, et vous réglez quand vous voulez : chaque semaine, une fois par mois… Deux compteurs par enfant :</p>
@@ -951,7 +953,7 @@ document.addEventListener('click', ev => {
     case 'obnext': if (obValidate()) { ob.step++; window.scrollTo(0, 0); } break;
     case 'obprev': ob.step--; ob.err = ''; window.scrollTo(0, 0); break;
     case 'obfinish': obFinish(); return;
-    case 'go': pinFor = null; view = b.dataset.v; if (!['parents', 'lire', 'art', 'apropos'].includes(view)) { pinOk = false; } pinAsk = false; pinBuf = ''; pinBad = false; window.scrollTo(0, 0); break;
+    case 'go': pinFor = null; view = b.dataset.v; if (b.dataset.from) lessonFrom = b.dataset.from; else if (!['lecons', 'lecon'].includes(view)) lessonFrom = null; if (!['parents', 'lire', 'art', 'apropos'].includes(view) && !(lessonFrom === 'parents' && ['lecons', 'lecon'].includes(view))) { pinOk = false; } pinAsk = false; pinBuf = ''; pinBad = false; window.scrollTo(0, 0); break;
     case 'kid': cur = k; goalEdit = false; resetCoins(); try { localStorage.setItem('pepite-cur', cur); } catch (e) {} break;
     case 'toPig': if (tray.length) depC.push(tray.shift()); break;
     case 'toGrow': if (tray.length) invC.push(tray.shift()); break;
