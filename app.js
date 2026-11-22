@@ -1,3 +1,4 @@
+import { articles } from './articles.js';
 import { Idiomorph } from './vendor/idiomorph.esm.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
@@ -78,7 +79,7 @@ let toast = null, toastT = null, undoArm = false, wipeArm = false, delArm = null
 const projInv = {}, sel = {};
 const form = { preason: '', pdur: '1', resetname: '', goalname: '', goalbudget: '', gamount: '', gfrom: '', plabel: '', pamount: '', pkid: '', email: '', pass: '', newpin: '' };
 let loginMode = 'in', loginMsg = '', loginErr = '', busy = false;
-let ob = null;
+let ob = null, artId = null;
 try { lock = localStorage.getItem('pepite-lock'); cur = localStorage.getItem('pepite-cur'); } catch (e) {}
 
 const kids = () => (F && F.kids) || [];
@@ -213,6 +214,7 @@ function loginView() {
   const up = loginMode === 'up';
   return `<main class="view full"><div class="welcome">${LOGOBIG}<h1>${WMFULL}</h1><p>Pièce après pièce, ta pépite grandit</p></div>
 <div class="intro"><p class="story">Semaine après semaine, la tirelire se remplit… jusqu’à devenir une vraie pépite.</p><p>Pépite aide les parents à montrer à leurs enfants, avec leur argent de poche, pourquoi épargner et investir tôt change tout.</p><p class="soft small">Bonus, bourse et intérêts sont un jeu financé par vous, les parents : ce n’est pas un vrai placement.</p></div>
+<button class="item art-item" data-act="go" data-v="lire" style="margin:14px 0 4px"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent</small><b>Pourquoi Pépite ? 4 articles pour comprendre</b></span><span class="end">${I.chev}</span></button>
 <div class="tabs2"><button data-act="lmode" data-m="in" aria-pressed="${!up}">J’ai un compte</button><button data-act="lmode" data-m="up" aria-pressed="${up}">Créer un compte</button></div>
 <form class="card" id="loginf" autocomplete="on">
 <h3>${up ? 'Créer le compte de la famille' : 'Connexion de cet appareil'}</h3>
@@ -344,15 +346,16 @@ function bourseView(k, t) {
   const p = postOf(cur), rolled = sameWeek(t.bourse && t.bourse.d), recent = t.rolls.slice(-8).reverse();
   const own = t.total >= 20, start = own ? r2(t.total) : 100;
   const pays = F.parents === 'parents' || F.parents === 'papamaman' ? 'nt' : '';
-  return `<h2 class="title">La bourse de la semaine</h2><p class="lead">Une fois par semaine, tu lances le dé : il fait monter ou baisser ta tirelire. C’est un jeu : ce que ton argent gagne ici, c’est ${P().label.toLowerCase()} qui le paie${pays}.</p>
-<section class="card dicebox">${p === 'none' ? `<p class="result">Tu ne joues pas la bourse.</p><p style="margin:0">Ta tirelire ne bouge pas : pas de gain, pas de perte. Tu peux changer d’avis quand tu veux, juste en dessous.</p>`
+  const diceH = `<h3 class="sec">${rolled ? 'Le dé de la semaine' : '2. Lance le dé'}</h3><section class="card dicebox">${p === 'none' ? `<p class="result">Tu ne joues pas la bourse.</p><p style="margin:0">Ta tirelire ne bouge pas : pas de gain, pas de perte. Tu peux changer d’avis quand tu veux, juste en dessous.</p>`
   : `<p class="soft small" style="margin:0">Ta stratégie : <b>${POST[p].name}</b></p><div id="die">${die(rolled ? t.bourse.face : 6, 132)}</div>
 ${rolled ? `<p class="result">Dé ${t.bourse.face} : ${t.bourse.rate < 0 ? 'semaine difficile' : t.bourse.rate === 0 ? 'semaine calme' : 'belle semaine'} !</p><p style="margin:0">Ta tirelire a ${t.bourse.gain < 0 ? 'perdu' : 'gagné'} <b class="${t.bourse.gain < 0 ? 'neg' : 'g'}">${f(Math.abs(t.bourse.gain))}</b>. Prochain lancer lundi.</p>`
     : t.total > 0 ? `<button class="btn full" data-act="roll" ${ready ? '' : 'disabled'}>Lancer le dé</button>` : `<p style="margin:0">Place d’abord quelques pièces dans ta tirelire : le dé agit sur ce qu’il y a dans ta tirelire.</p>`}
 ${recent.length ? `<div class="recent">${recent.map(e => `<span class="${e.gain < 0 ? 'neg' : e.gain > 0 ? 'g' : ''}">${eurS(e.gain)}</span>`).join('')}</div>` : ''}`}
-</section>
-<h3 class="sec">Choisis ta stratégie</h3><p class="lead">Chaque face du dé te dit ce qui arrive à ${own ? `ta tirelire de ${f(start)}` : 'une tirelire de 100 € (exemple)'} : en vert tu gagnes, en rouge tu perds. Compte les faces !</p>
-<div class="list">${Object.keys(POST).map(q => postureCard(q, q === p, start, own)).join('')}</div>
+</section>`;
+  const stratH = `<h3 class="sec">${rolled ? 'Ta stratégie' : '1. Choisis ta stratégie'}</h3><p class="lead">Chaque face du dé te dit ce qui arrive à ${own ? `ta tirelire de ${f(start)}` : 'une tirelire de 100 € (exemple)'} : en vert tu gagnes, en rouge tu perds. Compte les faces !</p>
+<div class="list">${Object.keys(POST).map(q => postureCard(q, q === p, start, own)).join('')}</div>`;
+  return `<h2 class="title">La bourse de la semaine</h2><p class="lead">Une fois par semaine, tu lances le dé : il fait monter ou baisser ta tirelire. C’est un jeu : ce que ton argent gagne ici, c’est ${P().label.toLowerCase()} qui le paie${pays}.</p>
+${rolled ? diceH + stratH : stratH + diceH}
 <p class="soft small" style="margin:10px 4px 0">${rolled && p !== 'none' ? 'Un changement de stratégie comptera pour le prochain lancer. ' : ''}Le dé est plus généreux que la vraie Bourse, pour qu’on voie l’effet plus vite.</p>`;
 }
 
@@ -427,6 +430,7 @@ function parentsView() {
   const lastTxt = last ? ({ paie: 'la paie du ', bourse: 'le lancer du ', recu: 'l’argent reçu le ', vire: 'le virement du ', donne: 'le porte-monnaie donné le ', projet: 'le projet du ', pause: 'la pause du ', reprise: 'la reprise du ', posture: 'le choix de stratégie du ' }[last.t] || '') + dateFr(last.d) : '';
   const pk = form.pkid && kidOf(form.pkid) ? form.pkid : cur;
   return `<h2 class="title">Espace parents</h2>
+<button class="item art-item parentread" data-act="go" data-v="lire"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent</small><b>4 articles pour comprendre Pépite</b></span><span class="end">${I.chev}</span></button>
 ${lock ? `<div class="msg">Cet appareil est verrouillé sur ${esc(K.name)}.<div class="row" style="margin-top:8px"><button class="btn sm" data-act="unlockdev">Déverrouiller l’appareil</button></div></div>` : ''}
 <section class="card"><h3>L’argent, en vrai</h3>
 <p class="soft small" style="margin:0">Pépite tient les comptes, et vous réglez quand vous voulez : chaque semaine, une fois par mois… Deux compteurs par enfant :</p>
@@ -471,6 +475,23 @@ ${last ? `<div class="row" style="margin-top:4px"><button class="btn ghost sm" d
 <section class="card"><h3>Compte</h3><p class="soft small" style="margin:0">Connecté avec ${esc(user.email || '')}.</p><div class="row"><button class="btn ghost sm" data-act="logout">Déconnecter cet appareil</button></div></section>`;
 }
 
+
+function artList() { return articles({ jar, miniDie, growNug, f, eurS, I }); }
+function lireView() {
+  const back = user ? 'parents' : 'home';
+  return `<button class="backlink" data-act="go" data-v="${back}">${I.chev}<span>${user ? 'Espace parents' : 'Retour'}</span></button>
+<p class="kicker">Toi, parent</p><h2 class="title">4 articles pour comprendre</h2><p class="lead">Pourquoi apprendre l’argent si tôt, comment marchent les intérêts composés, combien donner, et ce que fait l’appli. Quelques minutes chacun.</p>
+<div class="list">${artList().map(x => `<button class="item art-item" data-act="art" data-n="${x.id}"><span class="ic artn">${x.n}</span><span><small>${x.theme} · ${x.min} min</small><b>${x.title}</b></span><span class="end">${I.chev}</span></button>`).join('')}</div>`;
+}
+function artView() {
+  const L = artList(), i = Math.max(0, L.findIndex(x => x.id === artId)), x = L[i], next = L[i + 1];
+  const body = typeof x.body === 'function' ? x.body() : x.body;
+  return `<button class="backlink" data-act="go" data-v="lire">${I.chev}<span>Les 4 articles</span></button>
+<article class="art"><p class="kicker">Article ${x.n} sur ${L.length} · ${x.theme} · ${x.min} min</p><h2>${x.title}</h2><p class="alead">${x.lead}</p>${body}
+${x.sources.length ? `<details class="src"><summary>Sources (${x.sources.length})</summary><ol>${x.sources.map(([t, u]) => `<li><a href="${u}" target="_blank" rel="noopener">${t}</a></li>`).join('')}</ol></details>` : ''}</article>
+${next ? `<button class="item art-item nextart" data-act="art" data-n="${next.id}"><span class="ic artn">${next.n}</span><span><small>Article suivant</small><b>${next.title}</b></span><span class="end">${I.chev}</span></button>` : `<div class="row"><button class="btn full" data-act="${user ? 'go' : 'signup'}" data-v="parents">${user ? 'Retour à l’espace parents' : 'Créer le compte de ma famille'}</button></div>`}`;
+}
+
 function resetModal() {
   const k = kidOf(resetFor); if (!k) return '';
   const T = tot(k.id), g = goalOf(k.id), n = evs(k.id).length, okName = form.resetname.trim().toLowerCase() === k.name.toLowerCase();
@@ -488,7 +509,7 @@ function mainView() {
   const k = kidOf(cur);
   if (!k) return splash('Aucun enfant');
   const t = tot(cur);
-  const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : homeView(k, t);
+  const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : view === 'lire' ? lireView() : view === 'art' ? artView() : homeView(k, t);
   return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view">${content}</main>${tabbar()}${resetFor ? resetModal() : ''}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
 }
 
@@ -497,10 +518,10 @@ function render() {
   if (rolling) return;
   let html, color = '#2f5fe0', key;
   if (user === undefined) { html = splash(); key = 'splash'; }
-  else if (!user) { html = loginView(); key = 'login'; }
+  else if (!user) { const pub = view === 'lire' || view === 'art'; html = pub ? `<main class="view full">${view === 'lire' ? lireView() : artView()}</main>` : loginView(); key = 'login:' + (pub ? view + ':' + artId : ''); }
   else if (!famLoaded) { html = splash('Ouverture de la banque…'); key = 'splash2'; }
   else if (!F) { key = 'ob' + (ob ? ob.step : 1); if (!ob) { ob = newOb(); tryLegacy(); } html = obView(); color = ob.step === 2 && ob.kids[0] ? ob.kids[0].color : PAL[1]; }
-  else { html = mainView(); key = 'main:' + view + ':' + cur + ':' + (lock && !pinOk ? 'pin' : '') + (resetFor ? ':modal' : ''); const k = kidOf(cur); if (k) color = k.color; }
+  else { html = mainView(); key = 'main:' + view + ':' + (view === 'art' ? artId : '') + ':' + cur + ':' + (lock && !pinOk ? 'pin' : '') + (resetFor ? ':modal' : ''); const k = kidOf(cur); if (k) color = k.color; }
   document.documentElement.style.setProperty('--kid', color);
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', color);
   const app = document.getElementById('app');
@@ -644,6 +665,8 @@ document.addEventListener('click', ev => {
   if (a !== 'kdel') delArm = null;
   if (a !== 'goaldrop') goalDropArm = false;
   switch (a) {
+    case 'signup': view = 'home'; loginMode = 'up'; window.scrollTo(0, 0); break;
+    case 'art': view = 'art'; artId = b.dataset.n; window.scrollTo(0, 0); break;
     case 'lmode': loginMode = b.dataset.m; loginErr = ''; loginMsg = ''; break;
     case 'reset':
       if (!form.email.trim()) { loginErr = 'Indiquez d’abord votre e-mail.'; break; }
@@ -659,7 +682,7 @@ document.addEventListener('click', ev => {
     case 'obnext': if (obValidate()) { ob.step++; window.scrollTo(0, 0); } break;
     case 'obprev': ob.step--; ob.err = ''; window.scrollTo(0, 0); break;
     case 'obfinish': obFinish(); return;
-    case 'go': view = b.dataset.v; if (view !== 'parents') { pinOk = false; } pinBuf = ''; pinBad = false; window.scrollTo(0, 0); break;
+    case 'go': view = b.dataset.v; if (!['parents', 'lire', 'art'].includes(view)) { pinOk = false; } pinBuf = ''; pinBad = false; window.scrollTo(0, 0); break;
     case 'kid': cur = k; goalEdit = false; resetCoins(); try { localStorage.setItem('pepite-cur', cur); } catch (e) {} break;
     case 'toPig': if (tray) { tray--; dep++; } break;
     case 'toGrow': if (tray) { tray--; inv++; } break;
