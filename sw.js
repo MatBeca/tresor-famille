@@ -1,5 +1,5 @@
 // Cache de l'application pour un démarrage rapide et hors ligne. Les données passent par Firebase.
-const CACHE = 'pepite-v57';
+const CACHE = 'pepite-v58';
 const SHELL = ['./', './index.html', './app.js', './articles.js', './app.css', './config.js', './vendor/idiomorph.esm.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => {

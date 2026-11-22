@@ -825,7 +825,9 @@ var Idiomorph = (function () {
       return (
         !!ctx.ignoreActiveValue &&
         possibleActiveElement === document.activeElement &&
-        possibleActiveElement !== document.body
+        possibleActiveElement !== document.body &&
+        // Pépite : on ne fige que les champs de saisie, pas les boutons (sinon leur libellé ne se met plus à jour)
+        /^(INPUT|TEXTAREA|SELECT)$/.test(/** @type {Element} */ (possibleActiveElement).tagName || "")
       );
     }
 
