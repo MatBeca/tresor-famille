@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '61'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '62'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -468,6 +468,8 @@ function lockedView() {
 <section class="card"><h3>Corriger une erreur</h3>
 ${!last ? `<p class="soft" style="margin:0">Rien à annuler.</p>` : can ? `<p class="soft small" style="margin:0">Une erreur en rangeant tes pièces\u00a0? Tu peux annuler ${lastTxtOf(last)} et recommencer.</p><div class="row"><button class="btn ghost sm" data-act="undo" ${dis}>${undoArm ? 'Confirmer : annuler ' + lastTxtOf(last) : 'Annuler ' + lastTxtOf(last)}</button></div>`
   : `<p class="soft small" style="margin:0">Seul un parent peut annuler ${lastTxtOf(last)}.</p>`}</section>
+<section class="card"><h3>Ma couleur</h3><p class="soft small" style="margin:0">Choisis la couleur de ta tirelire et de ton appli.</p>
+<div class="swatches">${PAL.map((c, ci) => `<button class="sw" style="--c:${c}" title="${PALN[ci]}" data-act="mycolor" data-c="${c}" aria-pressed="${K.color === c}" aria-label="${PALN[ci]}" ${dis}></button>`).join('')}</div></section>
 <section class="card"><h3>Apparence</h3><p class="soft small" style="margin:0">Réglage propre à cet appareil.</p>
 <div class="pills">${[['light', 'Clair'], ['dark', 'Sombre']].map(([v, l]) => `<button class="pill" data-act="theme" data-n="${v}" aria-pressed="${theme === v}">${l}</button>`).join('')}</div></section>`;
 }
@@ -844,6 +846,7 @@ document.addEventListener('click', ev => {
       resetFor = null; form.resetname = ''; say(`La tirelire ${de(x.name)} est remise à zéro.`);
       break;
     }
+    case 'mycolor': { const x = kidOf(cur); if (x && ready && PAL.includes(b.dataset.c)) { x.color = b.dataset.c; saveF(); } break; }
     case 'kcolor': { const x = kidOf(k); if (x && ready) { x.color = b.dataset.c; saveF(); } break; }
     case 'kadd': if (ready) { const id = uid6(); const used = kids().map(z => z.color); F.kids.push({ id, start: iso(), posture: F.defaultPosture || 'equilibre', name: 'Nouvel enfant', birth: '2018-01-01', weekly: 3, color: PAL.find(c => !used.includes(c)) || PAL[0] }); EV[id] = []; KL[id] = true; saveK(id); saveF(); syncKids(); cur = id; say('Enfant ajouté : complétez sa fiche.'); } break;
     case 'kdel': if (ready) { if (delArm !== k) delArm = k; else { F.kids = F.kids.filter(z => z.id !== k); saveF(); queue('del' + k, () => deleteDoc(doc(fdb, 'familles', user.uid, 'enfants', k))); syncKids(); delArm = null; ensureCur(); say('Enfant supprimé.'); } } break;
