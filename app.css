@@ -321,3 +321,21 @@ i.cs{background:var(--purse)}i.cc{background:var(--grow)}
 .src{margin:14px 0 10px;font-size:14px}.src summary{cursor:pointer;font-weight:800;color:var(--soft)}.src ol{padding-left:20px;margin:8px 0 0}.src li{margin:5px 0;line-height:1.4}.src a{color:var(--kidd)}
 @media(max-width:380px){.demojar{grid-template-columns:1fr;justify-items:center}}
 .coin.half{width:40px;height:40px;align-self:center}
+/* Tutoriel d'avant inscription */
+.tourm{place-items:center}
+.sheet.tour{width:min(100%,440px);display:grid;gap:10px;padding:18px 18px 20px;min-height:min(600px,88dvh);align-content:start}
+.ttop{display:flex;justify-content:space-between;align-items:center}
+.tcount{font:800 13px Nunito,sans-serif;color:var(--soft)}
+.ttop .link{font-weight:800}
+.tvis .demoin{min-height:220px;display:grid;align-content:center;gap:8px}
+.tour h3{font-size:24px;margin:4px 0 0}
+.tour p{margin:0;font-size:16.5px;line-height:1.5}
+.tdots{display:flex;gap:6px;justify-content:center;margin:4px 0}
+.tdots i{width:8px;height:8px;border-radius:99px;background:var(--line);transition:width .2s}
+.tdots i.on{width:22px;background:var(--kid)}
+.tintro{display:grid;justify-items:center;gap:6px}.tintro svg.logo.big{width:170px;height:69px}.tintro .wmfull .wm{height:44px}
+.nugrow.big{justify-content:center}.nugrow.big .gnug{width:130px;height:113px}
+.sheet.tour{animation:none}
+.tour .tvis,.tour h3,.tour>p{animation:tfade .2s ease-out}
+@keyframes tfade{from{opacity:0;transform:translateX(14px)}}
+@media(prefers-reduced-motion:reduce){.tour .tvis,.tour h3,.tour>p{animation:none}}

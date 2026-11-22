@@ -1,10 +1,10 @@
-import { articles } from './articles.js';
+import { articles, features } from './articles.js';
 import { Idiomorph } from './vendor/idiomorph.esm.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '40'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '41'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -81,7 +81,7 @@ let toast = null, toastT = null, undoArm = false, wipeArm = false, delArm = null
 const projInv = {}, sel = {};
 const form = { preason: '', pdur: '1', resetname: '', goalname: '', goalbudget: '', gamount: '', gfrom: '', plabel: '', pamount: '', pkid: '', email: '', pass: '', newpin: '' };
 let loginMode = 'in', loginMsg = '', loginErr = '', busy = false;
-let ob = null, artId = null;
+let ob = null, artId = null, tour = null, tourAuto = false;
 try { lock = localStorage.getItem('pepite-lock'); cur = localStorage.getItem('pepite-cur'); } catch (e) {}
 
 const kids = () => (F && F.kids) || [];
@@ -228,7 +228,8 @@ function loginView() {
   const up = loginMode === 'up';
   return `<main class="view full"><div class="welcome">${LOGOBIG}<h1>${WMFULL}</h1><p>Pièce après pièce, ta pépite grandit</p></div>
 <div class="intro"><p class="story">Semaine après semaine, la tirelire se remplit… jusqu’à devenir une vraie pépite.</p><p>Pépite aide les parents à montrer à leurs enfants, avec leur argent de poche, pourquoi épargner et investir tôt change tout.</p><p class="soft small">Bonus, bourse et intérêts sont un jeu financé par vous, les parents : ce n’est pas un vrai placement.</p></div>
-<button class="item art-item" data-act="go" data-v="lire" style="margin:14px 0 4px"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent</small><b>Pourquoi Pépite ? 4 articles pour comprendre</b></span><span class="end">${I.chev}</span></button>
+<div class="row" style="margin-top:14px"><button class="btn gold full" data-act="tour">Découvrir Pépite en 1 minute</button></div>
+<button class="item art-item" data-act="go" data-v="lire" style="margin:10px 0 4px"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent</small><b>Pourquoi Pépite ? 4 articles pour comprendre</b></span><span class="end">${I.chev}</span></button>
 <div class="tabs2"><button data-act="lmode" data-m="in" aria-pressed="${!up}">J’ai un compte</button><button data-act="lmode" data-m="up" aria-pressed="${up}">Créer un compte</button></div>
 <form class="card" id="loginf" autocomplete="on">
 <h3>${up ? 'Créer le compte de la famille' : 'Connexion de cet appareil'}</h3>
@@ -489,7 +490,24 @@ ${last ? `<div class="row" style="margin-top:4px"><button class="btn ghost sm" d
 }
 
 
-function artList() { return articles({ jar, miniDie, growNug, f, eurS, r50, I, coinEl }); }
+const H = () => ({ jar, miniDie, growNug, f, eurS, r50, I, coinEl });
+function artList() { return articles(H()); }
+const tourLen = () => features(H()).length + 2;
+function tourSeen() { tour = null; try { localStorage.setItem('pepite-tour', '1'); } catch (e) {} }
+function tourModal() {
+  const fs = features(H()), n = fs.length + 2, i = Math.max(0, Math.min(n - 1, tour)), last = i === n - 1;
+  const s = i === 0 ? { title: 'Bienvenue dans Pépite\u00a0!', short: 'L’appli qui apprend à vos enfants à épargner et à investir, avec leur vrai argent de poche. Le tour complet en une minute.', visual: `<div class="tintro">${LOGOBIG}<div class="wmfull">${WMFULL}</div></div>` }
+    : last ? { title: 'C’est parti\u00a0?', short: 'Créez le compte de la famille en deux minutes. Vous retrouverez tout ça, et plus encore, dans «\u00a0Toi, parent\u00a0».', visual: `<div class="nugrow big">${growNug(100)}</div>` }
+    : fs[i - 1];
+  return `<div class="modal tourm" role="dialog" aria-modal="true" aria-labelledby="tt"><div class="sheet tour">
+<div class="ttop"><span class="tcount">${last ? 'Prêt\u00a0?' : i ? `${i} / ${n - 2}` : 'Le tour en 1 minute'}</span><button class="link" data-act="tskip">${last ? 'Fermer' : 'Passer'}</button></div>
+<div class="tvis"><div class="demoin" inert aria-hidden="true">${s.visual}</div></div>
+<h3 id="tt">${s.title}</h3><p>${s.short}</p>
+<div class="tdots" aria-hidden="true">${Array.from({ length: n }, (_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div>
+${last ? `<div class="list"><button class="btn full" data-act="tend">Créer le compte de ma famille</button><button class="btn ghost full" data-act="tread">Lire d’abord les 4 articles</button></div>`
+  : `<div class="row"><button class="btn ghost" data-act="tprev" ${i ? '' : 'disabled'}>Retour</button><button class="btn" data-act="tnext">${i ? 'Suivant' : 'C’est parti'}</button></div>`}
+</div></div>`;
+}
 function lireView() {
   const back = user ? 'parents' : 'home';
   return `<button class="backlink" data-act="go" data-v="${back}">${I.chev}<span>${user ? 'Espace parents' : 'Retour'}</span></button>
@@ -532,7 +550,7 @@ function render() {
   if (rolling) return;
   let html, color = '#2f5fe0', key;
   if (user === undefined) { html = splash(); key = 'splash'; }
-  else if (!user) { const pub = view === 'lire' || view === 'art'; html = pub ? `<main class="view full">${view === 'lire' ? lireView() : artView()}</main>` : loginView(); key = 'login:' + (pub ? view + ':' + artId : ''); }
+  else if (!user) { if (!tourAuto && view === 'home') { tourAuto = true; let seen = null; try { seen = localStorage.getItem('pepite-tour'); } catch (e) {} if (!seen) tour = 0; } const pub = view === 'lire' || view === 'art'; html = pub ? `<main class="view full">${view === 'lire' ? lireView() : artView()}</main>` : loginView() + (tour !== null ? tourModal() : ''); key = 'login:' + (pub ? view + ':' + artId : '') + (!pub && tour !== null ? ':tour' + tour : ''); }
   else if (!famLoaded) { html = splash('Ouverture de la banque…'); key = 'splash2'; }
   else if (!F) { if (!ob) { ob = newOb(); tryLegacy(); } if (view === 'art') { key = 'obart:' + artId; html = `<main class="view full">${artView()}</main>`; } else { key = 'ob' + ob.step; html = obView(); } color = ob.step === 2 && ob.kids[0] ? ob.kids[0].color : PAL[1]; }
   else { html = mainView(); key = 'main:' + view + ':' + (view === 'art' ? artId : '') + ':' + cur + ':' + (lock && !pinOk ? 'pin' : '') + (resetFor ? ':modal' : ''); const k = kidOf(cur); if (k) color = k.color; }
@@ -670,6 +688,17 @@ async function obFinish() {
   busy = false; render();
 }
 
+document.addEventListener('keydown', ev => {
+  if (tour === null || user) return;
+  if (ev.key === 'Escape') tourSeen(); else if (ev.key === 'ArrowRight') tour = Math.min(tourLen() - 1, tour + 1); else if (ev.key === 'ArrowLeft') tour = Math.max(0, tour - 1); else return;
+  render();
+});
+let tx0 = null;
+document.addEventListener('touchstart', ev => { tx0 = tour !== null && !user ? ev.touches[0].clientX : null; }, { passive: true });
+document.addEventListener('touchend', ev => {
+  if (tx0 === null || tour === null) return; const dx = ev.changedTouches[0].clientX - tx0; tx0 = null;
+  if (Math.abs(dx) < 50) return; tour = dx < 0 ? Math.min(tourLen() - 1, tour + 1) : Math.max(0, tour - 1); render();
+}, { passive: true });
 document.addEventListener('click', ev => {
   const b = ev.target.closest('[data-act]'); if (!b || b.disabled) return;
   const a = b.dataset.act, k = b.dataset.k;
@@ -679,6 +708,12 @@ document.addEventListener('click', ev => {
   if (a !== 'kdel') delArm = null;
   if (a !== 'goaldrop') goalDropArm = false;
   switch (a) {
+    case 'tour': tour = 0; break;
+    case 'tnext': tour = Math.min(tourLen() - 1, tour + 1); break;
+    case 'tprev': tour = Math.max(0, tour - 1); break;
+    case 'tskip': tourSeen(); break;
+    case 'tend': tourSeen(); loginMode = 'up'; window.scrollTo(0, 0); break;
+    case 'tread': tourSeen(); view = 'lire'; window.scrollTo(0, 0); break;
     case 'signup': view = 'home'; loginMode = 'up'; window.scrollTo(0, 0); break;
     case 'art': view = 'art'; artId = b.dataset.n; window.scrollTo(0, 0); break;
     case 'lmode': loginMode = b.dataset.m; loginErr = ''; loginMsg = ''; break;

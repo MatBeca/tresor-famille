@@ -4,7 +4,7 @@
 
 const fig = (n, t) => `<div class="fig"><b>${n}</b><span>${t}</span></div>`;
 const keep = items => `<div class="keep"><h4>À retenir</h4><ul>${items.map(i => `<li>${i}</li>`).join('')}</ul></div>`;
-const demo = (html, cap) => `<figure class="demo"><div class="demoin" inert aria-hidden="true">${html}</div><figcaption>${cap}</figcaption></figure>`;
+export const demo = (html, cap) => `<figure class="demo"><div class="demoin" inert aria-hidden="true">${html}</div><figcaption>${cap}</figcaption></figure>`;
 const eur = v => v.toFixed(2).replace('.', ',') + ' €';
 
 function compoundChart() {
@@ -17,6 +17,43 @@ ${rows.map(([y, s, c]) => `<div class="ccol"><div class="cbars"><i class="cs" st
 function grid() {
   const ages = [5, 6, 7, 8, 10, 12, 15, 17];
   return `<table class="agrid"><thead><tr><th>Âge</th><th>Par semaine</th><th>Soit par mois</th></tr></thead><tbody>${ages.map(a => { const w = 1 + 0.5 * (a - 5); return `<tr><td>${a} ans</td><td><b>${eur(w)}</b></td><td>${eur(w * 52 / 12)}</td></tr>`; }).join('')}</tbody></table>`;
+}
+
+
+/* Les fonctionnalités, partagées entre l'article 4 et le tutoriel d'avant inscription. */
+export function features(h) {
+  const t = { own: 40, bonus: 10, gains: 6, total: 56 };
+  const faces = [-1.5, -0.5, 0, 0.5, 1, 1.7].map(x => h.r50(x));
+  return [
+    { title: 'La paie, pièce par pièce', short: 'Chaque lundi, l’enfant reçoit sa paie en pièces et décide pour chacune : porte-monnaie pour dépenser, tirelire pour placer. Le bonus des parents tombe aussitôt sur les pièces placées.',
+      long: 'Chaque lundi, la paie arrive en pièces de 1\u00a0€ et de 50\u00a0centimes. L’enfant les range une par une\u00a0: dans son porte-monnaie pour les dépenser, ou dans sa tirelire pour les placer. Le bonus s’affiche aussitôt sur les pièces placées. S’il a oublié une semaine, ses paies l’attendent jusqu’à quatre semaines.',
+      visual: `<div class="tray">${h.coinEl(0.5)}</div><div class="zones"><div class="zone"><strong>Mon porte-monnaie\u00a0: 1,00\u00a0€</strong>${h.coinEl(1)}</div><div class="zone gz"><strong class="g">Ma tirelire\u00a0: 2,00\u00a0€</strong>${h.coinEl(1)}${h.coinEl(1)}<span class="chip">+0,50\u00a0€</span></div></div>`,
+      cap: 'Deux pièces placées, une gardée\u00a0: le bonus apparaît tout de suite.' },
+    { title: 'La tirelire à trois couches', short: 'Son argent, le bonus des parents et ce qui a été gagné tout seul, empilés dans le même bocal. On voit d’un coup d’œil ce qui fait grossir la tirelire.',
+      long: 'Son argent, le bonus des parents, ce qui a été gagné tout seul\u00a0: trois couleurs empilées pour comparer d’un coup d’œil. Quand l’objectif est atteint, le bocal s’illumine.',
+      visual: `<div class="demojar">${h.jar(t, { budget: 100 }).svg}<div class="tiles"><div class="tile"><small><i style="background:var(--kid)"></i>Mon argent</small><b>${h.f(40)}</b></div><div class="tile"><small><i style="background:var(--gold)"></i>Bonus</small><b>${h.f(10)}</b></div><div class="tile"><small><i style="background:var(--grow)"></i>Gagné tout seul</small><b class="g">${h.f(6)}</b></div></div></div>`,
+      cap: 'La tirelire telle que la voit l’enfant.' },
+    { title: 'Un projet, et sa pépite qui grandit', short: 'Un vélo, un jeu\u00a0? L’enfant se fixe un objectif. À chaque palier, sa pépite grossit. Objectif atteint\u00a0: il vous présente son projet et vous débloquez l’argent.',
+      long: 'Un vélo, un jeu, une sortie\u00a0: l’enfant fixe son objectif. À chaque palier (25, 50, 75\u00a0%), sa pépite prend une taille. Objectif atteint\u00a0? Il présente son projet, et vous débloquez l’argent depuis l’espace parents. Sans projet, les paliers suivent les seuils de la tirelire.',
+      visual: `<div class="nugrow">${[0, 25, 50, 75, 100].map(p => h.growNug(p)).join('')}</div>`,
+      cap: 'De la petite pépite à «\u00a0C’est pépite\u00a0!\u00a0»' },
+    { title: 'La bourse au dé', short: 'Une fois par semaine, l’enfant choisit sa stratégie puis lance le dé. Chaque face montre ce qu’il peut gagner ou perdre, en vraies pièces. Il compte, il choisit.',
+      long: 'Une fois par semaine, l’enfant choisit sa stratégie puis lance le dé. Chaque face affiche ce qu’elle ferait gagner ou perdre sur sa vraie tirelire, par pièces de 50\u00a0centimes, sans un seul pourcentage. «\u00a0Je ne joue pas\u00a0» est un choix respecté.',
+      visual: `<div class="post on" style="pointer-events:none"><span class="ph"><b>Équilibré</b></span><span class="dfaces">${faces.map((x, i) => `<span class="df ${x > 0 ? 'up' : x < 0 ? 'dn' : ''}">${h.miniDie(i + 1, x > 0 ? '#13a05a' : x < 0 ? '#e0434f' : '#a39cb8')}<b>${h.eurS(x)}</b></span>`).join('')}</span><span class="pr"><span class="g">3 faces sur 6 font gagner</span> · 1 ne change rien · <span class="neg">2 font perdre</span></span></div>`,
+      cap: 'Avec une tirelire de 100\u00a0€\u00a0: on compte les faces, on choisit.' },
+    { title: '«\u00a0J’ai reçu de l’argent\u00a0»', short: 'Un billet de mamie, un anniversaire\u00a0? L’enfant l’ajoute lui-même et choisit ce qu’il en fait. Vous décidez si l’argent reçu a droit à un bonus.',
+      long: 'Un billet de mamie, un anniversaire\u00a0? L’enfant l’ajoute lui-même et choisit\u00a0: tout dépenser, moitié-moitié ou tout placer. Vous décidez si l’argent reçu a droit à un bonus, et à combien.',
+      visual: `<div class="item"><span class="ic" style="background:color-mix(in srgb,var(--grow) 14%,transparent);color:var(--grow)">${h.I.gift}</span><span><b>J’ai reçu de l’argent</b><small>Un cadeau, un anniversaire\u00a0?</small></span><span class="end">${h.I.chev}</span></div>`,
+      cap: 'Depuis l’écran d’accueil de l’enfant.' },
+    { title: 'Le mode enfant, idéal pour un premier téléphone', short: 'Verrouillez l’appli sur un enfant\u00a0: il ne voit que sa tirelire. Les réglages sont protégés par un code parents. Aucun compte ni e-mail pour l’enfant.',
+      long: 'Verrouillez l’appli sur un enfant\u00a0: il ne voit que sa tirelire, ne peut pas ouvrir celle de ses frères et sœurs ni l’espace parents, et ne range qu’une paie et un lancer par semaine. Pour revenir aux réglages, un code parents à 4\u00a0chiffres. Pas besoin de compte Google ni d’adresse e-mail pour l’enfant.',
+      visual: `<div class="pin" style="padding:0"><div class="dots"><i class="on"></i><i class="on"></i><i></i><i></i></div><div class="keys mini">${[1, 2, 3, 4, 5, 6].map(n => `<span class="key">${n}</span>`).join('')}</div></div>`,
+      cap: 'Le code parents protège les réglages.' },
+    { title: 'L’argent, en vrai', short: 'Pépite tient les comptes, vous réglez quand vous voulez\u00a0: chaque semaine, chaque mois ou au retour des vacances. Deux compteurs vous disent combien donner et combien mettre de côté.',
+      long: 'Pépite tient les comptes, vous réglez quand vous voulez. Deux compteurs par enfant\u00a0: le porte-monnaie à donner et la tirelire à mettre de côté. Un geste pour dire «\u00a0c’est donné\u00a0» ou «\u00a0c’est rangé\u00a0», et le compteur repart à zéro.',
+      visual: `<div class="ledger"><span><i class="dot" style="background:var(--purse)"></i>Porte-monnaie à donner</span><b>${h.f(6)}</b><span class="btn ghost sm">C’est donné</span></div><div class="ledger"><span><i class="dot" style="background:var(--grow)"></i>Tirelire à mettre de côté</span><b class="g">${h.f(12.5)}</b><span class="btn gr sm">C’est rangé</span></div>`,
+      cap: 'Dans l’espace parents.' }
+  ];
 }
 
 export function articles(h) {
@@ -114,34 +151,9 @@ ${keep(['On démarre à 5 ans avec 1 € par semaine, puis 50 centimes de plus 
       id: 'fonctions', n: 4, theme: 'Les fonctionnalités', min: 3,
       title: 'Pépite, mode d’emploi en images',
       lead: 'Tout ce que fait l’appli, écran par écran. Les aperçus ci-dessous sont dessinés par l’appli elle-même : ils évoluent avec elle.',
-      body: () => {
-        const t = { own: 40, bonus: 10, gains: 6, total: 56 };
-        const faces = [-1.5, -0.5, 0, 0.5, 1, 1.7].map(x => h.r50(x));
-        return `
-<h3>1. La paie, pièce par pièce</h3>
-<p>Chaque lundi, la paie arrive en pièces de 1 €. L’enfant les range une par une : dans son porte-monnaie pour les dépenser, ou dans sa tirelire pour les placer. Le bonus s’affiche aussitôt sur les pièces placées. S’il a oublié une semaine, ses paies l’attendent jusqu’à quatre semaines.</p>
-${demo(`<div class="tray">${h.coinEl(1)}</div><div class="zones"><div class="zone"><strong>Mon porte-monnaie : 1,00 €</strong>${h.coinEl(1)}</div><div class="zone gz"><strong class="g">Ma tirelire : 2,00 €</strong>${h.coinEl(1)}${h.coinEl(1)}<span class="chip">+0,50 €</span></div></div>`, 'Deux pièces placées, une gardée : le bonus apparaît tout de suite.')}
-<h3>2. La tirelire à trois couches</h3>
-<p>Son argent, le bonus des parents, ce qui a été gagné tout seul : trois couleurs empilées pour comparer d’un coup d’œil. Quand l’objectif est atteint, le bocal s’illumine.</p>
-${demo(`<div class="demojar">${h.jar(t, { budget: 100 }).svg}<div class="tiles"><div class="tile"><small><i style="background:var(--kid)"></i>Mon argent</small><b>${h.f(40)}</b></div><div class="tile"><small><i style="background:var(--gold)"></i>Bonus</small><b>${h.f(10)}</b></div><div class="tile"><small><i style="background:var(--grow)"></i>Gagné tout seul</small><b class="g">${h.f(6)}</b></div></div></div>`, 'La tirelire telle que la voit l’enfant.')}
-<h3>3. Un projet, des paliers, une pépite qui grandit</h3>
-<p>Un vélo, un jeu, une sortie : l’enfant fixe son objectif. À chaque palier (25, 50, 75 %), sa pépite prend une taille. Objectif atteint ? Il présente son projet, et vous débloquez l’argent depuis l’espace parents. Sans projet, les paliers suivent les seuils de la tirelire.</p>
-${demo(`<div class="nugrow">${[0, 25, 50, 75, 100].map(p => h.growNug(p)).join('')}</div>`, 'De la petite pépite à « C’est pépite ! »')}
-<h3>4. La bourse au dé</h3>
-<p>Une fois par semaine, l’enfant choisit sa stratégie puis lance le dé. Chaque face affiche ce qu’elle ferait gagner ou perdre sur sa vraie tirelire, sans un seul pourcentage. « Je ne joue pas » est un choix respecté.</p>
-${demo(`<div class="post on" style="pointer-events:none"><span class="ph"><b>Équilibré</b></span><span class="dfaces">${faces.map((x, i) => `<span class="df ${x > 0 ? 'up' : x < 0 ? 'dn' : ''}">${h.miniDie(i + 1, x > 0 ? '#13a05a' : x < 0 ? '#e0434f' : '#a39cb8')}<b>${h.eurS(x)}</b></span>`).join('')}</span><span class="pr"><span class="g">3 faces sur 6 font gagner</span> · 1 ne change rien · <span class="neg">2 font perdre</span></span></div>`, 'Avec une tirelire de 100 € : on compte les faces, on choisit.')}
-<h3>5. « J’ai reçu de l’argent »</h3>
-<p>Un billet de mamie, un anniversaire ? L’enfant l’ajoute lui-même et choisit : tout dépenser, moitié-moitié ou tout placer. Vous décidez si l’argent reçu a droit à un bonus, et à combien.</p>
-${demo(`<div class="item"><span class="ic" style="background:color-mix(in srgb,var(--grow) 14%,transparent);color:var(--grow)">${h.I.gift}</span><span><b>J’ai reçu de l’argent</b><small>Un cadeau, un anniversaire ?</small></span><span class="end">${h.I.chev}</span></div>`, 'Depuis l’écran d’accueil de l’enfant.')}
-<h3>6. Le mode enfant, idéal pour un premier téléphone</h3>
-<p>Verrouillez l’appli sur un enfant : il ne voit que sa tirelire, ne peut pas ouvrir celle de ses frères et sœurs ni l’espace parents, et ne range qu’une paie et un lancer par semaine. Pour revenir aux réglages, un code parents à 4 chiffres. Pas besoin de compte Google ni d’adresse e-mail pour l’enfant.</p>
-${demo(`<div class="pin" style="padding:0"><div class="dots"><i class="on"></i><i class="on"></i><i></i><i></i></div><div class="keys mini">${[1, 2, 3, 4, 5, 6].map(n => `<span class="key">${n}</span>`).join('')}</div></div>`, 'Le code parents protège les réglages.')}
-<h3>7. L’argent, en vrai</h3>
-<p>Pépite tient les comptes, vous réglez quand vous voulez. Deux compteurs par enfant : le porte-monnaie à donner et la tirelire à mettre de côté. Un geste pour dire « c’est donné » ou « c’est rangé », et le compteur repart à zéro.</p>
-${demo(`<div class="ledger"><span><i class="dot" style="background:var(--purse)"></i>Porte-monnaie à donner</span><b>${h.f(6)}</b><span class="btn ghost sm">C’est donné</span></div><div class="ledger"><span><i class="dot" style="background:var(--grow)"></i>Tirelire à mettre de côté</span><b class="g">${h.f(12.5)}</b><span class="btn gr sm">C’est rangé</span></div>`, 'Dans l’espace parents.')}
-<h3>8. Et aussi</h3>
-<p>La paie mise en pause en cas de conflit, avec un message pour l’enfant. L’onglet Futur qui projette la tirelire jusqu’à ses 18 ans. Le carnet qui garde tout l’historique. Plusieurs enfants, chacun sa couleur. Un mode sombre. Et un bouton pour annuler la dernière opération quand quelqu’un s’est trompé.</p>`;
-      },
+      body: () => features(h).map((x, i) => `<h3>${i + 1}. ${x.title}</h3>\n<p>${x.long}</p>\n${demo(x.visual, x.cap)}`).join('\n') + `
+<h3>${features(h).length + 1}. Et aussi</h3>
+<p>La paie mise en pause en cas de conflit, avec un message pour l’enfant. L’onglet Futur qui projette la tirelire jusqu’à ses 18\u00a0ans. Le carnet qui garde tout l’historique. Plusieurs enfants, chacun sa couleur. Un mode sombre. Et un bouton pour annuler la dernière opération quand quelqu’un s’est trompé.</p>`,
       sources: []
     }
   ];
