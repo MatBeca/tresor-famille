@@ -1,4 +1,4 @@
-# Pépite, l'argent de poche qui pousse
+# C'est Pépite : pièce après pièce, ta pépite grandit
 
 Application installable (PWA) qui apprend aux enfants à épargner et à investir : paie hebdomadaire en pièces, bocal qui se remplit, bonus des parents, bourse de la semaine au dé, projection jusqu'à 18 ans, argent reçu, suivi des virements vers le Livret A et mode enfant verrouillé par code.
 

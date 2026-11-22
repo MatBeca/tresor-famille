@@ -1,7 +1,7 @@
-/* Pépite : l'argent de poche qui pousse.
+/* Pépite : pièce après pièce, ta pépite grandit.
    VOICE: joyeux, net, à hauteur d'enfant ; gros boutons en relief, chiffres ronds
    IDEA: une appli de poche comme un jeu : un bocal qui se remplit, un dé de bourse, une pièce qui germe
-   COLOUR: crème chaud, couleur choisie pour chaque enfant, or pour le bonus, vert pour ce qui pousse
+   COLOUR: crème chaud, couleur choisie pour chaque enfant, or pour le bonus, vert pour ce qui est gagné tout seul
    TYPE: Fredoka pour les titres et les montants, Nunito pour le texte */
 :root{color-scheme:light dark;
   --bg:light-dark(#fff8ee,#14131d);--card:light-dark(#fff,#211f2e);--ink:light-dark(#22203a,#f7f2ea);
@@ -263,3 +263,15 @@ input:focus,select:focus{border-color:var(--kid);outline:none}
 .wmfull .cest{position:absolute;left:-.2em;top:.85em;font:600 .34em/1 Fredoka,Nunito,sans-serif;color:light-dark(#6e4400,#e0a63a);transform:rotate(-6deg);transform-origin:left bottom;letter-spacing:.3px}
 
 .tile .tsub{display:block;font-size:13px;color:var(--soft);font-weight:700;margin-top:-2px}
+/* pépite qui grandit */
+.splash svg.logo.big,.welcome svg.logo.big{width:180px;height:73px}
+.progrow{display:flex;align-items:center;gap:6px}.progrow .prog{flex:1;min-width:0;margin:0}
+.gnug{width:40px;height:35px;flex:none}
+.gnug.full{filter:drop-shadow(0 0 6px rgba(245,179,35,.8))}
+/* bourse en faces */
+.dfaces{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;margin:8px 0 2px}
+.df{display:flex;flex-direction:column;align-items:center;gap:3px;border-radius:12px;padding:6px 2px;background:var(--glass)}
+.df b{font:700 12px/1.1 Nunito,sans-serif;color:var(--soft);text-align:center}
+.df.up{background:color-mix(in srgb,var(--grow) 14%,transparent)}.df.up b{color:var(--grow)}
+.df.dn{background:color-mix(in srgb,var(--red) 13%,transparent)}.df.dn b{color:var(--red)}
+.df svg{width:26px;height:26px}
