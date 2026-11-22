@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '71'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '72'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -85,7 +85,7 @@ let view = 'home', cur = null, lock = null, pinOk = false, pinBuf = '', pinBad =
 const KID_UNDO = ['paie', 'recu', 'posture']; // ce qu'un enfant peut annuler seul sur un appareil verrouillé
 let tray = [], invC = [], depC = [], rolling = false;
 let toast = null, toastT = null, undoArm = false, wipeArm = false, delArm = null;
-const projInv = {}, sel = {};
+const projInv = {}, sel = {}, projStrat = {}; // projStrat : stratégie essayée dans Futur (simulation, ne change pas la vraie)
 const form = { preason: '', pdur: '1', resetname: '', goalname: '', goalbudget: '', gamount: '', gfrom: '', plabel: '', pamount: '', pkid: '', email: '', pass: '', newpin: '' };
 let loginMode = 'in', loginMsg = '', loginErr = '', busy = false;
 let ob = null, artId = null, tour = null, tourAuto = false, guide = null, guidePlan = null, guideKind = 'pay', guidePaid = false, guideShown = -1, guideOff = {};
@@ -203,8 +203,8 @@ function milestone(before, after) {
   return '';
 }
 function sayMs(before, msg, sub) { const ms = milestone(before, tot(cur).total); if (ms) say(ms, msg); else say(msg, sub); }
-function project(id, perWeek) {
-  const k = kidOf(id), t = tot(id), m = projMean(id), match = F.match / 100, now = new Date(), birth = new Date(k.birth + 'T12:00:00'), share = k.weekly ? Math.min(1, perWeek / k.weekly) : 1;
+function project(id, perWeek, strat) {
+  const k = kidOf(id), t = tot(id), m = strat ? POST[strat].faces.reduce((x, y) => x + y, 0) / 6 / 100 : projMean(id), match = F.match / 100, now = new Date(), birth = new Date(k.birth + 'T12:00:00'), share = k.weekly ? Math.min(1, perWeek / k.weekly) : 1;
   let own = t.own, bonus = t.bonus, gains = t.gains, w = 0, pw = perWeek; const pts = [];
   for (let a = ageAt(k.birth, now) + 1; a <= 18; a++) {
     const bd = new Date(birth); bd.setFullYear(birth.getFullYear() + a);
@@ -416,36 +416,43 @@ ${rolled ? diceH + stratH : stratH + diceH}
 function futurView(k, t) {
   if (projInv[cur] === undefined) { const p = t.pays.slice(-8); projInv[cur] = p.length ? r50(p.reduce((a, b) => a + b, 0) / p.length) : k.weekly; }
   projInv[cur] = Math.max(0, Math.min(500, projInv[cur]));
-  const pts = project(cur, projInv[cur]);
+  if (!projStrat[cur]) projStrat[cur] = projPost(cur);
+  const ps = projStrat[cur], pts = project(cur, projInv[cur], ps);
   if (!pts.length) return `<h2 class="title">Ton futur</h2><section class="card"><p>Tu as 18 ans : le trésor est à toi !</p></section>`;
   if (!pts.some(p => p.age === sel[cur])) sel[cur] = pts[pts.length - 1].age;
   const max = Math.max(1, ...pts.map(p => p.total)), Pt = pts.find(p => p.age === sel[cur]);
   const bars = pts.map(p => { const pos = p.own + p.bonus + Math.max(0, p.gains) || 1, s = v => (Math.max(0, v) / pos * 100).toFixed(2);
     return `<button class="bar ${p.age === sel[cur] ? 'on' : ''}" data-act="bar" data-age="${p.age}" aria-label="À ${p.age} ans : ${f(r50(p.total))}"><span class="area"><span class="stk" style="height:${(p.total / max * 100).toFixed(2)}%"><i style="height:${s(p.own)}%;background:var(--kid)"></i><i style="height:${s(p.bonus)}%;background:var(--gold)"></i><i style="height:${s(p.gains)}%;background:var(--grow)"></i></span></span><span class="age">${p.age}</span></button>`; }).join('');
-  const full = projInv[cur] !== k.weekly ? project(cur, k.weekly).find(p => p.age === sel[cur]) : null;
+  const full = projInv[cur] !== k.weekly ? project(cur, k.weekly, ps).find(p => p.age === sel[cur]) : null;
+  const cmp = Object.keys(POST).map(q => ({ q, v: r50(project(cur, projInv[cur], q).find(p => p.age === sel[cur]).total) })), cmax = Math.max(1, ...cmp.map(c => c.v));
   const quick = [...new Set([k.weekly, 10, 20, 50])].sort((a, b) => a - b);
   return `<h2 class="title">Et si tu continuais jusqu’à 18 ans ?</h2><p class="lead">Touche une barre pour voir ton trésor à cet âge.</p>
 <section class="card"><div class="step">Je place <button data-act="pm" aria-label="Moins">−</button><span class="n">${f(projInv[cur])}</span><button data-act="pp" aria-label="Plus">+</button> par semaine</div>
 <div class="pills">${quick.map(n => `<button class="pill" data-act="pset" data-n="${n}" aria-pressed="${projInv[cur] === n}">${n === k.weekly ? `Ma paie (${f(n)})` : f(n)}</button>`).join('')}</div>
+<p style="margin:14px 0 6px;font-weight:800">Avec la stratégie</p><div class="pills">${Object.keys(POST).map(q => `<button class="pill" data-act="pstrat" data-n="${q}" aria-pressed="${ps === q}">${POST[q].name}</button>`).join('')}</div>
+<p class="soft small" style="margin:6px 0 0">C’est pour essayer : ta vraie stratégie ne change pas, tu la choisis dans « Bourse ».</p>
 ${projInv[cur] > k.weekly ? `<p class="soft small" style="margin:10px 0 0">C’est plus que ton argent de poche : il faudrait y ajouter l’argent que tu reçois (cadeaux, anniversaires, petits services).</p>` : ''}
 <div class="bars" style="grid-template-columns:repeat(${pts.length},minmax(0,1fr))">${bars}</div>
 <p class="cap">À <b>${Pt.age} ans</b>, ta tirelire contiendrait <b>${f(r50(Pt.total))}</b> : ${f(r50(Pt.own))} de ton argent, ${f(r50(Pt.bonus))} de bonus ${P().de} et <b class="g">${f(r50(Math.max(0, Pt.gains)))} gagnés tout seuls</b>.</p>
 <p class="soft" style="margin:0">Regarde le vert : plus tu attends, plus il grossit vite, parce que ce que ton argent a gagné se met à gagner lui aussi.${full ? ` Avec ta paie de ${f(k.weekly)} chaque semaine, tu aurais ${f(r50(full.total))} à ${full.age} ans.` : ''}</p>
-${calcHow(cur, projInv[cur], 'ce que tu choisis de placer ci-dessus')}</section>`;
+${calcHow(cur, projInv[cur], 'ce que tu choisis de placer ci-dessus', ps)}</section>
+<h3 class="sec">À ${Pt.age} ans, selon ta stratégie</h3>
+<section class="card"><ul class="cmp">${cmp.map(c => `<li class="${c.q === ps ? 'on' : ''}"><button data-act="pstrat" data-n="${c.q}"><span class="cn">${POST[c.q].name}</span><span class="cb"><i style="width:${(c.v / cmax * 100).toFixed(1)}%"></i></span><b>${f(c.v)}</b></button></li>`).join('')}</ul>
+<p class="soft small" style="margin:8px 0 0">Même argent placé chaque semaine : la différence, c’est ce que la bourse a fait grossir, et ce que ces gains ont gagné à leur tour. Mais attention : plus on peut gagner, plus les semaines peuvent être mauvaises.</p></section>`;
 }
 
 
 /* Explication du calcul des projections, en mots d'enfant. */
-function calcHow(id, perWeek, label) {
-  const t = tot(id), have = Math.max(0, t.total), p = postOf(id), pp = projPost(id), open = bourseOpen(id), m = projMean(id), bonus = r2(perWeek * F.match / 100);
+function calcHow(id, perWeek, label, strat) {
+  const t = tot(id), have = Math.max(0, t.total), p = strat || postOf(id), pp = strat || projPost(id), open = bourseOpen(id), m = strat ? POST[strat].faces.reduce((x, y) => x + y, 0) / 6 / 100 : projMean(id), bonus = r2(perWeek * F.match / 100);
   const month = r50(have * m * 52 / 12); // gain moyen du dé sur un mois, en pièces de 50 c
-  const dice = pp !== p || !open
-    ? `Pour le dé, on compte la stratégie <b>Équilibré</b>, celle du milieu${!open ? `, à partir du moment où ta bourse s’ouvrira (quand ta tirelire aura ${f(BOURSE_MIN)})` : ', même si tu ne joues pas en ce moment'}. En moyenne, elle fait gagner un peu plus qu’elle ne fait perdre.`
-    : `Pour le dé, on imagine que chaque semaine est une semaine moyenne de ta stratégie <b>${POST[p].name}</b> : en moyenne, le dé fait gagner un peu plus qu’il ne fait perdre. ${month > 0 ? `Avec ta tirelire actuelle, ça fait environ <b class="g">${f(month)} de plus par mois</b>.` : 'Avec ta tirelire actuelle, c’est encore presque rien.'}`;
+  const dice = pp === 'none'
+    ? 'Avec « Je ne joue pas », le dé ne compte pas : seuls ton argent et le bonus font grossir la tirelire.'
+    : `Pour le dé, on imagine des semaines moyennes de la stratégie <b>${POST[pp].name}</b>${!strat && pp !== postOf(id) ? ', celle du milieu, même si tu ne joues pas en ce moment' : ''}${!open ? `, à partir du moment où ta bourse s’ouvrira (quand ta tirelire aura ${f(BOURSE_MIN)})` : ''}. En moyenne, le dé fait gagner un peu plus qu’il ne fait perdre.${open ? (month > 0 ? ` Avec ta tirelire actuelle, ça fait environ <b class="g">${f(month)} de plus par mois</b>.` : ' Avec ta tirelire actuelle, c’est encore presque rien.') : ''}`;
   return `<details class="how"><summary>Comment on calcule ?</summary><ol>
 <li>On part de ce qu’il y a dans ta tirelire aujourd’hui : <b>${f(have)}</b>.</li>
 <li>Chaque semaine, on ajoute ${label} : <b>${f(perWeek)}</b>${bonus > 0 ? `, plus le bonus ${P().de} : <b>${f(bonus)}</b>` : ''}.${F.raise ? ' Et à chaque anniversaire, ta paie augmente de 0,50 € : on en tient compte.' : ''}</li>
-<li>${dice} Plus la tirelire grossit, plus ce petit plus grossit aussi.</li>
+<li>${dice}${pp === 'none' ? '' : ' Plus la tirelire grossit, plus ce petit plus grossit aussi.'}</li>
 </ol><p>Si tu changes de stratégie, le calcul prend tout de suite la nouvelle. Et en vrai, tes lancers seront parfois meilleurs, parfois moins bons : c’est une estimation, pas une promesse.</p></details>`;
 }
 function projetView(k, t) {
@@ -993,6 +1000,7 @@ document.addEventListener('click', ev => {
     case 'gok': okGift(b.dataset.k, b.dataset.d, true); break;
     case 'gno': okGift(b.dataset.k, b.dataset.d, false); break;
     case 'giftcheck': if (ready) { F.giftCheck = b.dataset.n === 'true'; saveF(); } break;
+    case 'pstrat': if (POST[b.dataset.n]) projStrat[cur] = b.dataset.n; break;
     case 'mycolor': { const x = kidOf(cur); if (x && ready && PAL.includes(b.dataset.c)) { x.color = b.dataset.c; saveF(); } break; }
     case 'kcolor': { const x = kidOf(k); if (x && ready) { x.color = b.dataset.c; saveF(); } break; }
     case 'kadd': if (ready) { const id = uid6(); const used = kids().map(z => z.color); F.kids.push({ id, start: iso(), posture: F.defaultPosture || 'equilibre', name: 'Nouvel enfant', birth: '2018-01-01', weekly: 3, color: PAL.find(c => !used.includes(c)) || PAL[0] }); EV[id] = []; KL[id] = true; saveK(id); saveF(); syncKids(); cur = id; say('Enfant ajouté : complétez sa fiche.'); } break;

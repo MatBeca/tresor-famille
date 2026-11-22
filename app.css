@@ -385,3 +385,10 @@ main.view.guided{padding-bottom:300px}
 .guide .gbody p.gpar b{color:var(--ink)}
 .waitcard{border-color:color-mix(in srgb,var(--gold) 60%,var(--line));background:color-mix(in srgb,var(--gold) 8%,var(--card))}
 .waitcard .log li{display:flex;flex-direction:column;align-items:stretch;gap:8px}.waitcard .log li .row{justify-content:flex-start}.waitcard .log li>.btn{align-self:flex-start}
+/* Futur : comparaison des stratégies */
+.cmp{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.cmp button{width:100%;display:grid;grid-template-columns:118px 1fr auto;gap:10px;align-items:center;background:none;border:2px solid transparent;border-radius:14px;padding:6px 8px;font:inherit;color:inherit;cursor:pointer;text-align:left}
+.cmp li.on button{border-color:var(--kid);background:color-mix(in srgb,var(--kid) 8%,var(--card))}
+.cmp .cn{font-weight:800;font-size:14px}
+.cmp .cb{height:14px;border-radius:8px;background:var(--line);overflow:hidden}.cmp .cb i{display:block;height:100%;background:var(--grow);border-radius:8px}
+.cmp b{font:700 16px Fredoka,sans-serif;white-space:nowrap}
