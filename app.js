@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '66'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '67'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -316,7 +316,7 @@ function homeView(k, t) {
 <div class="tile"><small><i style="background:var(--grow)"></i>Gagné tout seul</small><b class="${t.gains < 0 ? 'neg' : 'g'}">${f(t.gains)}</b></div>
 <div class="tile"><small><i style="background:var(--purse)"></i>Porte-monnaie à recevoir</small><b>${f(t.purseDue)}</b></div></div>
 ${t.out > 0 ? `<p class="soft small" style="margin:8px 4px 0">Projets réalisés : ${f(t.out)}</p>` : ''}
-<h3 class="sec">Mon projet</h3><div class="list"><button class="item" data-act="go" data-v="projet"><span class="ic" style="background:var(--kidt);color:var(--kidtxt)">${I.flag}</span><span>${g ? `<b>${esc(g.name)} : ${Math.floor(Math.min(1, Math.max(0, t.total) / g.budget) * 100)} %</b><small>${t.total >= g.budget ? 'Atteint : prépare ta présentation !' : `${f(Math.max(0, t.total))} sur ${f(g.budget)}`}</small>` : '<b>Choisis un projet</b><small>Un vélo, un jeu ? Fixe-toi un objectif.</small>'}</span><span class="end">${I.chev}</span></button></div>
+<h3 class="sec">Mon projet</h3><div class="list"><button class="item" data-act="go" data-v="projet"><span class="ic" style="background:var(--kidt);color:var(--kidtxt)">${I.flag}</span><span>${g ? `<b>${esc(g.name)} : ${Math.floor(Math.min(1, Math.max(0, t.total) / g.budget) * 100)} %</b><small>${t.total >= g.budget ? 'Atteint : prépare ta présentation !' : `${f(Math.max(0, t.total))} sur ${f(g.budget)}`}</small>` : '<b>Choisis un projet</b><small>Un vélo, un jeu, ton futur permis ? Pas obligatoire, mais motivant.</small>'}</span><span class="end">${I.chev}</span></button></div>
 <h3 class="sec">Cette semaine</h3><div class="list">
 <button class="item" data-act="go" data-v="paie"><span class="ic" style="background:#fff3c4;color:#a87300">${I.coin}</span><span><b>Ma paie</b><small>${pauseOf(cur) ? 'En pause ' + untilTxt(pauseOf(cur)) : paid ? 'Rangée, bravo !' : due > 1 ? `${due} paies t’attendent` : `${f(k.weekly)} t’attendent`}</small></span><span class="end ${paid && !pauseOf(cur) ? 'done' : ''}">${paid && !pauseOf(cur) ? I.check : I.chev}</span></button>
 <button class="item" data-act="go" data-v="bourse"><span class="ic" style="background:var(--glass)">${I.die}</span><span><b>La bourse</b><small>${!bourseOpen(cur) ? `S’ouvre quand ta tirelire aura ${f(BOURSE_MIN)}` : !t.rolls.length && !rolled ? 'Nouveau : la bourse est ouverte !' : postOf(cur) === 'none' ? 'Tu ne joues pas la bourse' : rolled ? `Dé ${t.bourse.face} : ${eurS(t.bourse.gain)}` : 'Lance le dé de la semaine'}</small></span><span class="end ${rolled ? 'done' : ''}">${rolled ? I.check : I.chev}</span></button>
@@ -430,9 +430,9 @@ function projetView(k, t) {
   const g = goalOf(cur), done = evs(cur).filter(e => e.t === 'projet').reverse(), dis = ready ? '' : 'disabled';
   const doneHtml = done.length ? `<section class="card"><h3>Mes projets réalisés</h3><ul class="log">${done.map(e => `<li><time>${dateFr(e.d)}</time><span>${esc(e.label)}</span><b>${f(e.amount)}</b></li>`).join('')}</ul></section>` : '';
   if (!g || goalEdit) {
-    return `<h2 class="title">${g ? 'Modifier mon projet' : 'Mon projet'}</h2><p class="lead">Un vélo, un jeu, une sortie ? Fixe-toi un objectif et regarde-toi avancer, palier après palier.</p>
+    return `<h2 class="title">${g ? 'Modifier mon projet' : 'Mon projet'}</h2><p class="lead">Un vélo, un jeu, une sortie ? Fixe-toi un objectif et regarde-toi avancer, palier après palier. Pas d’idée pour l’instant ? Ce n’est pas obligatoire : ta tirelire grossit quand même. Et pourquoi pas commencer à financer ton permis de conduire ?</p>
 <section class="card"><label>Mon projet<input id="go-name" type="text" autocomplete="off" maxlength="30" data-f="goalname" value="${esc(form.goalname)}" placeholder="Ex. : un vélo"></label>
-<div class="pills">${['Vélo', 'Trottinette', 'Jeu vidéo', 'Livres', 'Sortie', 'Cadeau'].map(n => `<button class="pill" data-act="goalpick" data-n="${n}" aria-pressed="${form.goalname === n}">${n}</button>`).join('')}</div>
+<div class="pills">${['Vélo', 'Trottinette', 'Jeu vidéo', 'Livres', 'Sortie', 'Cadeau', 'Permis de conduire'].map(n => `<button class="pill" data-act="goalpick" data-n="${n}" aria-pressed="${form.goalname === n}">${n}</button>`).join('')}</div>
 <label>Combien ça coûte ? (€)<input id="go-budget" type="text" inputmode="decimal" autocomplete="off" data-f="goalbudget" value="${esc(form.goalbudget)}" placeholder="Ex. : 150"></label>
 <div class="row">${g ? '<button class="btn ghost" data-act="goalcancel">Annuler</button>' : ''}<button class="btn" data-act="goalset" ${dis}>${g ? 'Enregistrer' : 'Créer mon projet'}</button></div></section>${doneHtml}`;
   }
@@ -617,7 +617,7 @@ function guideSteps(k) {
       parent: 'c’est le moment de lui expliquer votre bonus, avec de vraies pièces si vous en avez sous la main.', target: invC.length ? '.zone.gz .chip' : '.zone.gz', skip: () => noPay || guidePaid, next: 'Compris !' },
     { text: 'Bien rangé ! Appuie sur « Valider ma paie ».', target: '[data-act=pay]', done: () => guidePaid, skip: () => noPay && !guidePaid },
     { text: 'Et maintenant, ton rêve : appuie sur « Projet ».', target: '.tab[data-v=projet]', done: () => view === 'projet', skip: () => !!goalOf(cur) },
-    { text: 'Choisis ton projet et son prix, puis valide.', target: 'section.card:has(#go-name)', done: () => !!goalOf(cur), next: 'Plus tard' },
+    { text: 'Choisis ton projet et son prix, puis valide. Pas d’idée ? Ce n’est pas obligatoire : ta tirelire grossit quand même. Tu peux même commencer à mettre de côté pour ton permis de conduire !', target: 'section.card:has(#go-name)', done: () => !!goalOf(cur), next: 'Plus tard' },
     { text: `Bravo ! Quand ta tirelire aura ${BOURSE_MIN} €, la bourse s’ouvrira et je t’expliquerai le dé.`, target: '.hero > svg', next: 'Terminer', end: true }
   ];
 }
