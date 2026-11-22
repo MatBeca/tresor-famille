@@ -228,7 +228,8 @@ ${(() => { const p = bonusPlan(h.match); return p ? h.demo(bonusVis(h, h.match),
       intro: 'Avec la bourse, ton argent peut grossir… ou rétrécir un peu. À toi de choisir jusqu’où tu oses aller.',
       body: `<p><b>Prudent</b> : tu gagnes un tout petit peu, et tu ne perds presque jamais.</p>
 <p><b>Aventurier</b> : tu peux gagner gros, mais certaines semaines, tu perds vraiment.</p>
-<p><b>Équilibré</b> est entre les deux. Et <b>Je ne joue pas</b> : rien ne bouge, ni gain ni perte.</p>
+<p><b>Équilibré</b> : entre les deux.</p>
+<p><b>Je ne joue pas</b> : rien ne bouge, ni gain ni perte.</p>
 ${h.demo(h.diceDemo, 'Avec 100 € : les faces vertes font gagner, les rouges font perdre.')}
 <p>Voici la règle d’or de l’argent : <b>plus tu peux gagner gros, plus tu peux perdre gros</b>. Les grands appellent ça <b>le risque et le rendement</b>.</p>
 <p>Et une mauvaise semaine, ce n’est pas grave : ce qui compte, c’est toute l’année.</p>`,
