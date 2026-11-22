@@ -5,7 +5,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc, collection, collectionGroup, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
-const VERSION = '93'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '94'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -611,7 +611,7 @@ ${standalone() ? '' : `<section class="card"><h3>Installer Pépite sur ce télé
 <section class="card" id="compte"><h3>Compte</h3><p class="soft small" style="margin:0">Connecté avec ${esc(user.email || '')}. Version de l’appli : ${VERSION}.</p><div class="row"><button class="btn ghost sm" data-act="logout">Déconnecter cet appareil</button></div>
 <h4 style="margin:16px 0 4px">Vos données</h4><p class="soft small" style="margin:0">Statistiques d’usage, pour améliorer Pépite (jamais de publicité).</p>
 <div class="pills">${[['on', 'Activées'], ['off', 'Désactivées']].map(([v, l]) => `<button class="pill" data-act="stats" data-n="${v}" aria-pressed="${(v === 'off') === !!F.noStats}" ${dis}>${l}</button>`).join('')}</div>
-<div class="row"><button class="btn ghost sm" data-act="export" ${dis}>Télécharger les données de la famille</button></div>
+<div class="row"><button class="btn ghost sm" data-act="export" ${dis}>Télécharger l’historique de la famille</button></div><p class="soft small" style="margin:4px 0 0">Un tableau à ouvrir dans Excel ou Google Sheets : toutes les opérations de chaque enfant, ligne par ligne.</p>
 ${delAcct ? `<div class="danger-zone"><p style="margin:0"><b>Supprimer le compte de la famille</b><br><span class="soft small">Le compte et l’historique de tous les enfants seront effacés définitivement, sur tous les appareils. Pensez à télécharger les données avant si vous voulez les garder.</span></p>
 <label>Votre mot de passe, pour confirmer<input id="del-pass" type="password" autocomplete="current-password" data-f="delpass" value="${esc(form.delpass)}"></label>${delErr ? `<p class="neg small" style="margin:6px 0 0;font-weight:700">${esc(delErr)}</p>` : ''}
 <div class="row"><button class="btn ghost sm" data-act="delcancel">Annuler</button><button class="btn danger sm" data-act="deldo" ${busy ? 'disabled' : ''}>Supprimer définitivement</button></div></div>` : `<div class="row"><button class="btn ghost sm dangertxt" data-act="delopen">Supprimer le compte de la famille</button></div>`}
@@ -651,12 +651,35 @@ function touchStats(force) {
   if (!st.src && srcOf()) { st.src = srcOf(); ch = true; }
   if (ch && !force) saveF();
 }
+// Export RGPD lisible : un tableau (CSV) qui s'ouvre dans Excel ou Google Sheets, une ligne par opération.
 function exportData() {
-  const data = { appli: 'Pépite', exporte: iso(), compte: user.email, famille: clone(F), enfants: Object.fromEntries(kids().map(k => [k.name + ' (' + k.id + ')', { evenements: clone(evs(k.id)), projet: goalOf(k.id) ? clone(goalOf(k.id)) : null, pause: PAUSE[k.id] ? clone(PAUSE[k.id]) : null }])) };
-  delete data.famille.pin;
+  const n = v => typeof v === 'number' && v ? String(r2(v)).replace('.', ',') : '';
+  const cell = v => { const t = String(v ?? ''); return /[;"\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+  const day = d => d ? new Date(d).toLocaleDateString('fr-FR') : '';
+  const rows = [['Enfant', 'Date', 'Opération', 'Placé dans la tirelire (€)', 'Porte-monnaie (€)', 'Bonus des parents (€)', 'Gain ou perte bourse (€)', 'Sorti de la tirelire (€)', 'Détail']];
+  for (const k of kids()) {
+    rows.push([k.name, day(k.start), 'Inscription', '', '', '', '', '', `${validBirth(k.birth) ? 'né(e) le ' + day(k.birth + 'T12:00:00') + ', ' : ''}paie de ${f(k.weekly)} par semaine`]);
+    for (const e of evs(k.id)) {
+      const r = [k.name, day(e.d)];
+      if (e.t === 'paie') r.push('Paie rangée', n(e.inv), n(e.dep), n(e.bonus), '', '', '');
+      else if (e.t === 'recu') r.push('Argent reçu', n(e.inv), n(e.dep), n(e.bonus), '', '', [e.from ? 'de ' + e.from : '', e.pending ? 'en attente de validation' : e.refused ? 'refusé par un parent' : ''].filter(Boolean).join(', '));
+      else if (e.t === 'bourse') r.push('Dé de la bourse', '', '', '', String(r2(e.gain)).replace('.', ','), '', `face ${e.face}`);
+      else if (e.t === 'projet') r.push('Projet acheté', '', '', '', '', n(e.amount), e.label || '');
+      else if (e.t === 'vire') r.push('Rangé en lieu sûr par les parents', '', '', '', '', '', f(e.amount || 0));
+      else if (e.t === 'donne') r.push('Porte-monnaie donné', '', '', '', '', '', f(e.amount || 0));
+      else if (e.t === 'pause') r.push('Paie en pause', '', '', '', '', '', e.reason || '');
+      else if (e.t === 'reprise') r.push('Reprise de la paie', '', '', '', '', '', '');
+      else if (e.t === 'posture') r.push('Stratégie de bourse', '', '', '', '', '', POST[e.p] ? POST[e.p].name : e.p || '');
+      else continue;
+      rows.push(r);
+    }
+    if (goalOf(k.id)) rows.push([k.name, '', 'Projet en cours', '', '', '', '', '', `${goalOf(k.id).name} (${f(goalOf(k.id).budget)})`]);
+  }
+  rows.push([], ['Famille', '', 'Réglages', '', '', '', '', '', `bonus de ${F.match} % sur la paie placée, ${F.giftMatch} % sur l’argent reçu ; compte ${user.email} ; export du ${day(iso())}`]);
+  const csv = '﻿' + rows.map(r => r.map(cell).join(';')).join('\r\n');
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
-  a.download = 'pepite-donnees-' + iso().slice(0, 10) + '.json';
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'pepite-historique-' + iso().slice(0, 10) + '.csv';
   document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 async function deleteAccount() {
