@@ -180,31 +180,25 @@ function jar(t, g) {
   const pos = t.own + t.bonus + Math.max(0, t.gains), k = pos > 0 ? Math.max(0, t.total) / pos : 0, H = 196;
   const h = [t.own * k / cap * H, t.bonus * k / cap * H, Math.max(0, t.gains) * k / cap * H];
   const fills = ['var(--kid)', 'var(--gold)', 'var(--grow)'];
-  let y = 266, layers = '';
-  h.forEach((v, i) => { y -= v; layers += `<rect x="16" y="${y.toFixed(1)}" width="188" height="${v.toFixed(1)}" style="fill:${fills[i]}"/>`; });
+  let y = 266, layers = '', gy = 266;
+  h.forEach((v, i) => { y -= v; if (i === 2) gy = y; layers += `<rect x="16" y="${y.toFixed(1)}" width="188" height="${v.toFixed(1)}" style="fill:${fills[i]}"/>`; });
+  const yb = y + h[2]; // bas de la couche « gagné tout seul »
   const reached = !!g && t.total >= g.budget;
-  // La pousse sort de la fente et grandit avec ce que l'argent a gagné tout seul.
-  const gr = t.total > 0 ? Math.max(0, t.gains) / t.total : 0, grow = Math.min(1, gr / 0.2);
-  const sh = 24 + grow * 46, ls = 0.5 + grow * 0.7, sx = 100, sy = 36, top = sy - sh;
-  const leaf = (dir) => `<path transform="translate(${sx} ${top + 6}) scale(${(dir * ls).toFixed(2)} ${ls.toFixed(2)})" d="M0 0C-4-10-14-16-26-15-24-5-13 2 0 0Z" fill="${dir < 0 ? '#13a05a' : '#2fc275'}" stroke="#0b5e33" stroke-width="${(2.4 / ls).toFixed(2)}" stroke-linejoin="round"/>`;
-  const sprout = t.total > 0 ? `<path d="M${sx} ${sy}C${sx - 2} ${sy - sh * 0.4} ${sx + 3} ${sy - sh * 0.7} ${sx} ${top + 6}" stroke="#0b5e33" stroke-width="4" stroke-linecap="round" fill="none"/>${leaf(1)}${leaf(-1)}` : '';
-  const nug = reached ? LOGO.replace('<svg class="logo" viewBox="0 0 64 64" aria-hidden="true">', '<svg x="34" y="-78" width="152" height="152" viewBox="0 0 64 64">')
-    + '<path d="M28 -40l2.5 6.5 6.5 2.5-6.5 2.5-2.5 6.5-2.5-6.5-6.5-2.5 6.5-2.5z" fill="#ffc531" stroke="#6e4400" stroke-width="1.6" stroke-linejoin="round"/>' : '';
-  const svg = `<svg class="jar" viewBox="0 -80 220 370" role="img" aria-label="${reached ? 'Tirelire pleine : c’est pépite !' : `Tirelire remplie à ${Math.round((266 - y) / H * 100)} %`}">
+  const star = (x, yy, r) => `<path d="M${x} ${yy - r}l${r * 0.28} ${r * 0.72} ${r * 0.72} ${r * 0.28}-${r * 0.72} ${r * 0.28}-${r * 0.28} ${r * 0.72}-${r * 0.28}-${r * 0.72}-${r * 0.72}-${r * 0.28} ${r * 0.72}-${r * 0.28}z" fill="#fff3b0" stroke="#6e4400" stroke-width="2" stroke-linejoin="round"/>`;
+  const svg = `<svg class="jar" viewBox="0 0 220 290" role="img" aria-label="${reached ? 'Tirelire pleine : c’est pépite !' : `Tirelire remplie à ${Math.round((266 - y) / H * 100)} %`}">
 <defs><clipPath id="jc"><rect x="22" y="56" width="176" height="214" rx="40"/></clipPath>
-<pattern id="pc" width="26" height="18" patternUnits="userSpaceOnUse"><circle cx="13" cy="9" r="7" fill="#fff" fill-opacity=".2"/></pattern></defs>
+<pattern id="pc" width="26" height="18" patternUnits="userSpaceOnUse"><circle cx="13" cy="9" r="7" fill="#fff" fill-opacity=".2"/></pattern>
+<pattern id="pn" width="30" height="20" patternUnits="userSpaceOnUse"><path d="M5 12 7 7 12 5 18 6 21 10 20 14 14 16 8 15z" fill="#f5b323" stroke="#6e4400" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 9 11 7" stroke="#fff6cf" stroke-width="1.4" stroke-linecap="round"/></pattern></defs>
 <ellipse cx="110" cy="278" rx="80" ry="8" fill="#000" fill-opacity=".08"/>
 <rect x="22" y="56" width="176" height="214" rx="40" style="fill:var(--glass)"/>
-<g clip-path="url(#jc)">${layers}<rect x="16" y="${y.toFixed(1)}" width="188" height="${(266 - y).toFixed(1)}" fill="url(#pc)"/></g>
+<g clip-path="url(#jc)">${layers}<rect x="16" y="${gy.toFixed(1)}" width="188" height="${(266 - gy).toFixed(1)}" fill="url(#pc)"/>${h[2] > 0.5 ? `<rect x="16" y="${y.toFixed(1)}" width="188" height="${h[2].toFixed(1)}" fill="url(#pn)"/>` : ''}</g>
 <line x1="34" x2="186" y1="70" y2="70" stroke-dasharray="7 7" style="stroke:var(--soft)" stroke-width="2.5" stroke-linecap="round"/>
 <rect x="38" y="84" width="14" height="140" rx="7" fill="#fff" fill-opacity=".55"/>${g ? [0.25, 0.5, 0.75].map(m => { const yy = (266 - m * g.budget / cap * H).toFixed(1); return `<line x1="168" x2="192" y1="${yy}" y2="${yy}" style="stroke:var(--ink)" stroke-width="4" stroke-linecap="round"/>`; }).join('') : ''}
-<rect x="22" y="56" width="176" height="214" rx="40" fill="none" style="stroke:var(--ink)" stroke-width="6"/>
+<rect x="22" y="56" width="176" height="214" rx="40" fill="none" style="stroke:${reached ? '#c98a00' : 'var(--ink)'}" stroke-width="6"/>
 <rect x="40" y="20" width="140" height="38" rx="13" style="fill:var(--kid);stroke:var(--ink)" stroke-width="6"/>
 <rect x="74" y="29" width="72" height="11" rx="5.5" style="fill:var(--ink)"/>
-${reached ? '' : sprout}
-${reached ? '' : `<rect x="122" y="14" width="18" height="22" rx="4" fill="#f5b323" stroke="#6e4400" stroke-width="3"/><path d="M127 19v8" stroke="#fff3c4" stroke-width="2.5" stroke-linecap="round"/>`}
 <rect x="50" y="44" width="34" height="6" rx="3" fill="#fff" fill-opacity=".4"/>
-${nug}</svg>`;
+${reached ? star(14, 120, 13) + star(206, 170, 11) + star(196, 96, 7) + star(26, 214, 8) : ''}</svg>`;
   return { cap, svg };
 }
 
