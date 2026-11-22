@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '64'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '65'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -88,7 +88,8 @@ let toast = null, toastT = null, undoArm = false, wipeArm = false, delArm = null
 const projInv = {}, sel = {};
 const form = { preason: '', pdur: '1', resetname: '', goalname: '', goalbudget: '', gamount: '', gfrom: '', plabel: '', pamount: '', pkid: '', email: '', pass: '', newpin: '' };
 let loginMode = 'in', loginMsg = '', loginErr = '', busy = false;
-let ob = null, artId = null, tour = null, tourAuto = false, guide = null, guidePaid = false, guideShown = -1, guideOff = {};
+let ob = null, artId = null, tour = null, tourAuto = false, guide = null, guideKind = 'pay', guidePaid = false, guideShown = -1, guideOff = {};
+const BOURSE_MIN = 10; // la bourse s'ouvre quand la tirelire atteint 10 €
 try { lock = localStorage.getItem('pepite-lock'); cur = localStorage.getItem('pepite-cur'); } catch (e) {}
 
 const kids = () => (F && F.kids) || [];
@@ -318,7 +319,7 @@ ${t.out > 0 ? `<p class="soft small" style="margin:8px 4px 0">Projets réalisés
 <h3 class="sec">Mon projet</h3><div class="list"><button class="item" data-act="go" data-v="projet"><span class="ic" style="background:var(--kidt);color:var(--kidtxt)">${I.flag}</span><span>${g ? `<b>${esc(g.name)} : ${Math.floor(Math.min(1, Math.max(0, t.total) / g.budget) * 100)} %</b><small>${t.total >= g.budget ? 'Atteint : prépare ta présentation !' : `${f(Math.max(0, t.total))} sur ${f(g.budget)}`}</small>` : '<b>Choisis un projet</b><small>Un vélo, un jeu ? Fixe-toi un objectif.</small>'}</span><span class="end">${I.chev}</span></button></div>
 <h3 class="sec">Cette semaine</h3><div class="list">
 <button class="item" data-act="go" data-v="paie"><span class="ic" style="background:#fff3c4;color:#a87300">${I.coin}</span><span><b>Ma paie</b><small>${pauseOf(cur) ? 'En pause ' + untilTxt(pauseOf(cur)) : paid ? 'Rangée, bravo !' : due > 1 ? `${due} paies t’attendent` : `${f(k.weekly)} t’attendent`}</small></span><span class="end ${paid && !pauseOf(cur) ? 'done' : ''}">${paid && !pauseOf(cur) ? I.check : I.chev}</span></button>
-<button class="item" data-act="go" data-v="bourse"><span class="ic" style="background:var(--glass)">${I.die}</span><span><b>La bourse</b><small>${postOf(cur) === 'none' ? 'Tu ne joues pas la bourse' : rolled ? `Dé ${t.bourse.face} : ${eurS(t.bourse.gain)}` : 'Lance le dé de la semaine'}</small></span><span class="end ${rolled ? 'done' : ''}">${rolled ? I.check : I.chev}</span></button>
+<button class="item" data-act="go" data-v="bourse"><span class="ic" style="background:var(--glass)">${I.die}</span><span><b>La bourse</b><small>${!bourseOpen(cur) ? `S’ouvre quand ta tirelire aura ${f(BOURSE_MIN)}` : !t.rolls.length && !rolled ? 'Nouveau : la bourse est ouverte !' : postOf(cur) === 'none' ? 'Tu ne joues pas la bourse' : rolled ? `Dé ${t.bourse.face} : ${eurS(t.bourse.gain)}` : 'Lance le dé de la semaine'}</small></span><span class="end ${rolled ? 'done' : ''}">${rolled ? I.check : I.chev}</span></button>
 <button class="item" data-act="go" data-v="recu"><span class="ic" style="background:color-mix(in srgb,var(--grow) 14%,transparent);color:var(--grow)">${I.gift}</span><span><b>J’ai reçu de l’argent</b><small>Un cadeau, un anniversaire ?</small></span><span class="end">${I.chev}</span></button>
 <button class="item" data-act="go" data-v="carnet"><span class="ic" style="background:var(--glass)">${I.book}</span><span><b>Mon carnet</b><small>Tout ce qui est entré et sorti</small></span><span class="end">${I.chev}</span></button></div>`;
 }
@@ -337,7 +338,7 @@ ${help ? `<ol class="howto"><li><b>Chaque semaine, tu reçois ta paie</b>${coins
 <li><b>Ta tirelire est mise de côté</b>Pour récupérer cet argent, tu choisis un projet et tu le présentes ${P().a}.</li></ol>` : ''}</section>
 <section class="card">${blocked ? `<p class="result" style="text-align:center">Ta paie de la semaine est rangée.<br><span class="soft" style="font-size:17px">Rendez-vous la semaine prochaine !</span></p>` : `
 <p class="result" style="margin:0 0 4px">Paie ${weekTxt(ow[0])}</p>${ow.length > 1 ? `<p class="msg" style="margin-top:6px">Tu as ${ow.length} paies à ranger. On commence par la plus ancienne.</p>` : ''}
-<div class="tray" aria-label="Pièces à ranger">${tray.map(v => coinEl(v)).join('') || '<span class="soft">Toutes les pièces sont rangées !</span>'}</div>
+<div class="tray" aria-label="Pièces à ranger">${tray.map(v => coinEl(v, 'coinhint')).join('') || '<span class="soft">Toutes les pièces sont rangées !</span>'}</div>
 <div class="moves"><button class="btn ghost" data-act="toPig" ${tray.length && ready ? '' : 'disabled'}>Dans mon porte-monnaie</button><button class="btn gr" data-act="toGrow" ${tray.length && ready ? '' : 'disabled'}>Dans ma tirelire</button></div>
 <div class="zones"><div class="zone"><strong>Mon porte-monnaie : ${f(dep)}</strong>${depC.map(v => coinEl(v, 'backPig')).join('')}</div>
 <div class="zone gz"><strong class="g">Ma tirelire : ${f(inv)}</strong>${invC.map(v => coinEl(v, 'backGrow')).join('')}${inv ? `<span class="chip">+${f(bonusNow)}</span>` : ''}</div></div>
@@ -368,6 +369,15 @@ function postureCard(p, sel, start, own) {
 <span class="pr">${cnt}</span><span class="soft small">${d.like}</span></button>`;
 }
 function bourseView(k, t) {
+  if (!bourseOpen(cur)) {
+    const pct = Math.min(100, Math.max(0, t.total) / BOURSE_MIN * 100);
+    return `<h2 class="title">La bourse</h2><p class="lead">Elle s’ouvre quand ta tirelire aura <b>${f(BOURSE_MIN)}</b>. Encore ${f(Math.max(0, BOURSE_MIN - t.total))} à placer !</p>
+<section class="card"><div class="prog"><i style="width:${pct.toFixed(1)}%"></i></div><p class="soft small" style="margin:8px 0 0">${f(Math.max(0, t.total))} sur ${f(BOURSE_MIN)}</p></section>
+<h3 class="sec">Comment ça marche ?</h3>
+<section class="card"><p style="margin:0 0 10px">Imagine une tirelire de 100 €. Chaque semaine, tu lances un dé. Selon la face, ta tirelire gagne ou perd un petit bout de ce qu’il y a dedans.</p>
+<div class="demoin" inert aria-hidden="true">${postureCard('equilibre', true, 100, true)}</div>
+<p style="margin:10px 0 0">En vert, tu gagnes. En rouge, tu perds. Plus ta tirelire est pleine, plus le dé compte : c’est comme ça que marche la vraie Bourse.</p></section>`;
+  }
   const p = postOf(cur), rolled = sameWeek(t.bourse && t.bourse.d), recent = t.rolls.slice(-8).reverse();
   const own = true, start = Math.max(0, r2(t.total)); // toujours la vraie tirelire de l'enfant
   const pays = F.parents === 'parents' || F.parents === 'papamaman' ? 'nt' : '';
@@ -589,18 +599,23 @@ ${T.livret > 0 ? `<p class="msg">Vous avez déjà mis ${f(T.livret)} de côté p
 
 
 /* ---------- Première paie guidée (onboarding de l'enfant) ---------- */
+const bourseOpen = id => tot(id).total >= BOURSE_MIN || evs(id).some(e => e.t === 'bourse');
 function guideSteps(k) {
   const t = tot(cur), ow = owed(cur), noPay = !ow.length || !!pauseOf(cur), rolled = sameWeek(t.bourse && t.bourse.d);
+  if (guideKind === 'bourse') return [
+    { text: 'La bourse est ouverte ! Chaque semaine, tu lances un dé : il fait gagner ou perdre un petit bout de ta tirelire.', target: '.post.on', next: 'Suivant' },
+    { text: 'Les faces vertes te font gagner, les rouges te font perdre. Compte-les et choisis ta stratégie.', target: '.post.on', next: 'J’ai choisi' },
+    { text: 'Maintenant, lance le dé !', target: '.dicebox', done: () => sameWeek(tot(cur).bourse && tot(cur).bourse.d), skip: () => postOf(cur) === 'none', next: 'Plus tard' },
+    { text: 'Bravo ! Tu relanceras le dé chaque semaine. Plus ta tirelire grossit, plus il compte.', target: '.dicebox', next: 'Terminer', end: true }
+  ];
   return [
-    { text: `Salut ${esc(k.name)} ! Moi, c’est Pépite. Voici ta tirelire : elle va se remplir, semaine après semaine.`, target: '.hero > svg', next: 'C’est parti !', low: true },
-    { text: 'Ta paie de la semaine t’attend. Appuie sur « Paie », en bas.', target: '.tab[data-v=paie]', done: () => view === 'paie', skip: () => noPay },
-    { text: 'Voici tes pièces. Pour chacune, choisis : le porte-monnaie pour la dépenser, ou la tirelire pour la placer.', target: '.tray', done: () => view === 'paie' && tray.length === 0, skip: () => noPay },
-    { text: invC.length ? `Regarde : pour les pièces placées dans ta tirelire, ${P().aj} un bonus ! Appuie sur « Valider ma paie ».` : `Si tu places des pièces dans ta tirelire, ${P().aj} un bonus. Tu peux encore changer d’avis, puis appuie sur « Valider ma paie ».`, target: '.zone.gz', done: () => guidePaid, skip: () => noPay && !guidePaid },
-    { text: 'Maintenant, la bourse ! Appuie sur « Bourse », en bas.', target: '.tab[data-v=bourse]', done: () => view === 'bourse', skip: () => rolled },
-    { text: 'Choisis ta stratégie en comptant les faces vertes et les faces rouges. Puis lance le dé !', target: '.post.on', done: () => sameWeek(tot(cur).bourse && tot(cur).bourse.d), skip: () => rolled && view !== 'bourse', next: 'Plus tard' },
-    { text: 'Dernière étape : choisis ton rêve ! Appuie sur « Projet », en bas.', target: '.tab[data-v=projet]', done: () => view === 'projet', skip: () => !!goalOf(cur) },
-    { text: 'Choisis ou écris ton projet, indique son prix, puis valide. Ta pépite grandira à chaque palier !', target: 'section.card:has(#go-name)', done: () => !!goalOf(cur), next: 'Plus tard' },
-    { text: `Bravo ${esc(k.name)}, tu sais tout ! Reviens chaque semaine ranger ta paie et lancer le dé. C’est comme ça qu’une tirelire devient une pépite.`, target: '.hero > svg', next: 'Terminer', end: true, low: true }
+    { text: `Salut ${esc(k.name)} ! Moi, c’est Pépite. Voici ta tirelire : elle va se remplir, semaine après semaine.`, target: '.hero > svg', next: 'C’est parti !' },
+    { text: 'Ta paie t’attend : appuie sur « Paie ».', target: '.tab[data-v=paie]', done: () => view === 'paie', skip: () => noPay },
+    { text: 'Lis l’explication en haut. Puis range chaque pièce avec ces deux boutons.', target: '.moves', done: () => view === 'paie' && tray.length === 0, skip: () => noPay },
+    { text: 'Bien rangé ! Appuie sur « Valider ma paie ».', target: '[data-act=pay]', done: () => guidePaid, skip: () => noPay && !guidePaid },
+    { text: 'Et maintenant, ton rêve : appuie sur « Projet ».', target: '.tab[data-v=projet]', done: () => view === 'projet', skip: () => !!goalOf(cur) },
+    { text: 'Choisis ton projet et son prix, puis valide.', target: 'section.card:has(#go-name)', done: () => !!goalOf(cur), next: 'Plus tard' },
+    { text: `Bravo ! Quand ta tirelire aura ${BOURSE_MIN} €, la bourse s’ouvrira et je t’expliquerai le dé.`, target: '.hero > svg', next: 'Terminer', end: true }
   ];
 }
 function guideSync(k) {
@@ -608,10 +623,10 @@ function guideSync(k) {
   while (guide !== null && guide < S.length - 1) { const s = S[guide]; if ((s.skip && s.skip()) || (s.done && s.done())) guide++; else break; }
   return S;
 }
-function guideEnd(k) { guide = null; guidePaid = false; guideShown = -1; try { speechSynthesis.cancel(); } catch (e) {} if (k && !k.guided) { k.guided = true; if (ready) saveF(); } }
+function guideEnd(k) { const field = guideKind === 'bourse' ? 'bguided' : 'guided'; guide = null; guidePaid = false; guideShown = -1; try { speechSynthesis.cancel(); } catch (e) {} if (k && !k[field]) { k[field] = true; if (ready) saveF(); } }
 function guideView(k) {
   const S = guideSync(k), s = S[guide], n = S.length;
-  return `<div class="guide${s.low ? ' low' : ''}" role="dialog" aria-label="Guide de Pépite" aria-live="polite"><div class="gmascot">${NUG('', '')}</div><div class="gbody">
+  return `<div class="guide low" role="dialog" aria-label="Guide de Pépite" aria-live="polite"><div class="gmascot">${NUG('', '')}</div><div class="gbody">
 <p>${s.text}</p>
 <div class="gact"><button class="link gspeak" data-act="gspeak">${I.speak}Écoute</button><button class="link" data-act="gskip">${s.end ? '' : 'Passer le guide'}</button>${s.next ? `<button class="btn sm" data-act="${s.end ? 'gend' : 'gnext'}">${s.next}</button>` : ''}</div>
 <div class="tdots" aria-hidden="true">${S.map((_, j) => `<i class="${j === guide ? 'on' : ''}"></i>`).join('')}</div></div></div>`;
@@ -632,10 +647,13 @@ function mainView() {
   ensureCur();
   const k = kidOf(cur);
   if (!k) return splash('Aucun enfant');
-  if (guide === null && ready && !k.guided && !guideOff[cur] && !evs(cur).length && !goalOf(cur) && view === 'home') guide = 0;
+  if (guide === null && ready && !guideOff[cur]) {
+    if (!k.guided && !evs(cur).length && !goalOf(cur) && view === 'home') { guideKind = 'pay'; guide = 0; }
+    else if (!k.bguided && view === 'bourse' && bourseOpen(cur) && !evs(cur).some(e => e.t === 'bourse')) { guideKind = 'bourse'; guide = 0; }
+  }
   const t = tot(cur);
   const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : view === 'lire' ? lireView() : view === 'art' ? artView() : view === 'apropos' ? aproposView() : homeView(k, t);
-  return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view${guide !== null ? ' guided' : ''}">${content}</main>${guide !== null && ['home', 'paie', 'bourse', 'projet'].includes(view) ? guideView(k) : ''}${tabbar()}${resetFor ? resetModal() : ''}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
+  return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view${guide !== null ? ' guided' : ''}">${content}</main>${guide !== null && (guideKind === 'bourse' ? view === 'bourse' : ['home', 'paie', 'projet'].includes(view)) ? guideView(k) : ''}${tabbar()}${resetFor ? resetModal() : ''}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
 }
 
 let lastKey = '';
@@ -719,7 +737,7 @@ async function tryLegacy() {
 /* ---------- actions ---------- */
 function roll() {
   const t0 = tot(cur);
-  if (!ready || rolling || postOf(cur) === 'none' || sameWeek(t0.bourse && t0.bourse.d)) return;
+  if (!ready || rolling || postOf(cur) === 'none' || !bourseOpen(cur) || sameWeek(t0.bourse && t0.bourse.d)) return;
   rolling = true;
   const el = document.getElementById('die'), face = 1 + Math.floor(Math.random() * 6), quick = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let i = 0;
@@ -802,11 +820,12 @@ document.addEventListener('click', ev => {
   if (a !== 'kdel') delArm = null;
   if (a !== 'goaldrop') goalDropArm = false;
   switch (a) {
+    case 'coinhint': say('Pour ranger une pièce, utilise les deux boutons juste en dessous : porte-monnaie ou tirelire.'); break;
     case 'gnext': { const k = kidOf(cur); if (k && guide !== null) { guide++; } break; }
     case 'gskip': { const k = kidOf(cur); guideOff[cur] = true; guideEnd(k); break; }
     case 'gend': { const k = kidOf(cur); guideEnd(k); break; }
     case 'gspeak': guideSpeak(); return;
-    case 'gstart': { const id = b.dataset.k || cur; if (kidOf(id)) { cur = id; resetCoins(); view = 'home'; guide = 0; guidePaid = false; guideShown = -1; pinOk = false; pinAsk = false; window.scrollTo(0, 0); } break; }
+    case 'gstart': { const id = b.dataset.k || cur; if (kidOf(id)) { cur = id; resetCoins(); view = 'home'; guideKind = 'pay'; guide = 0; delete guideOff[id]; guidePaid = false; guideShown = -1; pinOk = false; pinAsk = false; window.scrollTo(0, 0); } break; }
     case 'tour': tour = 0; break;
     case 'tnext': tour = Math.min(tourLen() - 1, tour + 1); break;
     case 'tprev': tour = Math.max(0, tour - 1); break;
