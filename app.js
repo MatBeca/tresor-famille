@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '83'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '84'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -88,6 +88,8 @@ let toast = null, toastT = null, undoArm = false, wipeArm = false, delArm = null
 const projInv = {}, sel = {}, projStrat = {}; // projStrat : stratégie essayée dans Futur (simulation, ne change pas la vraie)
 const form = { preason: '', pdur: '1', resetname: '', goalname: '', goalbudget: '', gamount: '', gfrom: '', plabel: '', pamount: '', pkid: '', email: '', pass: '', newpin: '' };
 let loginMode = 'in', loginMsg = '', loginErr = '', busy = false;
+let installEv = null;
+const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 let ob = null, artId = null, lessonId = null, lessonFrom = null, kq = {}, tour = null, tourAuto = false, guide = null, guidePlan = null, guideKind = 'pay', guidePaid = false, guideShown = -1, guideOff = {};
 const BOURSE_MIN = 15; // la bourse s'ouvre quand la tirelire atteint 15 € (dès là, Équilibré et Aventurier font bouger le dé)
 try { lock = localStorage.getItem('pepite-lock'); cur = localStorage.getItem('pepite-cur'); } catch (e) {}
@@ -592,6 +594,7 @@ ${kids().map(k => `<label>${esc(k.name)}<select data-set="kpost:${k.id}">${Objec
 <section class="card"><h3>Corriger une erreur</h3>
 ${last ? `<div class="row" style="margin-top:4px"><button class="btn ghost sm" data-act="undo" ${dis}>${undoArm ? 'Confirmer : annuler ' + lastTxt : 'Annuler la dernière opération ' + de(K.name)}</button></div>
 <div class="row"><button class="btn danger sm" data-act="resetopen" ${dis}>Vider la tirelire et tout remettre à zéro pour ${esc(K.name)}</button></div>` : `<p class="soft">Rien à annuler pour ${esc(K.name)}.</p>`}</section>
+${standalone() ? '' : `<section class="card"><h3>Installer Pépite sur ce téléphone</h3>${installEv ? `<p class="soft small" style="margin:0">Une icône sur l’écran d’accueil, et l’appli s’ouvre en plein écran comme les autres.</p><div class="row"><button class="btn sm" data-act="install">Installer l’appli</button></div>` : `<p class="soft small" style="margin:0">Dans Chrome, touchez le menu ⋮ en haut à droite, puis « Ajouter à l’écran d’accueil » ou « Installer l’application ». Sur iPhone, dans Safari : bouton Partager, puis « Sur l’écran d’accueil ».</p>`}</section>`}
 <section class="card"><h3>Apparence</h3><p class="soft small" style="margin:0">Réglage propre à cet appareil.</p>
 <div class="pills">${[['light', 'Clair'], ['dark', 'Sombre']].map(([v, l]) => `<button class="pill" data-act="theme" data-n="${v}" aria-pressed="${theme === v}">${l}</button>`).join('')}</div></section>
 <button class="item art-item" data-act="go" data-v="apropos"><span class="ic artn aboutic"><img src="img/matthieu.jpg" alt="" width="40" height="40"></span><span><small>À propos</small><b>Qui a créé Pépite\u00a0?</b></span><span class="end">${I.chev}</span></button>
@@ -1026,6 +1029,7 @@ document.addEventListener('click', ev => {
     case 'gno': okGift(b.dataset.k, b.dataset.d, false); break;
     case 'giftcheck': if (ready) { F.giftCheck = b.dataset.n === 'true'; saveF(); } break;
     case 'pstrat': if (POST[b.dataset.n]) projStrat[cur] = b.dataset.n; break;
+    case 'install': if (installEv) { const e = installEv; installEv = null; e.prompt(); e.userChoice.finally(() => render()); } break;
     case 'lecon': view = 'lecon'; lessonId = b.dataset.n; window.scrollTo(0, 0); break;
     case 'kq': { const x = lessonList().find(l => l.id === lessonId); if (x) kq[x.id] = +b.dataset.n; break; }
     case 'kread': { const el = document.querySelector('.lesson'); if (!el) return; try { if (speechSynthesis.speaking) { speechSynthesis.cancel(); return; } const txt = [...el.querySelectorAll('h2, .alead, p:not(.kicker):not(.qfb), h4')].filter(e => !e.closest('.quiz') && !e.closest('figure')).map(e => e.innerText).join('. '); const u = new SpeechSynthesisUtterance(txt); u.lang = 'fr-FR'; u.rate = 0.95; const v = speechSynthesis.getVoices().find(z => /^fr/i.test(z.lang)); if (v) u.voice = v; speechSynthesis.speak(u); } catch (e) {} return; }
@@ -1089,3 +1093,6 @@ onAuthStateChanged(auth, u => {
   render();
 });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+// Installation : on garde l'invitation du navigateur pour la proposer depuis l'espace parents
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEv = e; render(); });
+addEventListener('appinstalled', () => { installEv = null; render(); });
