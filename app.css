@@ -1,3 +1,10 @@
+/* Polices hébergées avec l’appli (licence OFL) : aucune requête vers Google Fonts */
+@font-face{font-family:Fredoka;font-style:normal;font-weight:500;font-display:swap;src:url(fonts/fredoka-latin-500-normal.woff2) format('woff2')}
+@font-face{font-family:Fredoka;font-style:normal;font-weight:600;font-display:swap;src:url(fonts/fredoka-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:Fredoka;font-style:normal;font-weight:700;font-display:swap;src:url(fonts/fredoka-latin-700-normal.woff2) format('woff2')}
+@font-face{font-family:Nunito;font-style:normal;font-weight:600;font-display:swap;src:url(fonts/nunito-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:Nunito;font-style:normal;font-weight:700;font-display:swap;src:url(fonts/nunito-latin-700-normal.woff2) format('woff2')}
+@font-face{font-family:Nunito;font-style:normal;font-weight:800;font-display:swap;src:url(fonts/nunito-latin-800-normal.woff2) format('woff2')}
 /* Pépite : pièce après pièce, ta pépite grandit.
    VOICE: joyeux, net, à hauteur d'enfant ; gros boutons en relief, chiffres ronds
    IDEA: une appli de poche comme un jeu : un bocal qui se remplit, un dé de bourse, une pièce qui germe
@@ -413,3 +420,32 @@ main.view.guided{padding-bottom:300px}
 .quiz .btn{text-align:left;justify-content:flex-start}
 .qfb{font-weight:800;margin:10px 0 0 !important}
 .ic.artn svg[viewBox="0 0 24 24"]{width:22px;height:22px}
+
+/* consentement, pied de connexion, confidentialité */
+.chk{display:flex;gap:10px;align-items:flex-start;margin-top:12px;font-size:14px;line-height:1.4;color:var(--ink)}
+.chk input{width:20px;height:20px;flex:none;margin:2px 0 0;accent-color:var(--kid)}
+.chk .link{display:inline;padding:0;margin:0;font-size:inherit;line-height:inherit;min-height:0;vertical-align:baseline}
+.footlinks{display:flex;justify-content:center;gap:18px;margin-top:6px;flex-wrap:wrap}
+.art.legal h3{margin-top:22px}.art.legal a{color:var(--kidtxt);font-weight:800}
+.danger-zone{margin-top:14px;padding:12px;border-radius:16px;border:2px solid color-mix(in srgb,var(--red) 40%,transparent);background:color-mix(in srgb,var(--red) 7%,var(--card))}
+.dangertxt{color:var(--red)}
+.danger-zone p{line-height:1.4}
+
+/* écran d'installation */
+.gate .card h2{font-size:24px;margin:0 0 8px}
+.gate .card p{margin:0 0 6px}
+.btn.big{font-size:20px;padding:16px}
+a.btn{display:block;text-align:center;text-decoration:none}
+.steps{margin:6px 0 0;padding-left:22px;display:grid;gap:8px}
+
+/* tableau de bord d'usage */
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.kpi{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:12px;display:grid;gap:2px}
+.kpi b{font:700 28px Fredoka,sans-serif}.kpi span{font-weight:800;font-size:14px}.kpi small{color:var(--soft);font-size:12px}
+.wbars{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;align-items:end;height:150px;margin-top:8px}
+.wbars div{display:grid;grid-template-rows:1fr auto auto;height:100%;text-align:center;gap:2px}
+.wbars i{align-self:end;display:block;background:var(--kid);border-radius:6px 6px 2px 2px;min-height:3px}
+.wbars b{font-size:13px}.wbars small{font-size:10px;color:var(--soft);white-space:nowrap}
+.kv{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:6px}
+.kv li{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed var(--line);padding-bottom:6px}
+.kv li span{color:var(--ink)}

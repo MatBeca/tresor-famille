@@ -7,3 +7,7 @@ export const firebaseConfig = {
   messagingSenderId: "139391242691",
   appId: "1:139391242691:web:5faf5492f06ccc71abed76"
 };
+
+// Contact affiché dans la politique de confidentialité, et compte autorisé à voir le tableau de bord d'usage.
+export const CONTACT = 'matthieu.becamel@gmail.com';
+export const ADMIN = 'matthieu.becamel@gmail.com';

@@ -1,16 +1,26 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Le créateur de Pépite peut lire (jamais modifier) toutes les familles, pour le tableau de bord d'usage.
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == "matthieu.becamel@gmail.com";
+    }
     // Chaque famille ne voit et ne modifie que ses propres données.
     match /familles/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
+      allow write: if request.auth != null && request.auth.uid == uid;
       match /enfants/{enfant} {
-        allow read, write: if request.auth != null && request.auth.uid == uid;
+        allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
+        allow write: if request.auth != null && request.auth.uid == uid;
       }
+    }
+    // Lecture groupée de tous les enfants, pour le tableau de bord.
+    match /{chemin=**}/enfants/{enfant} {
+      allow read: if isAdmin();
     }
     // Anciennes données de la première version, lues une fois pour l'import.
     match /tresor/{doc} {
-      allow read: if request.auth != null && request.auth.token.email == "matthieu.becamel@gmail.com";
+      allow read: if isAdmin();
     }
   }
 }

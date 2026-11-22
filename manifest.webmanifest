@@ -1,7 +1,8 @@
 {
+  "id": "./",
   "name": "C’est Pépite : pièce après pièce, ta pépite grandit",
   "short_name": "Pépite",
-  "description": "Épargner, investir et voir son trésor grandir, en jouant.",
+  "description": "La tirelire qui apprend aux enfants à épargner et à investir : paie en pièces, bonus des parents, dé de la bourse et intérêts composés.",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",
@@ -10,8 +11,70 @@
   "background_color": "#fff8ee",
   "theme_color": "#fff8ee",
   "icons": [
-    { "src": "icons/icon-192.png?v=5", "sizes": "192x192", "type": "image/png" },
-    { "src": "icons/icon-512.png?v=5", "sizes": "512x512", "type": "image/png" },
-    { "src": "icons/icon-maskable-512.png?v=5", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icons/icon-192.png?v=5",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png?v=5",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-maskable-512.png?v=5",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": [
+    "education",
+    "finance",
+    "kids"
+  ],
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "https://matbeca.github.io/tresor-famille/manifest.webmanifest"
+    }
+  ],
+  "prefer_related_applications": false,
+  "screenshots": [
+    {
+      "src": "screenshots/1-home.png",
+      "sizes": "1080x2338",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "La tirelire qui grandit chaque semaine"
+    },
+    {
+      "src": "screenshots/2-paie.png",
+      "sizes": "1080x2338",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "La paie en pièces, à ranger une par une"
+    },
+    {
+      "src": "screenshots/3-bourse.png",
+      "sizes": "1080x2338",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Le dé de la bourse pour comprendre le risque"
+    },
+    {
+      "src": "screenshots/4-projet.png",
+      "sizes": "1080x2338",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Un projet et ses paliers"
+    },
+    {
+      "src": "screenshots/5-futur.png",
+      "sizes": "1080x2338",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Les intérêts composés jusqu’à 18 ans"
+    }
   ]
 }

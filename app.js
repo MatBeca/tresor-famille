@@ -1,10 +1,11 @@
 import { articles, features, lessons, bonusPlan } from './articles.js';
 import { Idiomorph } from './vendor/idiomorph.esm.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import { firebaseConfig } from './config.js';
-const VERSION = '92'; // à garder égal au cache du service worker (sw.js)
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, EmailAuthProvider, reauthenticateWithCredential, deleteUser } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc, collection, collectionGroup, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { firebaseConfig, CONTACT, ADMIN } from './config.js';
+import { privacyHTML, PRIVACY_VERSION } from './legal.js';
+const VERSION = '93'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -86,9 +87,16 @@ const KID_UNDO = ['paie', 'recu', 'posture']; // ce qu'un enfant peut annuler se
 let tray = [], invC = [], depC = [], rolling = false;
 let toast = null, toastT = null, undoArm = false, wipeArm = false, delArm = null;
 const projInv = {}, sel = {}, projStrat = {}; // projStrat : stratégie essayée dans Futur (simulation, ne change pas la vraie)
-const form = { preason: '', pdur: '1', resetname: '', goalname: '', goalbudget: '', gamount: '', gfrom: '', plabel: '', pamount: '', pkid: '', email: '', pass: '', newpin: '' };
+const form = { ok: false, delpass: '', preason: '', pdur: '1', resetname: '', goalname: '', goalbudget: '', gamount: '', gfrom: '', plabel: '', pamount: '', pkid: '', email: '', pass: '', newpin: '' };
 let loginMode = 'in', loginMsg = '', loginErr = '', busy = false;
-let installEv = null;
+let installEv = null, installed = false, relatedApp = false, delAcct = false, delErr = '', adminData = null, adminErr = '';
+const UA = navigator.userAgent;
+const isMobile = /Android|iPhone|iPad|iPod/i.test(UA) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(UA));
+const isIOS = /iPhone|iPad|iPod/i.test(UA) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(UA));
+const inApp = /FBAN|FBAV|FB_IAB|Instagram|LinkedInApp|Snapchat|musical_ly|TikTok|Line\/|; wv\)/i.test(UA);
+let gateOff = false; try { gateOff = sessionStorage.getItem('pepite-gate') === '1'; } catch (e) {}
+// Source d'arrivée (lien ?src=…), gardée sur l'appareil jusqu'à la création du compte
+try { const q = new URLSearchParams(location.search), src = (q.get('src') || q.get('utm_source') || '').slice(0, 40).replace(/[^\w.-]/g, ''); if (src && !localStorage.getItem('pepite-src')) localStorage.setItem('pepite-src', src); } catch (e) {}
 const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 let ob = null, artId = null, lessonId = null, lessonFrom = null, kq = {}, tour = null, tourAuto = false, guide = null, guidePlan = null, guideKind = 'pay', guidePaid = false, guideShown = -1, guideOff = {}, guideHold = null, guideViews = [];
 const BOURSE_MIN = 15; // la bourse s'ouvre quand la tirelire atteint 15 € (dès là, Équilibré et Aventurier font bouger le dé)
@@ -262,11 +270,12 @@ function loginView() {
 <label>E-mail d’un parent<input id="l-email" type="email" autocomplete="username" data-f="email" value="${esc(form.email)}" required></label>
 <label>Mot de passe${up ? ' (6 caractères minimum)' : ''}<input id="l-pass" type="password" autocomplete="${up ? 'new-password' : 'current-password'}" data-f="pass" value="${esc(form.pass)}" required minlength="6"></label>
 ${loginErr ? `<p class="neg" style="margin:10px 0 0;font-weight:700">${esc(loginErr)}</p>` : ''}${loginMsg ? `<div class="msg">${esc(loginMsg)}</div>` : ''}
+${up ? `<label class="chk"><input type="checkbox" id="l-ok" data-f="ok" ${form.ok ? 'checked' : ''} required><span>Je suis parent ou titulaire de l’autorité parentale des enfants que j’inscris, et j’accepte la <button class="link" type="button" data-act="go" data-v="confidentialite">politique de confidentialité</button>.</span></label>` : ''}
 <div class="row"><button class="btn full" type="submit" ${busy ? 'disabled' : ''}>${up ? 'Créer le compte' : 'Se connecter'}</button></div>
 ${up ? '' : '<button class="link" type="button" data-act="reset">Mot de passe oublié ?</button>'}
 <p class="soft small" style="margin:8px 0 0">Un seul compte pour toute la famille : un parent se connecte une fois sur chaque appareil.</p></form>
 <button class="item art-item" data-act="go" data-v="lire" style="margin:18px 0 4px"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent · 5 lectures courtes</small><b>Pourquoi ça marche\u00a0: la méthode Pépite expliquée</b></span><span class="end">${I.chev}</span></button>
-<button class="link" data-act="go" data-v="apropos" style="display:block;margin:6px auto 0">Qui a créé Pépite ?</button></main>`;
+<div class="footlinks"><button class="link" data-act="go" data-v="apropos">Qui a créé Pépite ?</button><button class="link" data-act="go" data-v="confidentialite">Confidentialité</button></div></main>`;
 }
 
 function newOb() { return { step: 1, parents: 'parents', kids: [{ id: uid6(), name: '', birth: '', weekly: '', color: PAL[0] }], match: 25, giftMatch: 10, dice: 'equilibre', pin: '', legacy: null, err: '' }; }
@@ -513,7 +522,7 @@ function leconsView() {
   const L = lessonList();
   const par = lessonFrom === 'parents';
   return `${par ? `<button class="backlink" data-act="go" data-v="parents">${I.chev}<span>Espace parents</span></button><p class="kicker">Côté enfant</p>` : ''}<h2 class="title">Comprendre l’argent</h2><p class="lead">${par ? `Les ${L.length} leçons que lit votre enfant, avec leur quiz. Les mêmes notions que vos articles, à hauteur d’enfant : de quoi en reparler ensemble à table.` : `${L.length} petites leçons pour devenir un as de l’argent. Chacune se lit, ou s’écoute, en deux minutes.`}</p>
-<div class="list">${L.map(x => { const done = kq[x.id] === x.quiz.ok; return `<button class="item art-item" data-act="lecon" data-n="${x.id}"><span class="ic artn">${done ? I.check : x.n}</span><span><small>${x.term}</small><b>${x.title}</b></span><span class="end">${I.chev}</span></button>`; }).join('')}</div>`;
+<div class="list">${L.map(x => { const done = kq[x.id] === x.quiz.ok || !!(kidOf(cur) && kidOf(cur).lq && kidOf(cur).lq[x.id]); return `<button class="item art-item" data-act="lecon" data-n="${x.id}"><span class="ic artn">${done ? I.check : x.n}</span><span><small>${x.term}</small><b>${x.title}</b></span><span class="end">${I.chev}</span></button>`; }).join('')}</div>`;
 }
 function leconView() {
   const L = lessonList(), i = Math.max(0, L.findIndex(x => x.id === lessonId)), x = L[i], next = L[i + 1], ans = kq[x.id];
@@ -599,9 +608,138 @@ ${standalone() ? '' : `<section class="card"><h3>Installer Pépite sur ce télé
 <section class="card"><h3>Apparence</h3><p class="soft small" style="margin:0">Réglage propre à cet appareil.</p>
 <div class="pills">${[['light', 'Clair'], ['dark', 'Sombre']].map(([v, l]) => `<button class="pill" data-act="theme" data-n="${v}" aria-pressed="${theme === v}">${l}</button>`).join('')}</div></section>
 <button class="item art-item" data-act="go" data-v="apropos"><span class="ic artn aboutic"><img src="img/matthieu.jpg" alt="" width="40" height="40"></span><span><small>À propos</small><b>Qui a créé Pépite\u00a0?</b></span><span class="end">${I.chev}</span></button>
-<section class="card"><h3>Compte</h3><p class="soft small" style="margin:0">Connecté avec ${esc(user.email || '')}. Version de l’appli : ${VERSION}.</p><div class="row"><button class="btn ghost sm" data-act="logout">Déconnecter cet appareil</button></div></section>`;
+<section class="card" id="compte"><h3>Compte</h3><p class="soft small" style="margin:0">Connecté avec ${esc(user.email || '')}. Version de l’appli : ${VERSION}.</p><div class="row"><button class="btn ghost sm" data-act="logout">Déconnecter cet appareil</button></div>
+<h4 style="margin:16px 0 4px">Vos données</h4><p class="soft small" style="margin:0">Statistiques d’usage, pour améliorer Pépite (jamais de publicité).</p>
+<div class="pills">${[['on', 'Activées'], ['off', 'Désactivées']].map(([v, l]) => `<button class="pill" data-act="stats" data-n="${v}" aria-pressed="${(v === 'off') === !!F.noStats}" ${dis}>${l}</button>`).join('')}</div>
+<div class="row"><button class="btn ghost sm" data-act="export" ${dis}>Télécharger les données de la famille</button></div>
+${delAcct ? `<div class="danger-zone"><p style="margin:0"><b>Supprimer le compte de la famille</b><br><span class="soft small">Le compte et l’historique de tous les enfants seront effacés définitivement, sur tous les appareils. Pensez à télécharger les données avant si vous voulez les garder.</span></p>
+<label>Votre mot de passe, pour confirmer<input id="del-pass" type="password" autocomplete="current-password" data-f="delpass" value="${esc(form.delpass)}"></label>${delErr ? `<p class="neg small" style="margin:6px 0 0;font-weight:700">${esc(delErr)}</p>` : ''}
+<div class="row"><button class="btn ghost sm" data-act="delcancel">Annuler</button><button class="btn danger sm" data-act="deldo" ${busy ? 'disabled' : ''}>Supprimer définitivement</button></div></div>` : `<div class="row"><button class="btn ghost sm dangertxt" data-act="delopen">Supprimer le compte de la famille</button></div>`}
+<div class="row"><button class="link" data-act="go" data-v="confidentialite">Politique de confidentialité</button>${isAdmin() ? '<button class="link" data-act="go" data-v="admin">Tableau de bord d’usage</button>' : ''}</div></section>`;
 }
 
+
+
+/* ---------- installation, confidentialité, données, mesure ---------- */
+const isAdmin = () => !!(user && user.email && user.email.toLowerCase() === ADMIN.toLowerCase());
+const srcOf = () => { try { return localStorage.getItem('pepite-src') || ''; } catch (e) { return ''; } };
+const showGate = () => isMobile && !standalone() && !gateOff && view !== 'confidentialite';
+function gateView() {
+  const url = location.href.split('#')[0], host = url.replace(/^https?:\/\//, '');
+  const chrome = /Android/i.test(UA) ? `intent://${host}#Intent;scheme=https;package=com.android.chrome;end` : url;
+  let body;
+  if (installed) body = `<h2>C’est installé !</h2><p>Ouvre Pépite depuis l’écran d’accueil de ton téléphone : elle s’y trouve maintenant, comme tes autres applis.</p>`;
+  else if (relatedApp) body = `<h2>Pépite est déjà installée</h2><p>Ouvre-la depuis l’écran d’accueil de ce téléphone : tu y retrouveras toute ta famille.</p>`;
+  else if (inApp) body = `<h2>Ouvre Pépite dans ${isIOS ? 'Safari' : 'Chrome'}</h2><p>Ce lien s’est ouvert dans une messagerie, qui ne permet pas d’installer l’appli.</p>
+${isIOS ? '' : `<div class="row"><a class="btn full" href="${chrome}">Ouvrir dans Chrome</a></div>`}<div class="row"><button class="btn ghost full" data-act="gatecopy">Copier le lien</button></div>${isIOS ? '<p class="soft small">Puis colle-le dans Safari.</p>' : ''}`;
+  else if (installEv) body = `<h2>Installe Pépite sur ton téléphone</h2><p>Une icône sur l’écran d’accueil, l’appli en plein écran et tes comptes qui t’attendent, même hors connexion.</p>
+<div class="row"><button class="btn gold full big" data-act="install">Installer Pépite</button></div><p class="soft small" style="text-align:center">Gratuit, sans publicité, moins de 1 Mo.</p>`;
+  else if (isIOS) body = `<h2>Installe Pépite sur ton iPhone</h2><ol class="steps"><li>Touche le bouton <b>Partager</b> (le carré avec une flèche vers le haut).</li><li>Choisis <b>Sur l’écran d’accueil</b>.</li><li>Touche <b>Ajouter</b>, puis ouvre Pépite depuis ton écran d’accueil.</li></ol>`;
+  else body = `<h2>Installe Pépite sur ton téléphone</h2><ol class="steps"><li>Touche le menu <b>⋮</b> en haut à droite de Chrome.</li><li>Choisis <b>Installer l’application</b> ou <b>Ajouter à l’écran d’accueil</b>.</li><li>Ouvre Pépite depuis ton écran d’accueil.</li></ol><p class="soft small" style="margin:8px 0 0">Tu ne vois pas ce choix ? Touche d’abord « Ouvrir dans Chrome » dans le même menu.</p>`;
+  return `<main class="view full gate"><div class="welcome">${LOGOBIG}<h1>${WMFULL}</h1></div><section class="card">${body}</section>
+<button class="link" data-act="gateskip" style="display:block;margin:14px auto 0">Continuer dans le navigateur</button></main>`;
+}
+function privacyView() { return privacyHTML({ contact: CONTACT, I, user }); }
+// Repères d'usage : une écriture par jour au plus, rien si la famille a refusé les statistiques.
+function touchStats(force) {
+  if (!F || F.noStats) return;
+  const today = iso().slice(0, 10), first = kids().flatMap(k => evs(k.id)).map(e => e.d).sort()[0];
+  const st = F.stats || (F.stats = { created: F.created || first || iso(), days: 0 });
+  let ch = !!force;
+  if (st.seen !== today) { st.seen = today; st.days = (st.days || 0) + 1; ch = true; }
+  if (standalone() && !st.inst) { st.inst = today; ch = true; }
+  if (!st.src && srcOf()) { st.src = srcOf(); ch = true; }
+  if (ch && !force) saveF();
+}
+function exportData() {
+  const data = { appli: 'Pépite', exporte: iso(), compte: user.email, famille: clone(F), enfants: Object.fromEntries(kids().map(k => [k.name + ' (' + k.id + ')', { evenements: clone(evs(k.id)), projet: goalOf(k.id) ? clone(goalOf(k.id)) : null, pause: PAUSE[k.id] ? clone(PAUSE[k.id]) : null }])) };
+  delete data.famille.pin;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+  a.download = 'pepite-donnees-' + iso().slice(0, 10) + '.json';
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+async function deleteAccount() {
+  if (!user || busy) return;
+  if (!form.delpass) { delErr = 'Tapez votre mot de passe pour confirmer.'; return render(); }
+  busy = true; delErr = ''; render();
+  try {
+    await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, form.delpass));
+    const uid = user.uid, ids = kids().map(k => k.id);
+    stopSync();
+    await Promise.all(ids.map(id => deleteDoc(doc(fdb, 'familles', uid, 'enfants', id))));
+    await deleteDoc(doc(fdb, 'familles', uid));
+    await deleteUser(user);
+    try { ['pepite-lock', 'pepite-consent', 'pepite-src'].forEach(k => localStorage.removeItem(k)); } catch (e) {}
+    lock = null; delAcct = false; form.delpass = ''; view = 'home'; loginMsg = 'Le compte de la famille et toutes ses données ont été supprimés.';
+  } catch (e) {
+    const c = e && e.code || '';
+    delErr = c.includes('wrong-password') || c.includes('invalid-credential') ? 'Mot de passe incorrect.' : c.includes('too-many-requests') ? 'Trop d’essais : réessayez dans quelques minutes.' : 'Suppression impossible pour le moment : vérifiez la connexion.';
+    if (user && !famUnsub) startSync();
+  }
+  busy = false; render();
+}
+
+/* ---------- tableau de bord d'usage (réservé au créateur) ---------- */
+async function loadAdmin() {
+  if (!isAdmin()) return;
+  adminErr = ''; adminData = null; render();
+  try {
+    const [fs, ks] = await Promise.all([getDocs(collection(fdb, 'familles')), getDocs(collectionGroup(fdb, 'enfants'))]);
+    const fams = [], kd = {};
+    fs.forEach(d => fams.push({ id: d.id, ...d.data() }));
+    ks.forEach(d => { const fid = d.ref.parent.parent.id; (kd[fid] = kd[fid] || {})[d.id] = d.data(); });
+    adminData = { at: Date.now(), fams, kd };
+  } catch (e) { adminErr = 'Lecture impossible : publiez d’abord les nouvelles règles Firestore (accès du tableau de bord).'; }
+  render();
+}
+function adminStats() {
+  const now = Date.now(), D = 864e5, day = d => d ? new Date(d).getTime() : 0, P = (a, b) => b ? Math.round(100 * a / b) + ' %' : '–';
+  const fams = adminData.fams.filter(x => x.id !== user.uid && Array.isArray(x.kids));
+  const rows = fams.map(x => {
+    const kd = adminData.kd[x.id] || {}, ev = Object.values(kd).flatMap(k => k.events || []), dates = ev.map(e => day(e.d)).filter(Boolean);
+    const st = x.stats || {}, created = day(st.created || x.created) || Math.min(...dates, now);
+    const last = Math.max(day(st.seen), ...dates, created);
+    const kids = x.kids.map(k => {
+      const e = (kd[k.id] || {}).events || [];
+      const w = [...new Set(e.filter(z => z.t === 'paie').map(z => wk(z.d)))].sort((a, b) => a - b);
+      let run = w.length ? 1 : 0, best = run; for (let i = 1; i < w.length; i++) { run = w[i] - w[i - 1] <= 8 * D ? run + 1 : 1; best = Math.max(best, run); }
+      let tot = 0, peak = 0; for (const z of e) { if (z.t === 'paie' || (z.t === 'recu' && !z.pending && !z.refused)) tot += z.inv + z.bonus; else if (z.t === 'bourse') tot += z.gain; else if (z.t === 'projet') tot -= z.amount; peak = Math.max(peak, tot); }
+      return { age: validBirth(k.birth) ? ageAt(k.birth, new Date()) : null, streak: best, rolls: e.filter(z => z.t === 'bourse').length, open: peak >= BOURSE_MIN, goal: !!(kd[k.id] || {}).goal, bought: e.some(z => z.t === 'projet'), guided: !!k.guided, lq: Object.keys(k.lq || {}).length, post: k.posture || 'none', tot };
+    });
+    const wks = new Set([...dates, last].map(d => wk(d)));
+    return { wks, created, last, inst: !!st.inst, src: st.src || 'direct', days: st.days || 0, match: x.match, kids, noStats: !!x.noStats };
+  });
+  const K = rows.flatMap(r => r.kids), n = rows.length;
+  const act7 = rows.filter(r => now - r.last < 7 * D).length, act30 = rows.filter(r => now - r.last < 30 * D).length;
+  const old7 = rows.filter(r => now - r.created >= 7 * D), old28 = rows.filter(r => now - r.created >= 28 * D);
+  const ret = (arr, d) => arr.filter(r => r.last - r.created >= d * D).length;
+  const weeks = Array.from({ length: 8 }, (_, i) => { const x = new Date(wk(new Date())); x.setDate(x.getDate() - 7 * (7 - i)); const start = x.getTime(); return { label: dateFr(start), v: rows.filter(r => r.wks.has(start)).length }; });
+  const srcs = Object.entries(rows.reduce((m, r) => (m[r.src] = (m[r.src] || 0) + 1, m), {})).sort((a, b) => b[1] - a[1]);
+  const posts = Object.entries(K.filter(k => k.open).reduce((m, k) => (m[k.post] = (m[k.post] || 0) + 1, m), {}));
+  return { n, act7, act30, new7: rows.filter(r => now - r.created < 7 * D).length, new30: rows.filter(r => now - r.created < 30 * D).length, inst: P(rows.filter(r => r.inst).length, n),
+    ret1: P(ret(old7, 7), old7.length), ret4: P(ret(old28, 28), old28.length), old7: old7.length, old28: old28.length,
+    kids: K.length, perFam: n ? (K.length / n).toFixed(1).replace('.', ',') : '–', ages: [[6, 8], [9, 11], [12, 17]].map(([a, b]) => [a + '–' + b + ' ans', K.filter(k => k.age >= a && k.age <= b).length]),
+    habit: P(K.filter(k => k.streak >= 3).length, K.length), open: P(K.filter(k => k.open).length, K.length), rolled: P(K.filter(k => k.rolls > 0).length, K.filter(k => k.open).length),
+    goal: P(K.filter(k => k.goal).length, K.length), bought: K.filter(k => k.bought).length, guided: P(K.filter(k => k.guided).length, K.length), lq: P(K.filter(k => k.lq > 0).length, K.length),
+    avg: K.length ? f(K.reduce((a, k) => a + k.tot, 0) / K.length) : '–', match: n ? Math.round(rows.reduce((a, r) => a + (r.match || 0), 0) / n) + ' %' : '–', weeks, srcs, posts, optout: rows.filter(r => r.noStats).length };
+}
+function adminView() {
+  if (!isAdmin()) return '<p>Accès réservé.</p>';
+  const head = `<button class="backlink" data-act="go" data-v="parents">${I.chev}<span>Espace parents</span></button><p class="kicker">Réservé au créateur</p><h2 class="title">Tableau de bord d’usage</h2>`;
+  if (adminErr) return head + `<div class="msg">${esc(adminErr)}</div><div class="row"><button class="btn sm" data-act="adminreload">Réessayer</button></div>`;
+  if (!adminData) return head + '<p class="soft">Chargement des familles…</p>';
+  const s = adminStats(), max = Math.max(1, ...s.weeks.map(w => w.v));
+  const kpi = (v, l, sub) => `<div class="kpi"><b>${v}</b><span>${l}</span>${sub ? `<small>${sub}</small>` : ''}</div>`;
+  const line = (l, v) => `<li><span>${l}</span><b>${v}</b></li>`;
+  return head + `<p class="lead">Toutes les familles, hors la tienne. Mis à jour le ${new Date(adminData.at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}. <button class="link" data-act="adminreload">Actualiser</button></p>
+<div class="kpis">${kpi(s.n, 'familles inscrites', `+${s.new7} en 7 j · +${s.new30} en 30 j`)}${kpi(s.act7, 'actives cette semaine', `${s.act30} sur 30 jours`)}${kpi(s.ret4, 'encore là après 4 semaines', `sur ${s.old28} familles assez anciennes`)}${kpi(s.inst, 'ont installé l’appli', '')}</div>
+<section class="card"><h3>Familles actives par semaine</h3><div class="wbars">${s.weeks.map(w => `<div><i style="height:${Math.round(100 * w.v / max)}%"></i><b>${w.v}</b><small>${w.label}</small></div>`).join('')}</div></section>
+<section class="card"><h3>Rétention</h3><ul class="kv">${line('Encore actives après 1 semaine', `${s.ret1} <small class="soft">(${s.old7} familles)</small>`)}${line('Encore actives après 4 semaines', `${s.ret4} <small class="soft">(${s.old28} familles)</small>`)}${line('Enfants qui ont rangé leur paie 3 semaines de suite', s.habit)}</ul></section>
+<section class="card"><h3>Ce qui est utilisé</h3><ul class="kv">${line('Enfants inscrits', `${s.kids} <small class="soft">(${s.perFam} par famille)</small>`)}${s.ages.map(([l, v]) => line('· ' + l, v)).join('')}${line('Guide terminé', s.guided)}${line('Au moins un quiz réussi', s.lq)}${line('Un projet en cours', s.goal)}${line('Projets achetés', s.bought)}${line('Bourse ouverte (15 € atteints)', s.open)}${line('Dé lancé, parmi les bourses ouvertes', s.rolled)}${s.posts.map(([p, v]) => line('· ' + (POST[p] ? POST[p].name : p), v)).join('')}${line('Tirelire moyenne', s.avg)}${line('Bonus moyen des parents', s.match)}</ul></section>
+<section class="card"><h3>D’où viennent les familles</h3><ul class="kv">${s.srcs.map(([k, v]) => line(esc(k), v)).join('') || '<li><span class="soft">Aucune donnée</span></li>'}</ul><p class="soft small" style="margin:8px 0 0">Ajoute <b>?src=nom</b> à tes liens (ex. ?src=whatsapp, ?src=instagram) pour savoir lesquels marchent.</p></section>
+<section class="card"><h3>Comment lire ces chiffres</h3><p class="small" style="margin:0">Repères indicatifs, à ajuster avec l’expérience. Le chiffre qui compte le plus est la rétention à 4 semaines : au-delà de 40 %, l’habitude est installée et tu peux tester une offre payante. Si l’installation reste sous 50 %, travaille l’écran d’installation avant tout. Si beaucoup de familles s’inscrivent mais peu d’enfants rangent leur paie trois semaines de suite, c’est la promesse ou l’accompagnement des parents qui coince, pas l’acquisition.</p>${s.optout ? `<p class="soft small" style="margin:8px 0 0">${s.optout} famille(s) ont désactivé les statistiques : leurs repères d’usage manquent.</p>` : ''}</section>`;
+}
 
 const H = () => ({ jar, miniDie, growNug, f, eurS, r50, I, coinEl });
 function artList() { return articles(H()); }
@@ -737,7 +875,7 @@ function mainView() {
     else if (!k.bguided && view === 'bourse' && bourseOpen(cur) && !evs(cur).some(e => e.t === 'bourse')) { guideKind = 'bourse'; guide = 0; guideHold = null; guideViews = []; }
   }
   const t = tot(cur);
-  const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : view === 'lire' ? lireView() : view === 'art' ? artView() : view === 'apropos' ? aproposView() : view === 'lecons' ? leconsView() : view === 'lecon' ? leconView() : homeView(k, t);
+  const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : view === 'lire' ? lireView() : view === 'art' ? artView() : view === 'apropos' ? aproposView() : view === 'lecons' ? leconsView() : view === 'lecon' ? leconView() : view === 'confidentialite' ? privacyView() : view === 'admin' ? (lock && !pinOk ? lockedView() : adminView()) : homeView(k, t);
   return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view${guide !== null ? ' guided' : ''}">${content}</main>${guide !== null && (guideKind === 'bourse' ? view === 'bourse' : ['home', 'paie', 'bourse', 'projet'].includes(view)) ? guideView(k) : ''}${tabbar()}${resetFor ? resetModal() : ''}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
 }
 
@@ -745,11 +883,12 @@ let lastKey = '';
 function render() {
   if (rolling) return;
   let html, color = '#2f5fe0', key;
-  if (user === undefined) { html = splash(); key = 'splash'; }
-  else if (!user) { if (!tourAuto && view === 'home') { tourAuto = true; let seen = null; try { seen = localStorage.getItem('pepite-tour'); } catch (e) {} if (!seen) tour = 0; } const pub = view === 'lire' || view === 'art' || view === 'apropos'; html = pub ? `<main class="view full">${view === 'lire' ? lireView() : view === 'apropos' ? aproposView() : artView()}</main>` : loginView() + (tour !== null ? tourModal() : ''); key = 'login:' + (pub ? view + ':' + artId : '') + (!pub && tour !== null ? ':tour' + tour : ''); }
+  if (showGate()) { html = gateView(); key = 'gate:' + !!installEv + installed + relatedApp; }
+  else if (user === undefined) { html = splash(); key = 'splash'; }
+  else if (!user) { if (!tourAuto && view === 'home') { tourAuto = true; let seen = null; try { seen = localStorage.getItem('pepite-tour'); } catch (e) {} if (!seen) tour = 0; } const pub = view === 'lire' || view === 'art' || view === 'apropos' || view === 'confidentialite'; html = pub ? `<main class="view full">${view === 'lire' ? lireView() : view === 'apropos' ? aproposView() : view === 'confidentialite' ? privacyView() : artView()}</main>` : loginView() + (tour !== null ? tourModal() : ''); key = 'login:' + (pub ? view + ':' + artId : '') + (!pub && tour !== null ? ':tour' + tour : ''); }
   else if (!famLoaded) { html = splash('Ouverture de la banque…'); key = 'splash2'; }
   else if (!F) { if (!ob) { ob = newOb(); tryLegacy(); } if (view === 'art') { key = 'obart:' + artId; html = `<main class="view full">${artView()}</main>`; } else { key = 'ob' + ob.step; html = obView(); } color = ob.step === 2 && ob.kids[0] ? ob.kids[0].color : PAL[1]; }
-  else { html = mainView(); key = 'main:' + view + ':' + (view === 'art' ? artId : view === 'lecon' ? lessonId : '') + ':' + cur + ':' + (lock && !pinOk ? (pinAsk ? 'pin' : 'lk') : '') + (resetFor ? ':modal' : ''); const k = kidOf(cur); if (k) color = k.color; }
+  else { html = mainView(); key = 'main:' + view + ':' + (view === 'art' ? artId : view === 'lecon' ? lessonId : '') + ':' + cur + ':' + (lock && !pinOk ? (pinAsk ? 'pin' : 'lk') : '') + (resetFor ? ':modal' : ''); const k = kidOf(cur); if (k) color = k.color; if (view === 'admin') key += ':' + (adminData ? adminData.at : '') + adminErr; }
   document.documentElement.style.setProperty('--kid', color); document.documentElement.style.setProperty('--kidon', onColor(color));
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', color);
   const app = document.getElementById('app');
@@ -777,7 +916,7 @@ function applyRaises() {
 }
 function updateReady() {
   const r = !!(F && famServer && kids().every(k => KL[k.id]));
-  if (r !== ready) { ready = r; if (r) { status = ''; clearTimeout(offlineTimer); applyRaises(); resetCoins(); } return true; }
+  if (r !== ready) { ready = r; if (r) { status = ''; clearTimeout(offlineTimer); applyRaises(); touchStats(); resetCoins(); } return true; }
   return false;
 }
 function syncKids() {
@@ -902,7 +1041,7 @@ async function obFinish() {
   if (!obValidate()) return render();
   busy = true; render();
   try {
-    const fam = { v: 1, parents: ob.parents, kids: ob.kids.map(k => ({ id: k.id, start: iso(), name: k.name, birth: k.birth, weekly: k.weekly, color: k.color, posture: ob.dice })), match: ob.match, giftMatch: ob.giftMatch, raise: true, dice: POST[ob.dice].faces.slice(), diceName: ob.dice, defaultPosture: ob.dice, pin: ob.pin, created: iso() };
+    const fam = { v: 1, parents: ob.parents, kids: ob.kids.map(k => ({ id: k.id, start: iso(), name: k.name, birth: k.birth, weekly: k.weekly, color: k.color, posture: ob.dice })), match: ob.match, giftMatch: ob.giftMatch, raise: true, dice: POST[ob.dice].faces.slice(), diceName: ob.dice, defaultPosture: ob.dice, pin: ob.pin, created: iso(), consent: { d: (() => { try { return localStorage.getItem('pepite-consent'); } catch (e) { return null; } })() || iso(), v: PRIVACY_VERSION }, stats: { created: iso(), seen: iso().slice(0, 10), days: 1, ...(standalone() ? { inst: iso().slice(0, 10) } : {}), ...(srcOf() ? { src: srcOf() } : {}) } };
     await Promise.all(fam.kids.map(k => setDoc(doc(fdb, 'familles', user.uid, 'enfants', k.id), { events: (ob.legacy && ob.legacy[k.id]) || [], goal: null, pause: null })));
     await setDoc(doc(fdb, 'familles', user.uid), fam);
     view = 'home'; cur = fam.kids[0].id;
@@ -960,7 +1099,7 @@ document.addEventListener('click', ev => {
     case 'obnext': if (obValidate()) { ob.step++; window.scrollTo(0, 0); } break;
     case 'obprev': ob.step--; ob.err = ''; window.scrollTo(0, 0); break;
     case 'obfinish': obFinish(); return;
-    case 'go': pinFor = null; view = b.dataset.v; if (b.dataset.from) lessonFrom = b.dataset.from; else if (!['lecons', 'lecon'].includes(view)) lessonFrom = null; if (!['parents', 'lire', 'art', 'apropos'].includes(view) && !(lessonFrom === 'parents' && ['lecons', 'lecon'].includes(view))) { pinOk = false; } pinAsk = false; pinBuf = ''; pinBad = false; window.scrollTo(0, 0); break;
+    case 'go': pinFor = null; view = b.dataset.v; if (view === 'admin') loadAdmin(); if (view !== 'parents') { delAcct = false; delErr = ''; } if (b.dataset.from) lessonFrom = b.dataset.from; else if (!['lecons', 'lecon'].includes(view)) lessonFrom = null; if (!['parents', 'lire', 'art', 'apropos', 'confidentialite', 'admin'].includes(view) && !(lessonFrom === 'parents' && ['lecons', 'lecon'].includes(view))) { pinOk = false; } pinAsk = false; pinBuf = ''; pinBad = false; window.scrollTo(0, 0); break;
     case 'kid': cur = k; goalEdit = false; resetCoins(); try { localStorage.setItem('pepite-cur', cur); } catch (e) {} break;
     case 'toPig': if (tray.length) depC.push(tray.shift()); break;
     case 'toGrow': if (tray.length) invC.push(tray.shift()); break;
@@ -1034,8 +1173,16 @@ document.addEventListener('click', ev => {
     case 'giftcheck': if (ready) { F.giftCheck = b.dataset.n === 'true'; saveF(); } break;
     case 'pstrat': if (POST[b.dataset.n]) projStrat[cur] = b.dataset.n; break;
     case 'install': if (installEv) { const e = installEv; installEv = null; e.prompt(); e.userChoice.finally(() => render()); } break;
+    case 'stats': if (ready) { if (b.dataset.n === 'off') { F.noStats = true; delete F.stats; } else { delete F.noStats; touchStats(true); } saveF(); } break;
+    case 'export': exportData(); break;
+    case 'delopen': delAcct = true; delErr = ''; form.delpass = ''; break;
+    case 'delcancel': delAcct = false; delErr = ''; form.delpass = ''; break;
+    case 'deldo': deleteAccount(); return;
+    case 'gateskip': gateOff = true; try { sessionStorage.setItem('pepite-gate', '1'); } catch (e) {} break;
+    case 'gatecopy': try { navigator.clipboard.writeText(location.href.split('#')[0]); say('Lien copié : colle-le dans Chrome.'); } catch (e) {} break;
+    case 'adminreload': loadAdmin(); break;
     case 'lecon': view = 'lecon'; lessonId = b.dataset.n; window.scrollTo(0, 0); break;
-    case 'kq': { const x = lessonList().find(l => l.id === lessonId); if (x) kq[x.id] = +b.dataset.n; break; }
+    case 'kq': { const x = lessonList().find(l => l.id === lessonId); if (x) { kq[x.id] = +b.dataset.n; const k = kidOf(cur); if (k && ready && lessonFrom !== 'parents' && kq[x.id] === x.quiz.ok && !(k.lq && k.lq[x.id])) { k.lq = { ...(k.lq || {}), [x.id]: 1 }; saveF(); } } break; }
     case 'kread': { const el = document.querySelector('.lesson'); if (!el) return; try { if (speechSynthesis.speaking) { speechSynthesis.cancel(); return; } const txt = [...el.querySelectorAll('h2, .alead, p:not(.kicker):not(.qfb), h4')].filter(e => !e.closest('.quiz') && !e.closest('figure')).map(e => e.innerText).join('. '); const u = new SpeechSynthesisUtterance(txt); u.lang = 'fr-FR'; u.rate = 0.95; const v = speechSynthesis.getVoices().find(z => /^fr/i.test(z.lang)); if (v) u.voice = v; speechSynthesis.speak(u); } catch (e) {} return; }
     case 'mycolor': { const x = kidOf(cur); if (x && ready && PAL.includes(b.dataset.c)) { x.color = b.dataset.c; saveF(); } break; }
     case 'kcolor': { const x = kidOf(k); if (x && ready) { x.color = b.dataset.c; saveF(); } break; }
@@ -1049,7 +1196,7 @@ document.addEventListener('click', ev => {
 
 document.addEventListener('input', ev => {
   const t = ev.target, fk = t.dataset.f, ok = t.dataset.ob;
-  if (fk) form[fk] = t.value;
+  if (fk) form[fk] = t.type === 'checkbox' ? t.checked : t.value;
   if (fk === 'resetname') { const x = kidOf(resetFor), btn = document.querySelector('[data-act=resetdo]'); if (x && btn) btn.disabled = !(ready && t.value.trim().toLowerCase() === x.name.toLowerCase()); }
   if (ok && ob) { const [key, id] = ok.split(':'); if (id) { const x = ob.kids.find(z => z.id === id); if (x) x[key] = t.value; } else ob[key] = t.value.replace(/\D/g, '').slice(0, 4); }
   if (t.dataset.set === 'pin') form.newpin = t.value.replace(/\D/g, '').slice(0, 4);
@@ -1075,7 +1222,7 @@ document.addEventListener('submit', async ev => {
   ev.preventDefault();
   loginErr = ''; loginMsg = ''; busy = true; render();
   try {
-    if (loginMode === 'up') await createUserWithEmailAndPassword(auth, form.email.trim(), form.pass);
+    if (loginMode === 'up') { if (!form.ok) { loginErr = 'Cochez la case pour confirmer que vous êtes le parent.'; busy = false; return render(); } try { localStorage.setItem('pepite-consent', iso()); } catch (e) {} await createUserWithEmailAndPassword(auth, form.email.trim(), form.pass); }
     else await signInWithEmailAndPassword(auth, form.email.trim(), form.pass);
     form.pass = '';
   } catch (e) {
@@ -1093,10 +1240,14 @@ auth = getAuth(app);
 fdb = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
 onAuthStateChanged(auth, u => {
   user = u;
-  if (u) startSync(); else { stopSync(); view = 'home'; }
+  if (u) startSync(); else { stopSync(); if (view !== 'confidentialite') view = 'home'; }
   render();
 });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
 // Installation : on garde l'invitation du navigateur pour la proposer depuis l'espace parents
 addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEv = e; render(); });
-addEventListener('appinstalled', () => { installEv = null; render(); });
+addEventListener('appinstalled', () => { installEv = null; installed = true; render(); });
+// Appli déjà installée sur ce téléphone ? (Chrome Android, grâce à related_applications du manifeste)
+if (navigator.getInstalledRelatedApps) navigator.getInstalledRelatedApps().then(a => { if (a && a.length) { relatedApp = true; render(); } }).catch(() => {});
+// Lien direct vers la politique de confidentialité (exigé par le Play Store)
+if (/^#(confidentialite|suppression)/.test(location.hash)) { view = 'confidentialite'; gateOff = true; render(); }
