@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '79'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '80'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -521,8 +521,8 @@ function leconView() {
 <div class="keep"><h4>Le savais-tu ?</h4><p style="margin:0">${x.know}</p></div>
 <section class="quiz"><h4>Petit quiz</h4><p>${x.quiz.q}</p><div class="list">${x.quiz.a.map((t, j) => `<button class="btn ${ans === j ? (j === x.quiz.ok ? 'gr' : 'danger') : 'ghost'} full" data-act="kq" data-n="${j}">${t}</button>`).join('')}</div>
 ${ans !== undefined ? `<p class="qfb ${ans === x.quiz.ok ? 'g' : 'neg'}">${ans === x.quiz.ok ? x.quiz.yes : x.quiz.no + ' Essaie encore !'}</p>` : ''}</section>
-${lessonFrom === 'parents' ? '' : `<div class="row"><button class="btn gold full" data-act="go" data-v="${x.act[0]}">À essayer dans Pépite : ${x.act[1]}</button></div>`}</article>
-${next ? `<button class="item art-item nextart" data-act="lecon" data-n="${next.id}"><span class="ic artn">${next.n}</span><span><small>Leçon suivante</small><b>${next.title}</b></span><span class="end">${I.chev}</span></button>` : `<div class="row"><button class="btn full" data-act="go" data-v="lecons">Toutes mes leçons</button></div>`}`;
+</article>
+${next ? `<button class="item art-item nextart" data-act="lecon" data-n="${next.id}"><span class="ic artn">${next.n}</span><span><small>Leçon suivante</small><b>${next.title}</b></span><span class="end">${I.chev}</span></button>` : `<div class="row"><button class="btn full" data-act="go" data-v="lecons">${lessonFrom === 'parents' ? 'Toutes les leçons' : 'Toutes mes leçons'}</button></div>`}`;
 }
 function lockedView() {
   const dis = ready ? '' : 'disabled', K = kidOf(cur), last = evs(cur)[evs(cur).length - 1], can = last && KID_UNDO.includes(last.t);
