@@ -372,23 +372,23 @@ ${rolled ? diceH + stratH : stratH + diceH}
 }
 
 function futurView(k, t) {
-  if (projInv[cur] === undefined) { const p = t.pays.slice(-8); projInv[cur] = p.length ? Math.round(p.reduce((a, b) => a + b, 0) / p.length) : k.weekly; }
+  if (projInv[cur] === undefined) { const p = t.pays.slice(-8); projInv[cur] = p.length ? r50(p.reduce((a, b) => a + b, 0) / p.length) : k.weekly; }
   projInv[cur] = Math.max(0, Math.min(500, projInv[cur]));
   const pts = project(cur, projInv[cur]);
   if (!pts.length) return `<h2 class="title">Ton futur</h2><section class="card"><p>Tu as 18 ans : le trésor est à toi !</p></section>`;
   if (!pts.some(p => p.age === sel[cur])) sel[cur] = pts[pts.length - 1].age;
   const max = Math.max(1, ...pts.map(p => p.total)), Pt = pts.find(p => p.age === sel[cur]);
   const bars = pts.map(p => { const pos = p.own + p.bonus + Math.max(0, p.gains) || 1, s = v => (Math.max(0, v) / pos * 100).toFixed(2);
-    return `<button class="bar ${p.age === sel[cur] ? 'on' : ''}" data-act="bar" data-age="${p.age}" aria-label="À ${p.age} ans : ${f(p.total)}"><span class="area"><span class="stk" style="height:${(p.total / max * 100).toFixed(2)}%"><i style="height:${s(p.own)}%;background:var(--kid)"></i><i style="height:${s(p.bonus)}%;background:var(--gold)"></i><i style="height:${s(p.gains)}%;background:var(--grow)"></i></span></span><span class="age">${p.age}</span></button>`; }).join('');
+    return `<button class="bar ${p.age === sel[cur] ? 'on' : ''}" data-act="bar" data-age="${p.age}" aria-label="À ${p.age} ans : ${f(r50(p.total))}"><span class="area"><span class="stk" style="height:${(p.total / max * 100).toFixed(2)}%"><i style="height:${s(p.own)}%;background:var(--kid)"></i><i style="height:${s(p.bonus)}%;background:var(--gold)"></i><i style="height:${s(p.gains)}%;background:var(--grow)"></i></span></span><span class="age">${p.age}</span></button>`; }).join('');
   const full = projInv[cur] !== k.weekly ? project(cur, k.weekly).find(p => p.age === sel[cur]) : null;
   const quick = [...new Set([k.weekly, 10, 20, 50])].sort((a, b) => a - b);
   return `<h2 class="title">Et si tu continuais jusqu’à 18 ans ?</h2><p class="lead">Touche une barre pour voir ton trésor à cet âge.</p>
-<section class="card"><div class="step">Je place <button data-act="pm" aria-label="Moins">−</button><span class="n">${projInv[cur]} €</span><button data-act="pp" aria-label="Plus">+</button> par semaine</div>
+<section class="card"><div class="step">Je place <button data-act="pm" aria-label="Moins">−</button><span class="n">${f(projInv[cur])}</span><button data-act="pp" aria-label="Plus">+</button> par semaine</div>
 <div class="pills">${quick.map(n => `<button class="pill" data-act="pset" data-n="${n}" aria-pressed="${projInv[cur] === n}">${n === k.weekly ? `Ma paie (${f(n)})` : f(n)}</button>`).join('')}</div>
 ${projInv[cur] > k.weekly ? `<p class="soft small" style="margin:10px 0 0">C’est plus que ton argent de poche : il faudrait y ajouter l’argent que tu reçois (cadeaux, anniversaires, petits services).</p>` : ''}
 <div class="bars" style="grid-template-columns:repeat(${pts.length},minmax(0,1fr))">${bars}</div>
-<p class="cap">À <b>${Pt.age} ans</b>, ta tirelire contiendrait <b>${f(Pt.total)}</b> : ${f(Pt.own)} de ton argent, ${f(Pt.bonus)} de bonus ${P().de} et <b class="g">${f(Math.max(0, Pt.gains))} gagnés tout seuls</b>.</p>
-<p class="soft" style="margin:0">Regarde le vert : plus tu attends, plus il grossit vite, parce que ce que ton argent a gagné se met à gagner lui aussi.${full ? ` Avec ta paie de ${f(k.weekly)} chaque semaine, tu aurais ${f(full.total)} à ${full.age} ans.` : ''}</p>
+<p class="cap">À <b>${Pt.age} ans</b>, ta tirelire contiendrait <b>${f(r50(Pt.total))}</b> : ${f(r50(Pt.own))} de ton argent, ${f(r50(Pt.bonus))} de bonus ${P().de} et <b class="g">${f(r50(Math.max(0, Pt.gains)))} gagnés tout seuls</b>.</p>
+<p class="soft" style="margin:0">Regarde le vert : plus tu attends, plus il grossit vite, parce que ce que ton argent a gagné se met à gagner lui aussi.${full ? ` Avec ta paie de ${f(k.weekly)} chaque semaine, tu aurais ${f(r50(full.total))} à ${full.age} ans.` : ''}</p>
 <p class="soft small" style="margin:8px 0 0">${postOf(cur) === 'none' ? 'Tu ne joues pas la bourse : seuls ton argent et le bonus comptent.' : `Calcul fait avec la moyenne de ta stratégie ${POST[postOf(cur)].name} : en vrai, tout dépendra de tes lancers de dé.`}</p></section>`;
 }
 
@@ -715,8 +715,8 @@ document.addEventListener('click', ev => {
     }
     case 'gift': if (ready) doGift(parseFloat(b.dataset.r)); break;
     case 'payhelp': payHelp = !(payHelp === null ? !tot(cur).paie : payHelp); break;
-    case 'pm': projInv[cur] = Math.max(0, projInv[cur] - (projInv[cur] > 20 ? 5 : 1)); break;
-    case 'pp': projInv[cur] = Math.min(500, projInv[cur] + (projInv[cur] >= 20 ? 5 : 1)); break;
+    case 'pm': { const v = projInv[cur]; projInv[cur] = Math.max(0, r50(v - (v > 20 ? 5 : v > 10 ? 1 : 0.5))); break; }
+    case 'pp': { const v = projInv[cur]; projInv[cur] = Math.min(500, r50(v + (v >= 20 ? 5 : v >= 10 ? 1 : 0.5))); break; }
     case 'pset': projInv[cur] = +b.dataset.n; break;
     case 'bar': sel[cur] = +b.dataset.age; break;
     case 'pin':
