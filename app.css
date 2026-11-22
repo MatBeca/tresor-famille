@@ -339,3 +339,8 @@ i.cs{background:var(--purse)}i.cc{background:var(--grow)}
 .tour .tvis,.tour h3,.tour>p{animation:tfade .2s ease-out}
 @keyframes tfade{from{opacity:0;transform:translateX(14px)}}
 @media(prefers-reduced-motion:reduce){.tour .tvis,.tour h3,.tour>p{animation:none}}
+.bonusdemo{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+.bcoins{display:grid;grid-template-columns:repeat(2,50px);gap:6px}
+.bplus{font:700 34px Fredoka,sans-serif;color:var(--soft)}
+.bgift{display:grid;justify-items:center;gap:4px;padding:10px 12px;border-radius:18px;background:color-mix(in srgb,var(--gold) 22%,var(--card));border:2px dashed var(--goldd)}
+.bgift small{font-weight:800;font-size:13px;color:#6e4400;max-width:90px;text-align:center;line-height:1.2}
