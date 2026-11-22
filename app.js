@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '67'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '68'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -172,10 +172,15 @@ const goalOf = id => GOAL[id] || null;
 const pauseOf = id => { const p = PAUSE[id]; if (!p) return null; if (p.until && Date.now() >= new Date(p.until).getTime()) return null; return p; };
 const untilTxt = p => p.until ? 'jusqu’au ' + new Date(new Date(p.until).getTime() - 864e5).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + ' inclus' : 'jusqu’à nouvel ordre';
 const MS = [0.25, 0.5, 0.75, 1];
+// Stratégie retenue pour les projections : celle de l'enfant, ou Équilibré s'il ne joue pas encore (bourse fermée ou « Je ne joue pas »).
+const projPost = id => { const p = postOf(id); return p === 'none' || !bourseOpen(id) ? 'equilibre' : p; };
+const projMean = id => POST[projPost(id)].faces.reduce((a, b) => a + b, 0) / 6 / 100;
+// Semaines (à partir d'aujourd'hui) où tombent les prochains anniversaires, pour la hausse de 0,50 € par an.
+function bdWeeks(k, maxW) { const out = []; if (!F.raise || !validBirth(k.birth)) return out; const now = new Date(), b = new Date(k.birth + 'T12:00:00'); for (let a = ageAt(k.birth, now) + 1; a <= 18; a++) { const d = new Date(b); d.setFullYear(b.getFullYear() + a); const w = Math.round((d - now) / (7 * 864e5)); if (w > maxW) break; out.push(w); } return out; }
 function eta(id, perWeek) {
   const g = goalOf(id), t = tot(id); if (!g) return null; if (t.total >= g.budget) return 0;
-  const m = meanOf(id) / 100, match = F.match / 100; let x = Math.max(0, t.total);
-  for (let w = 1; w <= 520; w++) { x += x * m + perWeek * (1 + match); if (x >= g.budget) return w; }
+  const k = kidOf(id), m = projMean(id), match = F.match / 100, share = k.weekly ? Math.min(1, perWeek / k.weekly) : 1, bds = bdWeeks(k, 520); let x = Math.max(0, t.total), pw = perWeek;
+  for (let w = 1; w <= 520; w++) { if (bds.includes(w)) pw += share * 0.5; x += (x >= BOURSE_MIN || bourseOpen(id) ? x * m : 0) + pw * (1 + match); if (x >= g.budget) return w; }
   return null;
 }
 const avgInv = id => { const p = tot(id).pays.slice(-8); return p.length ? p.reduce((a, b) => a + b, 0) / p.length : kidOf(id).weekly; };
@@ -189,12 +194,13 @@ function milestone(before, after) {
 }
 function sayMs(before, msg, sub) { const ms = milestone(before, tot(cur).total); if (ms) say(ms, msg); else say(msg, sub); }
 function project(id, perWeek) {
-  const k = kidOf(id), t = tot(id), m = meanOf(id) / 100, match = F.match / 100, now = new Date(), birth = new Date(k.birth + 'T12:00:00');
-  let own = t.own, bonus = t.bonus, gains = t.gains, w = 0; const pts = [];
+  const k = kidOf(id), t = tot(id), m = projMean(id), match = F.match / 100, now = new Date(), birth = new Date(k.birth + 'T12:00:00'), share = k.weekly ? Math.min(1, perWeek / k.weekly) : 1;
+  let own = t.own, bonus = t.bonus, gains = t.gains, w = 0, pw = perWeek; const pts = [];
   for (let a = ageAt(k.birth, now) + 1; a <= 18; a++) {
     const bd = new Date(birth); bd.setFullYear(birth.getFullYear() + a);
     const target = Math.max(0, Math.round((bd - now) / (7 * 864e5)));
-    while (w < target) { gains += Math.max(0, own + bonus + gains - t.out) * m; own += perWeek; bonus += perWeek * match; w++; }
+    while (w < target) { const cap = Math.max(0, own + bonus + gains - t.out); gains += cap >= BOURSE_MIN || bourseOpen(id) ? cap * m : 0; own += pw; bonus += pw * match; w++; }
+    if (F.raise) pw += share * 0.5;
     pts.push({ age: a, own, bonus, gains, total: Math.max(0, own + bonus + gains - t.out) });
   }
   return pts;
@@ -418,13 +424,16 @@ ${calcHow(cur, projInv[cur], 'ce que tu choisis de placer ci-dessus')}</section>
 
 /* Explication du calcul des projections, en mots d'enfant. */
 function calcHow(id, perWeek, label) {
-  const t = tot(id), have = Math.max(0, t.total), p = postOf(id), m = meanOf(id) / 100, bonus = r2(perWeek * F.match / 100);
+  const t = tot(id), have = Math.max(0, t.total), p = postOf(id), pp = projPost(id), open = bourseOpen(id), m = projMean(id), bonus = r2(perWeek * F.match / 100);
   const month = r50(have * m * 52 / 12); // gain moyen du dé sur un mois, en pièces de 50 c
+  const dice = pp !== p || !open
+    ? `Pour le dé, on compte la stratégie <b>Équilibré</b>, celle du milieu${!open ? `, à partir du moment où ta bourse s’ouvrira (quand ta tirelire aura ${f(BOURSE_MIN)})` : ', même si tu ne joues pas en ce moment'}. En moyenne, elle fait gagner un peu plus qu’elle ne fait perdre.`
+    : `Pour le dé, on imagine que chaque semaine est une semaine moyenne de ta stratégie <b>${POST[p].name}</b> : en moyenne, le dé fait gagner un peu plus qu’il ne fait perdre. ${month > 0 ? `Avec ta tirelire actuelle, ça fait environ <b class="g">${f(month)} de plus par mois</b>.` : 'Avec ta tirelire actuelle, c’est encore presque rien.'}`;
   return `<details class="how"><summary>Comment on calcule ?</summary><ol>
 <li>On part de ce qu’il y a dans ta tirelire aujourd’hui : <b>${f(have)}</b>.</li>
-<li>Chaque semaine, on ajoute ${label} : <b>${f(perWeek)}</b>${bonus > 0 ? `, plus le bonus ${P().de} : <b>${f(bonus)}</b>` : ''}.</li>
-<li>${p === 'none' ? 'Tu ne joues pas à la bourse : le dé ne compte pas.' : `Pour le dé, on imagine que chaque semaine est une semaine moyenne de ta stratégie <b>${POST[p].name}</b> : en moyenne, le dé fait gagner un peu plus qu’il ne fait perdre. ${month > 0 ? `Avec ta tirelire actuelle, ça fait environ <b class="g">${f(month)} de plus par mois</b>.` : 'Avec ta tirelire actuelle, c’est encore presque rien.'} Plus la tirelire grossit, plus ce petit plus grossit aussi.`}</li>
-</ol><p>${p === 'none' ? 'Si tu te mets à jouer à la bourse, le calcul changera.' : 'Si tu changes de stratégie, le calcul prend tout de suite la nouvelle. Et en vrai, tes lancers seront parfois meilleurs, parfois moins bons : c’est une estimation, pas une promesse.'}</p></details>`;
+<li>Chaque semaine, on ajoute ${label} : <b>${f(perWeek)}</b>${bonus > 0 ? `, plus le bonus ${P().de} : <b>${f(bonus)}</b>` : ''}.${F.raise ? ' Et à chaque anniversaire, ta paie augmente de 0,50 € : on en tient compte.' : ''}</li>
+<li>${dice} Plus la tirelire grossit, plus ce petit plus grossit aussi.</li>
+</ol><p>Si tu changes de stratégie, le calcul prend tout de suite la nouvelle. Et en vrai, tes lancers seront parfois meilleurs, parfois moins bons : c’est une estimation, pas une promesse.</p></details>`;
 }
 function projetView(k, t) {
   const g = goalOf(cur), done = evs(cur).filter(e => e.t === 'projet').reverse(), dis = ready ? '' : 'disabled';
@@ -520,6 +529,8 @@ ${kids().map(k => { const pz = pauseOf(k.id); return `<div style="padding:12px 0
 <div class="swatches">${PAL.map((c, ci) => `<button class="sw" style="--c:${c}" title="${PALN[ci]}" data-act="kcolor" data-k="${k.id}" data-c="${c}" aria-pressed="${k.color === c}" aria-label="${PALN[ci]}"></button>`).join('')}</div></div>`).join('')}
 <div class="row"><button class="btn ghost full" data-act="kadd" ${dis}>Ajouter un enfant</button></div></section>
 <section class="card"><h3>Les règles du jeu</h3><p class="soft small" style="margin:0">Une paie par semaine, à ranger le jour qui vous arrange (la semaine va du lundi au dimanche). Si vous la versez en retard, les paies non rangées restent disponibles ${BACKLOG} semaines, puis elles sont perdues. </p><p class="soft small" style="margin:6px 0 0">Les bonus ne s’appliquent qu’à l’argent placé (les pièces que l’enfant place), jamais à celui qui va dans le porte-monnaie.</p>
+<p style="margin:12px 0 4px;font-weight:800">Augmenter la paie de 0,50 € à chaque anniversaire</p><div class="pills">${[[true, 'Oui'], [false, 'Non']].map(([v, l]) => `<button class="pill" data-act="raise" data-n="${v}" aria-pressed="${!!F.raise === v}" ${ready ? '' : 'disabled'}>${l}</button>`).join('')}</div>
+<p class="soft small" style="margin:4px 0 0">Le jour de son anniversaire, la paie de l’enfant augmente toute seule. Elle est aussi prise en compte dans les projections.</p>
 <label>Les enfants vous appellent<select data-set="parents">${Object.entries(PAR).filter(([k]) => k !== 'papamaman' || F.parents === k).map(([k, v]) => `<option value="${k}" ${F.parents === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>
 <div class="grid2"><label>Bonus argent de poche (%)<input id="r-m" type="number" min="0" max="100" value="${F.match}" data-set="match"></label>
 <label>Bonus argent reçu (%)<input id="r-g" type="number" min="0" max="100" value="${gm()}" data-set="giftMatch"></label></div>
@@ -682,9 +693,20 @@ const chains = {};
 function queue(key, fn) { chains[key] = (chains[key] || Promise.resolve()).then(fn).catch(() => { status = 'Enregistrement impossible : vérifie ta connexion.'; render(); }); return chains[key]; }
 function saveF() { const body = clone(F); lastF = JSON.stringify(body); return queue('F', () => setDoc(doc(fdb, 'familles', user.uid), body)); }
 function saveK(id) { const body = { events: clone(evs(id)), goal: goalOf(id) ? clone(goalOf(id)) : null, pause: PAUSE[id] ? clone(PAUSE[id]) : null }; lastK[id] = JSON.stringify(body); return queue(id, () => setDoc(doc(fdb, 'familles', user.uid, 'enfants', id), body)); }
+// Hausse automatique de la paie aux anniversaires (si la famille l'a activée).
+function applyRaises() {
+  let ch = false; const now = new Date(), msgs = [];
+  for (const k of kids()) {
+    if (!validBirth(k.birth)) continue;
+    const age = ageAt(k.birth, now);
+    if (typeof k.raisedAge !== 'number') { k.raisedAge = age; ch = true; continue; }
+    if (age > k.raisedAge) { if (F.raise) { k.weekly = Math.min(50, Math.round((k.weekly + 0.5 * (age - k.raisedAge)) * 2) / 2); msgs.push(`${k.name} a ${age} ans : sa paie passe à ${f(k.weekly)} par semaine.`); } k.raisedAge = age; ch = true; }
+  }
+  if (ch) saveF(); if (msgs.length) say(msgs.join(' '));
+}
 function updateReady() {
   const r = !!(F && famServer && kids().every(k => KL[k.id]));
-  if (r !== ready) { ready = r; if (r) { status = ''; clearTimeout(offlineTimer); resetCoins(); } return true; }
+  if (r !== ready) { ready = r; if (r) { status = ''; clearTimeout(offlineTimer); applyRaises(); resetCoins(); } return true; }
   return false;
 }
 function syncKids() {
@@ -795,7 +817,7 @@ async function obFinish() {
   if (!obValidate()) return render();
   busy = true; render();
   try {
-    const fam = { v: 1, parents: ob.parents, kids: ob.kids.map(k => ({ id: k.id, start: iso(), name: k.name, birth: k.birth, weekly: k.weekly, color: k.color, posture: ob.dice })), match: ob.match, giftMatch: ob.giftMatch, dice: POST[ob.dice].faces.slice(), diceName: ob.dice, defaultPosture: ob.dice, pin: ob.pin, created: iso() };
+    const fam = { v: 1, parents: ob.parents, kids: ob.kids.map(k => ({ id: k.id, start: iso(), name: k.name, birth: k.birth, weekly: k.weekly, color: k.color, posture: ob.dice })), match: ob.match, giftMatch: ob.giftMatch, raise: true, dice: POST[ob.dice].faces.slice(), diceName: ob.dice, defaultPosture: ob.dice, pin: ob.pin, created: iso() };
     await Promise.all(fam.kids.map(k => setDoc(doc(fdb, 'familles', user.uid, 'enfants', k.id), { events: (ob.legacy && ob.legacy[k.id]) || [], goal: null, pause: null })));
     await setDoc(doc(fdb, 'familles', user.uid), fam);
     view = 'home'; cur = fam.kids[0].id;
@@ -919,6 +941,7 @@ document.addEventListener('click', ev => {
       resetFor = null; form.resetname = ''; say(`La tirelire ${de(x.name)} est remise à zéro.`);
       break;
     }
+    case 'raise': if (ready) { F.raise = b.dataset.n === 'true'; kids().forEach(k => { if (validBirth(k.birth)) k.raisedAge = ageAt(k.birth, new Date()); }); saveF(); say(F.raise ? 'La paie augmentera de 0,50 € à chaque anniversaire.' : 'La paie ne changera plus toute seule.'); } break;
     case 'mycolor': { const x = kidOf(cur); if (x && ready && PAL.includes(b.dataset.c)) { x.color = b.dataset.c; saveF(); } break; }
     case 'kcolor': { const x = kidOf(k); if (x && ready) { x.color = b.dataset.c; saveF(); } break; }
     case 'kadd': if (ready) { const id = uid6(); const used = kids().map(z => z.color); F.kids.push({ id, start: iso(), posture: F.defaultPosture || 'equilibre', name: 'Nouvel enfant', birth: '2018-01-01', weekly: 3, color: PAL.find(c => !used.includes(c)) || PAL[0] }); EV[id] = []; KL[id] = true; saveK(id); saveF(); syncKids(); cur = id; say('Enfant ajouté : complétez sa fiche.'); } break;
