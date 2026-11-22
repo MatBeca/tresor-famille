@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '68'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '69'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -88,7 +88,7 @@ let toast = null, toastT = null, undoArm = false, wipeArm = false, delArm = null
 const projInv = {}, sel = {};
 const form = { preason: '', pdur: '1', resetname: '', goalname: '', goalbudget: '', gamount: '', gfrom: '', plabel: '', pamount: '', pkid: '', email: '', pass: '', newpin: '' };
 let loginMode = 'in', loginMsg = '', loginErr = '', busy = false;
-let ob = null, artId = null, tour = null, tourAuto = false, guide = null, guideKind = 'pay', guidePaid = false, guideShown = -1, guideOff = {};
+let ob = null, artId = null, tour = null, tourAuto = false, guide = null, guidePlan = null, guideKind = 'pay', guidePaid = false, guideShown = -1, guideOff = {};
 const BOURSE_MIN = 15; // la bourse s'ouvre quand la tirelire atteint 15 € (dès là, Équilibré et Aventurier font bouger le dé)
 try { lock = localStorage.getItem('pepite-lock'); cur = localStorage.getItem('pepite-cur'); } catch (e) {}
 
@@ -612,6 +612,7 @@ ${T.livret > 0 ? `<p class="msg">Vous avez déjà mis ${f(T.livret)} de côté p
 /* ---------- Première paie guidée (onboarding de l'enfant) ---------- */
 const bourseOpen = id => tot(id).total >= BOURSE_MIN || evs(id).some(e => e.t === 'bourse');
 function bonusTxt() { const m = F.match, n = 100 / m; return Number.isInteger(n) && n > 1 ? `pour ${n} pièces placées dans ta tirelire, ${P().aj} 1 pièce` : `${P().aj} ${m} % de ce que tu places dans ta tirelire`; }
+function planOf() { const t = tot(cur); return { pay: owed(cur).length > 0 && !pauseOf(cur), paused: !!pauseOf(cur), open: bourseOpen(cur), rolled: sameWeek(t.bourse && t.bourse.d), goal: !!goalOf(cur) }; }
 function guideSteps(k) {
   const t = tot(cur), ow = owed(cur), noPay = !ow.length || !!pauseOf(cur), rolled = sameWeek(t.bourse && t.bourse.d);
   if (guideKind === 'bourse') return [
@@ -620,24 +621,38 @@ function guideSteps(k) {
     { text: 'Maintenant, lance le dé !', target: '.dicebox', done: () => sameWeek(tot(cur).bourse && tot(cur).bourse.d), skip: () => postOf(cur) === 'none', next: 'Plus tard' },
     { text: 'Bravo ! Tu relanceras le dé chaque semaine. Plus ta tirelire grossit, plus il compte.', target: '.dicebox', next: 'Terminer', end: true }
   ];
-  return [
-    { text: `Salut ${esc(k.name)} ! Moi, c’est Pépite. Voici ta tirelire : elle va se remplir, semaine après semaine.`, parent: 'faites ce premier tour avec votre enfant, il dure deux minutes.', target: '.hero > svg', next: 'C’est parti !' },
-    { text: 'Ta paie t’attend : appuie sur « Paie ».', target: '.tab[data-v=paie]', done: () => view === 'paie', skip: () => noPay },
-    { text: 'Lis l’explication en haut. Puis range chaque pièce avec ces deux boutons.', target: '.moves', done: () => view === 'paie' && tray.length === 0, skip: () => noPay },
-    { text: invC.length ? `Regarde la pastille dorée : +${f(r2(sumC(invC) * F.match / 100))} ! C’est le bonus : ${bonusTxt()}. L’argent du porte-monnaie, lui, n’a pas de bonus.` : `Ici, pas de bonus : tout est dans ton porte-monnaie. Si tu mets des pièces dans ta tirelire, ${bonusTxt().replace('pour ', 'pour ')}. Tu peux reprendre une pièce pour essayer !`,
-      parent: 'c’est le moment de lui expliquer votre bonus, avec de vraies pièces si vous en avez sous la main.', target: invC.length ? '.zone.gz .chip' : '.zone.gz', skip: () => noPay || guidePaid, next: 'Compris !' },
-    { text: 'Bien rangé ! Appuie sur « Valider ma paie ».', target: '[data-act=pay]', done: () => guidePaid, skip: () => noPay && !guidePaid },
-    { text: 'Et maintenant, ton rêve : appuie sur « Projet ».', target: '.tab[data-v=projet]', done: () => view === 'projet', skip: () => !!goalOf(cur) },
-    { text: 'Choisis ton projet et son prix, puis valide. Pas d’idée ? Ce n’est pas obligatoire : ta tirelire grossit quand même. Tu peux même commencer à mettre de côté pour ton permis de conduire !', target: 'section.card:has(#go-name)', done: () => !!goalOf(cur), next: 'Plus tard' },
-    { text: `Bravo ! Quand ta tirelire aura ${BOURSE_MIN} €, la bourse s’ouvrira et je t’expliquerai le dé.`, target: '.hero > svg', next: 'Terminer', end: true }
-  ];
+  // Le parcours est figé au lancement (guidePlan) : il ne change pas de forme si la paie est rangée en cours de route.
+  const pl = guidePlan || { pay: !noPay, paused: !!pauseOf(cur), open: bourseOpen(cur), rolled, goal: !!goalOf(cur) };
+  const S = [{ text: `Salut ${esc(k.name)} ! Moi, c’est Pépite. Voici ta tirelire : elle va se remplir, semaine après semaine.`, parent: 'faites ce tour avec votre enfant, il dure deux minutes.', target: '.hero > svg', next: 'C’est parti !' }];
+  if (pl.pay) S.push(
+    { text: 'Ta paie t’attend : appuie sur « Paie ».', target: '.tab[data-v=paie]', done: () => view === 'paie' },
+    { text: 'Lis l’explication en haut. Puis range chaque pièce avec ces deux boutons.', target: '.moves', done: () => view === 'paie' && tray.length === 0 },
+    { text: invC.length ? `Regarde la pastille dorée : +${f(r2(sumC(invC) * F.match / 100))} ! C’est le bonus : ${bonusTxt()}. L’argent du porte-monnaie, lui, n’a pas de bonus.` : `Ici, pas de bonus : tout est dans ton porte-monnaie. Si tu mets des pièces dans ta tirelire, ${bonusTxt()}. Tu peux reprendre une pièce pour essayer !`,
+      parent: 'c’est le moment de lui expliquer votre bonus, avec de vraies pièces si vous en avez sous la main.', target: invC.length ? '.zone.gz .chip' : '.zone.gz', skip: () => guidePaid, next: 'Compris !' },
+    { text: 'Bien rangé ! Appuie sur « Valider ma paie ».', target: '[data-act=pay]', done: () => guidePaid });
+  else S.push(
+    { text: pl.paused ? 'Ta paie est en pause pour l’instant. Quand elle reviendra, tu la rangeras ici, dans « Paie ».' : 'Ta paie de la semaine est déjà rangée. Chaque semaine, elle t’attendra ici, dans « Paie ».', target: '.tab[data-v=paie]', next: 'Suivant' },
+    { text: `Et ça, c’est le bonus : ${bonusTxt()}. L’argent du porte-monnaie, lui, n’a pas de bonus.`, parent: 'c’est le moment de lui rappeler votre bonus, avec de vraies pièces si vous en avez sous la main.', target: '.tiles .tile:nth-child(2)', next: 'Compris !' });
+  if (pl.open) S.push(
+    { text: 'Ta tirelire a dépassé 15 € : la bourse est ouverte ! Appuie sur « Bourse ».', target: '.tab[data-v=bourse]', done: () => view === 'bourse' },
+    { text: 'Chaque semaine, tu lances un dé : il fait gagner ou perdre un petit bout de ta tirelire. Les faces vertes font gagner, les rouges font perdre. Ici, tu choisis ta stratégie.', target: '.post.on', next: 'Suivant' },
+    pl.rolled || postOf(cur) === 'none'
+      ? { text: pl.rolled ? 'Tu as déjà lancé le dé cette semaine : tu le relanceras la semaine prochaine.' : 'Tu ne joues pas à la bourse en ce moment. Tu peux changer de stratégie quand tu veux.', target: '.dicebox', next: 'Suivant' }
+      : { text: 'Maintenant, lance le dé de la semaine !', target: '.dicebox', done: () => sameWeek(tot(cur).bourse && tot(cur).bourse.d), next: 'Plus tard' });
+  else S.push({ text: `Quand ta tirelire aura ${BOURSE_MIN} €, la bourse s’ouvrira : je t’expliquerai le dé.`, target: '.tab[data-v=bourse]', next: 'Suivant' });
+  S.push({ text: pl.goal ? 'Et maintenant, ton projet : appuie sur « Projet ».' : 'Et maintenant, ton rêve : appuie sur « Projet ».', target: '.tab[data-v=projet]', done: () => view === 'projet' });
+  S.push(pl.goal
+    ? { text: 'Voici ton projet. À chaque palier, ta pépite grandit. Et « Comment on calcule ? » te dit quand tu l’auras.', target: 'section.goal', next: 'Suivant' }
+    : { text: 'Choisis ton projet et son prix, puis valide. Pas d’idée ? Ce n’est pas obligatoire : ta tirelire grossit quand même. Tu peux même commencer à mettre de côté pour ton permis de conduire !', target: 'section.card:has(#go-name)', done: () => !!goalOf(cur), next: 'Plus tard' });
+  S.push({ text: `Bravo ${esc(k.name)}, tu sais tout ! Reviens chaque semaine ranger ta paie${pl.open ? ' et lancer le dé' : ''}. C’est comme ça qu’une tirelire devient une pépite.`, next: 'Terminer', end: true });
+  return S;
 }
 function guideSync(k) {
   const S = guideSteps(k);
   while (guide !== null && guide < S.length - 1) { const s = S[guide]; if ((s.skip && s.skip()) || (s.done && s.done())) guide++; else break; }
   return S;
 }
-function guideEnd(k) { const field = guideKind === 'bourse' ? 'bguided' : 'guided'; guide = null; guidePaid = false; guideShown = -1; try { speechSynthesis.cancel(); } catch (e) {} if (k && !k[field]) { k[field] = true; if (ready) saveF(); } }
+function guideEnd(k) { const field = guideKind === 'bourse' ? 'bguided' : 'guided'; if (k && guideKind === 'pay' && guidePlan && guidePlan.open && !k.bguided) k.bguided = true; guidePlan = null; guide = null; guidePaid = false; guideShown = -1; try { speechSynthesis.cancel(); } catch (e) {} if (k && !k[field]) { k[field] = true; if (ready) saveF(); } }
 function guideView(k) {
   const S = guideSync(k), s = S[guide], n = S.length;
   return `<div class="guide low" role="dialog" aria-label="Guide de Pépite" aria-live="polite"><div class="gmascot">${NUG('', '')}</div><div class="gbody">
@@ -662,12 +677,12 @@ function mainView() {
   const k = kidOf(cur);
   if (!k) return splash('Aucun enfant');
   if (guide === null && ready && !guideOff[cur]) {
-    if (!k.guided && !evs(cur).length && !goalOf(cur) && view === 'home') { guideKind = 'pay'; guide = 0; }
+    if (!k.guided && !evs(cur).length && !goalOf(cur) && view === 'home') { guideKind = 'pay'; guidePlan = planOf(); guide = 0; }
     else if (!k.bguided && view === 'bourse' && bourseOpen(cur) && !evs(cur).some(e => e.t === 'bourse')) { guideKind = 'bourse'; guide = 0; }
   }
   const t = tot(cur);
   const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : view === 'lire' ? lireView() : view === 'art' ? artView() : view === 'apropos' ? aproposView() : homeView(k, t);
-  return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view${guide !== null ? ' guided' : ''}">${content}</main>${guide !== null && (guideKind === 'bourse' ? view === 'bourse' : ['home', 'paie', 'projet'].includes(view)) ? guideView(k) : ''}${tabbar()}${resetFor ? resetModal() : ''}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
+  return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view${guide !== null ? ' guided' : ''}">${content}</main>${guide !== null && (guideKind === 'bourse' ? view === 'bourse' : ['home', 'paie', 'bourse', 'projet'].includes(view)) ? guideView(k) : ''}${tabbar()}${resetFor ? resetModal() : ''}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
 }
 
 let lastKey = '';
@@ -850,7 +865,7 @@ document.addEventListener('click', ev => {
     case 'gskip': { const k = kidOf(cur); guideOff[cur] = true; guideEnd(k); break; }
     case 'gend': { const k = kidOf(cur); guideEnd(k); break; }
     case 'gspeak': guideSpeak(); return;
-    case 'gstart': { const id = b.dataset.k || cur; if (kidOf(id)) { cur = id; resetCoins(); view = 'home'; guideKind = 'pay'; guide = 0; delete guideOff[id]; guidePaid = false; guideShown = -1; pinOk = false; pinAsk = false; window.scrollTo(0, 0); } break; }
+    case 'gstart': { const id = b.dataset.k || cur; if (kidOf(id)) { cur = id; resetCoins(); view = 'home'; guideKind = 'pay'; guidePlan = planOf(); guide = 0; delete guideOff[id]; guidePaid = false; guideShown = -1; pinOk = false; pinAsk = false; window.scrollTo(0, 0); } break; }
     case 'tour': tour = 0; break;
     case 'tnext': tour = Math.min(tourLen() - 1, tour + 1); break;
     case 'tprev': tour = Math.max(0, tour - 1); break;
