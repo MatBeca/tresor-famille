@@ -16,7 +16,7 @@ ${rows.map(([y, s, c]) => `<div class="ccol"><div class="cbars"><i class="cs" st
 
 function grid() {
   const ages = [6, 7, 8, 9, 10, 12, 15, 17];
-  return `<table class="agrid"><thead><tr><th>Âge</th><th>Par semaine</th><th>Soit par mois</th></tr></thead><tbody>${ages.map(a => { const w = 1 + 0.5 * (a - 6); return `<tr><td>${a} ans</td><td><b>${eur(w)}</b></td><td>${eur(w * 52 / 12)}</td></tr>`; }).join('')}</tbody></table>`;
+  return `<table class="agrid"><thead><tr><th>Âge</th><th>Par semaine</th><th>Soit par mois</th></tr></thead><tbody>${ages.map(a => { const w = 1.5 + 0.5 * (a - 6); return `<tr><td>${a} ans</td><td><b>${eur(w)}</b></td><td>${eur(w * 52 / 12)}</td></tr>`; }).join('')}</tbody></table>`;
 }
 
 
@@ -129,7 +129,7 @@ ${keep(['Les gains qui restent placés rapportent à leur tour : c’est l’in
     {
       id: 'rythme', n: 3, theme: 'Le bon rythme', min: 4,
       title: 'Quand commencer, combien donner ?',
-      lead: 'Notre proposition tient en une ligne : on commence à 6 ans avec 1 € par semaine, et on ajoute 50 centimes à chaque anniversaire. Voici pourquoi, et pourquoi vous restez libre de tout.',
+      lead: 'Notre proposition tient en une ligne : on commence à 6 ans avec 1,50 € par semaine, et on ajoute 50 centimes à chaque anniversaire. Voici pourquoi, et pourquoi vous restez libre de tout.',
       body: `
 <h3>Pourquoi 6 ans ?</h3>
 <p>Avant 6 ans, un enfant ne mesure pas encore vraiment la valeur de l’argent, rappelle La finance pour tous. À 6 ans, il entre au CP, apprend à compter et comprend qu’une pièce s’échange contre quelque chose : c’est le bon moment pour lui confier sa première paie. Et l’essentiel des habitudes d’argent est en place dès 7 ans (Université de Cambridge, 2013) : commencer à 6 ans, c’est installer le rituel juste avant que tout se fige.</p>
@@ -146,7 +146,7 @@ ${grid()}
 <p>Les avis divergent, et La finance pour tous ne tranche pas : elle suggère de combiner l’argent donné sans contrepartie et l’argent gagné. Notre parti pris : la paie Pépite est un apprentissage, pas un salaire. Si un vrai coup de main mérite récompense, il s’ajoute en « argent reçu ».</p>
 <h3>La règle d’or : tenir parole</h3>
 <p>Les chercheurs de Rochester l’ont montré : un enfant patiente quand il a confiance (Kidd et al., 2013). Une paie qui tombe toujours, un bonus toujours versé, un projet débloqué dès qu’il est atteint. C’est la fiabilité des parents qui fabrique la patience des enfants.</p>
-${keep(['On démarre à 6 ans avec 1 € par semaine, puis 50 centimes de plus par an.', 'La régularité compte plus que le montant.', 'Pépite suit la paie chaque semaine, vous réglez quand vous voulez.'])}`,
+${keep(['On démarre à 6 ans avec 1,50 € par semaine, puis 50 centimes de plus par an.', 'La régularité compte plus que le montant.', 'Pépite suit la paie chaque semaine, vous réglez quand vous voulez.'])}`,
       sources: [
         ['La finance pour tous (IEFP), L’argent de poche', 'https://www.lafinancepourtous.com/p/parler-d-argent-avec-ses-enfants/largent-de-poche/'],
         ['État de Fribourg, Faut-il donner de l’argent de poche aux enfants ?', 'https://www.fr.ch/sante/prevention-et-promotion/sante-et-prevention-a-lecole-informations-pour-les-parents/faut-il-donner-de-largent-de-poche-aux-enfants'],
