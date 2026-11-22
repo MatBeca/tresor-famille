@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '54'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '55'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -393,9 +393,20 @@ ${projInv[cur] > k.weekly ? `<p class="soft small" style="margin:10px 0 0">C’e
 <div class="bars" style="grid-template-columns:repeat(${pts.length},minmax(0,1fr))">${bars}</div>
 <p class="cap">À <b>${Pt.age} ans</b>, ta tirelire contiendrait <b>${f(r50(Pt.total))}</b> : ${f(r50(Pt.own))} de ton argent, ${f(r50(Pt.bonus))} de bonus ${P().de} et <b class="g">${f(r50(Math.max(0, Pt.gains)))} gagnés tout seuls</b>.</p>
 <p class="soft" style="margin:0">Regarde le vert : plus tu attends, plus il grossit vite, parce que ce que ton argent a gagné se met à gagner lui aussi.${full ? ` Avec ta paie de ${f(k.weekly)} chaque semaine, tu aurais ${f(r50(full.total))} à ${full.age} ans.` : ''}</p>
-<p class="soft small" style="margin:8px 0 0">${postOf(cur) === 'none' ? 'Tu ne joues pas la bourse : seuls ton argent et le bonus comptent.' : `Calcul fait avec la moyenne de ta stratégie ${POST[postOf(cur)].name} : en vrai, tout dépendra de tes lancers de dé.`}</p></section>`;
+${calcHow(cur, projInv[cur], 'ce que tu choisis de placer ci-dessus')}</section>`;
 }
 
+
+/* Explication du calcul des projections, en mots d'enfant. */
+function calcHow(id, perWeek, label) {
+  const t = tot(id), have = Math.max(0, t.total), p = postOf(id), m = meanOf(id) / 100, bonus = r2(perWeek * F.match / 100);
+  const month = r50(have * m * 52 / 12); // gain moyen du dé sur un mois, en pièces de 50 c
+  return `<details class="how"><summary>Comment on calcule ?</summary><ol>
+<li>On part de ce qu’il y a dans ta tirelire aujourd’hui : <b>${f(have)}</b>.</li>
+<li>Chaque semaine, on ajoute ${label} : <b>${f(perWeek)}</b>${bonus > 0 ? `, plus le bonus ${P().de} : <b>${f(bonus)}</b>` : ''}.</li>
+<li>${p === 'none' ? 'Tu ne joues pas à la bourse : le dé ne compte pas.' : `Pour le dé, on imagine que chaque semaine est une semaine moyenne de ta stratégie <b>${POST[p].name}</b> : en moyenne, le dé fait gagner un peu plus qu’il ne fait perdre. ${month > 0 ? `Avec ta tirelire actuelle, ça fait environ <b class="g">${f(month)} de plus par mois</b>.` : 'Avec ta tirelire actuelle, c’est encore presque rien.'} Plus la tirelire grossit, plus ce petit plus grossit aussi.`}</li>
+</ol><p>${p === 'none' ? 'Si tu te mets à jouer à la bourse, le calcul changera.' : 'Si tu changes de stratégie, le calcul prend tout de suite la nouvelle. Et en vrai, tes lancers seront parfois meilleurs, parfois moins bons : c’est une estimation, pas une promesse.'}</p></details>`;
+}
 function projetView(k, t) {
   const g = goalOf(cur), done = evs(cur).filter(e => e.t === 'projet').reverse(), dis = ready ? '' : 'disabled';
   const doneHtml = done.length ? `<section class="card"><h3>Mes projets réalisés</h3><ul class="log">${done.map(e => `<li><time>${dateFr(e.d)}</time><span>${esc(e.label)}</span><b>${f(e.amount)}</b></li>`).join('')}</ul></section>` : '';
@@ -413,7 +424,7 @@ function projetView(k, t) {
 <section class="card goal"><p class="lbl" style="margin:0">Objectif</p><h3 class="gname">${esc(g.name)}</h3>
 <div class="gnum"><span class="amount">${Math.floor(p * 100)} %</span><span>${f(have)} sur ${f(g.budget)}</span></div>
 <div class="track"><div class="road"><i style="width:${(p * 100).toFixed(1)}%"></i></div>${flags}<span class="me" style="left:${(p * 100).toFixed(1)}%">${esc(k.name.slice(0, 1).toUpperCase())}</span></div>
-${reached ? '' : `<p style="margin:6px 0 0">Il te manque <b>${f(g.budget - have)}</b>.${etaTxt(w1) ? ` Si tu continues comme ça, tu l’auras ${etaTxt(w1)}.` : ' Place un peu chaque semaine pour avancer.'}</p>${wAll !== null && w1 !== null && wAll < w1 ? `<p class="soft small" style="margin:6px 0 0">En plaçant toute ta paie : ${etaTxt(wAll)}.</p>` : ''}`}</section>
+${reached ? '' : `<p style="margin:6px 0 0">Il te manque <b>${f(g.budget - have)}</b>.${etaTxt(w1) ? ` Si tu continues comme ça, tu l’auras ${etaTxt(w1)}.` : ' Place un peu chaque semaine pour avancer.'}</p>${wAll !== null && w1 !== null && wAll < w1 ? `<p class="soft small" style="margin:6px 0 0">En plaçant toute ta paie (${f(k.weekly)} par semaine) : ${etaTxt(wAll)}.</p>` : ''}${calcHow(cur, avgInv(cur), avgInv(cur) === k.weekly && !tot(cur).pays.length ? 'ta paie' : 'ce que tu places d’habitude (la moyenne de tes dernières paies)')}`}</section>
 ${reached ? `<section class="card celebrate"><h3>C’est pépite ! Objectif atteint</h3><p style="margin:0">Prépare ta présentation ${P().a} : pourquoi tu le veux, combien il coûte, ce qu’il va t’apporter. S’ils sont convaincus, ils débloqueront ton argent.</p></section>` : ''}
 <section class="card"><h3>Les paliers</h3><ul class="log">${MS.map(m => { const v = r2(g.budget * m), ok = have >= v; return `<li><span class="${ok ? 'g' : 'soft'}" style="width:26px;flex:none">${ok ? I.check : '○'}</span><span>${m === 1 ? 'Objectif complet' : 'Palier ' + m * 100 + ' %'} : ${f(v)}</span><b class="${ok ? 'g' : 'soft'}">${ok ? 'atteint' : 'encore ' + f(v - have)}</b></li>`; }).join('')}</ul></section>
 <div class="row"><button class="btn ghost sm" data-act="goaledit">Modifier</button><button class="btn ghost sm" data-act="goaldrop">${goalDropArm ? 'Confirmer l’abandon' : 'Abandonner ce projet'}</button></div>${doneHtml}`;

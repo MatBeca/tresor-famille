@@ -349,3 +349,7 @@ i.cs{background:var(--purse)}i.cc{background:var(--grow)}
 .k2bar{display:flex;height:22px;border-radius:8px;overflow:hidden;background:var(--line);margin:4px 0}
 .k2bar i{display:block;height:100%}.k2bar .kv{background:var(--purse)}.k2bar .kg{background:var(--grow)}
 .k2>span{font-size:14px;font-weight:700;color:var(--soft)}
+.how{margin:12px 0 0;border-top:1px solid var(--line);padding-top:10px}
+.how summary{cursor:pointer;font-weight:800;color:var(--kidd)}
+.how ol{margin:8px 0 6px;padding-left:22px}.how li{margin:5px 0;line-height:1.45}
+.how p{margin:0;font-size:14px;color:var(--soft)}
