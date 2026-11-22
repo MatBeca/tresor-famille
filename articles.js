@@ -14,6 +14,13 @@ ${rows.map(([y, s, c]) => `<div class="ccol"><div class="cbars"><i class="cs" st
 </div><p class="clegend"><span><i class="cs"></i>Intérêts simples</span><span><i class="cc"></i>Intérêts composés</span></p>`;
 }
 
+const e0 = n => n.toLocaleString('fr-FR').replace(/\s/g, '\u00a0') + '\u00a0€';
+function twoKids() {
+  const rows = [['Inès, dès 6\u00a0ans', 1248, 1696], ['Hugo, dès 12\u00a0ans', 624, 725]];
+  return `<div class="kids2" role="img" aria-label="À 18 ans, Inès a versé 1 248 € et en a 1 696 € ; Hugo a versé 624 € et en a 725 €">${rows.map(([n, v, t]) => `<div class="k2"><b>${n}</b><div class="k2bar"><i class="kv" style="width:${(v / 1696 * 100).toFixed(1)}%"></i><i class="kg" style="width:${((t - v) / 1696 * 100).toFixed(1)}%"></i></div><span>${e0(v)} versés · <b class="g">+${e0(t - v)} de gains</b> · ${e0(t)} à 18\u00a0ans</span></div>`).join('')}</div>
+<p class="clegend"><span><i class="cs"></i>Argent versé</span><span><i class="cc"></i>Gains du placement</span></p>`;
+}
+
 function grid() {
   const ages = [6, 7, 8, 9, 10, 12, 15, 17];
   return `<table class="agrid"><thead><tr><th>Âge</th><th>Par semaine</th><th>Soit par mois</th></tr></thead><tbody>${ages.map(a => { const w = 1.5 + 0.5 * (a - 6); return `<tr><td>${a} ans</td><td><b>${eur(w)}</b></td><td>${eur(w * 52 / 12)}</td></tr>`; }).join('')}</tbody></table>`;
@@ -37,8 +44,8 @@ export function features(h) {
       long: 'Pour chaque pièce placée dans la tirelire, les parents ajoutent un bonus\u00a0: c’est l’abondement, comme un employeur qui complète l’épargne de ses salariés. Avec 25\u00a0%, un enfant de 7\u00a0ans comprend tout de suite\u00a0: «\u00a0tu places 4\u00a0pièces, on t’en donne 1\u00a0». Le bonus ne s’applique qu’à l’argent placé, jamais à celui qui part dans le porte-monnaie. Vous choisissez le taux (10, 25 ou 50\u00a0%), et un autre pour l’argent reçu.',
       visual: `<div class="bonusdemo"><div class="bcoins">${h.coinEl(1)}${h.coinEl(1)}${h.coinEl(1)}${h.coinEl(1)}</div><span class="bplus">+</span><div class="bgift">${h.coinEl(1)}<small>offerte par les parents</small></div></div>`,
       cap: 'Avec un bonus de 25\u00a0%\u00a0: 4\u00a0pièces placées, 1\u00a0pièce offerte.' },
-    { title: 'La bourse au dé', short: 'L’argent placé peut grossir, comme un vrai placement en Bourse. Une fois par semaine, l’enfant choisit sa stratégie puis lance le dé. Chaque face montre ce qu’il peut gagner ou perdre, en vraies pièces. Il compte, il choisit.',
-      long: 'Une fois par semaine, l’enfant choisit sa stratégie puis lance le dé. Chaque face affiche ce qu’elle ferait gagner ou perdre sur sa vraie tirelire, par pièces de 50\u00a0centimes, sans un seul pourcentage. «\u00a0Je ne joue pas\u00a0» est un choix respecté.',
+    { title: 'La bourse au dé', short: 'L’argent placé peut grossir, comme un vrai placement en Bourse. Une fois par semaine, l’enfant choisit sa stratégie puis lance le dé. Chaque face montre ce qu’il peut gagner ou perdre, en vraies pièces. Ces montants suivent la taille de sa tirelire\u00a0: plus elle est pleine, plus le dé fait gagner, ou perdre, gros.',
+      long: 'Une fois par semaine, l’enfant choisit sa stratégie puis lance le dé. Chaque face affiche ce qu’elle ferait gagner ou perdre sur sa vraie tirelire, par pièces de 50\u00a0centimes, sans un seul pourcentage. Comme chaque face joue sur toute la tirelire, les montants grandissent avec elle\u00a0: la même face rapporte 10\u00a0fois plus avec 1\u00a0000\u00a0€ qu’avec 100\u00a0€. «\u00a0Je ne joue pas\u00a0» est un choix respecté.',
       visual: `<div class="post on" style="pointer-events:none"><span class="ph"><b>Équilibré</b></span><span class="dfaces">${faces.map((x, i) => `<span class="df ${x > 0 ? 'up' : x < 0 ? 'dn' : ''}">${h.miniDie(i + 1, x > 0 ? '#13a05a' : x < 0 ? '#e0434f' : '#a39cb8')}<b>${h.eurS(x)}</b></span>`).join('')}</span><span class="pr"><span class="g">3 faces sur 6 font gagner</span> · 1 ne change rien · <span class="neg">2 font perdre</span></span></div>`,
       cap: 'Avec une tirelire de 100\u00a0€\u00a0: on compte les faces, on choisit.' },
     { title: 'La tirelire à trois couches', short: 'Trois couches dans le même bocal\u00a0: son argent, le bonus des parents, et en vert ce que son argent a rapporté tout seul grâce à la bourse, comme un placement. Pas un service rendu\u00a0: de l’argent qui travaille.',
@@ -97,27 +104,33 @@ ${keep(['Épargner et investir ne s’improvisent pas : la plupart d’entre no
       ]
     },
     {
-      id: 'interets', n: 2, theme: 'Les intérêts composés', min: 4,
+      id: 'interets', n: 2, theme: 'Les intérêts composés', min: 5,
       title: 'Quand l’argent fait des petits',
-      lead: 'C’est le mécanisme le plus puissant de la finance, et il tient en une phrase : les gains rapportent à leur tour des gains. Pépite est construite pour qu’un enfant le voie de ses propres yeux.',
+      lead: 'Un placement, c’est de l’argent qu’on laisse de côté et qui rapporte. Pour qu’il rapporte beaucoup, il y a un secret en deux mots, intérêts composés, et un ingrédient, le temps. Explication sans jargon.',
       body: `
-<h3>Simple contre composé</h3>
-<p>Placez 100 € à 5 % par an. Si l’on vous verse vos 5 € chaque année sans les réinvestir, vous aurez 250 € au bout de 30 ans. Si les gains restent placés et rapportent à leur tour, vous aurez 432 €. Même départ, même taux : 182 € d’écart, uniquement grâce au temps.</p>
+<h3>Un placement, c’est quoi ?</h3>
+<p>Vous connaissez le Livret A. Vous y laissez 100 €, et au bout d’un an la banque vous verse 1,70 €. Ces 1,70 €, ce sont des intérêts : une sorte de loyer que l’on vous paie parce que votre argent reste de côté au lieu d’être dépensé. Un placement, c’est exactement ça.</p>
+<p>Certains placements rapportent plus que le Livret A, mais en échange ils peuvent aussi baisser. C’est le cas de la Bourse (les actions) : de 1900 à 2023, elle a rapporté en moyenne 5,1 % par an de plus que la hausse des prix, avec pourtant des années à −30 %. Dans nos exemples, on retient donc 5 % par an : c’est un ordre de grandeur réaliste sur longue période, pas une promesse.</p>
+<h3>Les intérêts composés : l’effet boule de neige</h3>
+<p>Une boule de neige qui roule ramasse d’autant plus de neige qu’elle est grosse. L’argent placé fait pareil. La première année, 100 € placés à 5 % rapportent 5 €. La deuxième année, ce ne sont plus 100 € qui travaillent, mais 105 € : ils rapportent 5,25 €. Puis 5,51 €, puis 5,79 €… Les gains se mettent eux-mêmes à rapporter.</p>
 ${compoundChart()}
-<p>Une règle de poche pour le dîner : divisez 72 par le taux, vous obtenez le nombre d’années pour doubler votre mise. À 5 %, un peu plus de 14 ans.</p>
-<h3>Le vrai super-pouvoir : commencer tôt</h3>
-<p>Inès et Hugo placent 2 € par semaine jusqu’à leurs 18 ans, à 5 % par an. Inès commence à 6 ans, Hugo à 12. Inès a versé deux fois plus (1 248 € contre 624 €), mais ses gains sont plus de quatre fois plus gros : 448 € contre 101 €. Et 1 000 € laissés de côté à 18 ans deviennent environ 9 900 € à 65 ans au même rythme, sans rien ajouter.</p>
-<p>Pourquoi 5 % ? Parce que c’est un ordre de grandeur honnête : de 1900 à 2023, les Bourses mondiales (les actions) ont rapporté en moyenne 5,1 % par an après inflation (Global Investment Returns Yearbook). En moyenne seulement, avec des années à −30 %. D’où le dé.</p>
+<p>Au bout de 30 ans, vous avez 432 €. Si vous aviez dépensé vos 5 € de gains chaque année, vous n’auriez que 250 €. La différence, 182 €, vient uniquement de la boule de neige.</p>
+<h3>Pourquoi commencer le plus tôt possible</h3>
+<p>La boule de neige a besoin d’une seule chose : du temps. Plus elle roule longtemps, plus elle grossit vite à la fin. Prenons Inès et Hugo. Chacun met 2 € de côté par semaine jusqu’à ses 18 ans, placés à 5 % par an. Inès commence à 6 ans, Hugo à 12 ans.</p>
+${twoKids()}
+<p>Inès a mis deux fois plus d’argent que Hugo, mais son argent lui a rapporté plus de quatre fois plus : 448 € contre 101 €. Ce n’est pas le montant qui a fait la différence, ce sont ses six années d’avance. Et la boule continue de rouler : 1 000 € laissés de côté à 18 ans deviennent environ 9 900 € à 65 ans, sans rien ajouter.</p>
+<p>Une règle de poche pour le dîner : divisez 72 par le taux, vous obtenez le nombre d’années qu’il faut pour doubler votre argent. À 5 %, un peu plus de 14 ans.</p>
 <h3>Ce que Pépite fait apprendre</h3>
-<div class="mech"><h4>La paie en pièces</h4><p>Chaque lundi, l’enfant range ses pièces une par une : porte-monnaie ou tirelire. Il ne subit pas une règle, il arbitre. Et il recommence 52 fois par an : c’est la répétition qui fait l’habitude.</p></div>
+<div class="mech"><h4>La paie en pièces</h4><p>Chaque lundi, l’enfant range ses pièces une par une : porte-monnaie ou tirelire. Il ne subit pas une règle, il fait un choix. Et il recommence 52 fois par an : c’est la répétition qui fait l’habitude.</p></div>
 <div class="mech"><h4>Le bonus des parents</h4><p>« Tu places 4 pièces, on t’en donne 1. » C’est l’abondement, le même mécanisme que l’employeur qui complète un plan d’épargne salariale. Il ne s’applique qu’à l’argent placé : épargner devient visiblement plus intéressant que dépenser.</p></div>
-<div class="mech"><h4>Le dé de la bourse</h4><p>Chaque semaine, un lancer fait monter ou baisser la tirelire. Trois stratégies, plus le droit de ne pas jouer. L’enfant compte les faces vertes et rouges et découvre seul que plus on peut gagner, plus on peut perdre. Le jeu est volontairement accéléré : en moyenne, Prudent rapporte environ 5 % par an, Équilibré 11 % et Aventurier 17 %, avec de vraies semaines de pertes. On voit en mois ce que la vraie Bourse montre en décennies.</p></div>
-<div class="mech"><h4>La couche verte</h4><p>Dans la tirelire, trois couleurs : son argent, le bonus, et ce qui a été gagné tout seul. Ce vert qui épaissit, c’est l’intérêt composé rendu visible. L’onglet Futur montre jusqu’où il peut monter si l’enfant continue.</p></div>
+<div class="mech"><h4>Le dé de la bourse</h4><p>Chaque semaine, un lancer fait monter ou baisser la tirelire, comme la Bourse. Trois stratégies, plus le droit de ne pas jouer. L’enfant compte les faces vertes et rouges et découvre seul que plus on peut gagner, plus on peut perdre.</p><p>Chaque face fait gagner ou perdre une part de toute la tirelire. Les montants affichés grandissent donc avec elle : en Équilibré, la meilleure face rapporte 1,50 € quand il y a 100 € dans la tirelire, et 17 € quand il y en a 1 000 €. La plus mauvaise fait alors perdre 15 €. L’enfant voit toujours, avant de lancer, le montant exact en jeu. Le jeu est volontairement plus rapide que la vraie Bourse : en moyenne, Prudent rapporte environ 5 % par an, Équilibré 11 % et Aventurier 17 %, avec de vraies semaines de pertes.</p></div>
+<div class="mech"><h4>La couche verte</h4><p>Dans la tirelire, trois couleurs : son argent, le bonus, et en vert tout ce que le dé a rapporté depuis le début, pertes déduites. Comme le dé joue sur toute la tirelire, la couche verte grossit de plus en plus vite à mesure que la tirelire se remplit : c’est la boule de neige, sous ses yeux. L’onglet Futur montre jusqu’où elle peut monter s’il continue jusqu’à 18 ans.</p></div>
 <div class="mech"><h4>L’argent bloqué, le projet présenté</h4><p>L’argent placé ne se dépense pas sur un coup de tête. Pour le récupérer, l’enfant se fixe un projet, franchit des paliers, puis le présente à ses parents : pourquoi, combien, ce que ça va lui apporter. Il apprend à attendre et à convaincre.</p></div>
 <h3>Attendre, ça s’apprend… si la promesse est tenue</h3>
-<p>Le célèbre test du marshmallow a longtemps fait croire que la patience était un don. La recherche a nuancé. En 2018, une réplication sur plus de 900 enfants a trouvé des liens bien plus faibles avec la réussite future (Watts, Duncan et Quan). Et en 2013, des chercheurs de l’Université de Rochester ont montré que des enfants à qui l’on avait tenu parole attendaient en moyenne 12 minutes, contre 3 pour ceux à qui l’on avait fait faux bond (Kidd, Palmeri et Aslin). La patience dépend d’abord de la confiance.</p>
+<p>C’est l’une des expériences les plus célèbres de la psychologie. À la fin des années 1960, à l’université Stanford, le psychologue Walter Mischel pose un marshmallow devant un enfant de 4 ou 5 ans et lui propose un marché : il peut le manger tout de suite, ou attendre quelques minutes seul dans la pièce et en recevoir deux. Les enfants qui attendaient semblaient mieux réussir plus tard, et l’on en a longtemps conclu que la patience était un don.</p>
+<p>La recherche a depuis nuancé. En 2018, l’expérience refaite avec plus de 900 enfants a trouvé un lien bien plus faible avec la réussite future (Watts, Duncan et Quan). Et en 2013, à l’université de Rochester, des chercheurs ont ajouté une étape juste avant le test : l’adulte faisait une petite promesse à l’enfant, de plus beaux crayons par exemple. Avec la moitié des enfants, il la tenait. Avec les autres, non. Les premiers ont ensuite attendu en moyenne 12 minutes devant le marshmallow, les seconds 3 minutes (Kidd, Palmeri et Aslin). La patience dépend d’abord de la confiance.</p>
 <p>C’est pour cela que Pépite tient un registre : chaque pièce est notée, chaque bonus calculé, rien ne se perd. L’enfant attend parce qu’il sait que ce qui est promis arrive.</p>
-${keep(['Les gains qui restent placés rapportent à leur tour : c’est l’intérêt composé.', 'Commencer tôt compte plus que mettre beaucoup.', 'Chaque mécanisme de Pépite (paie, bonus, dé, couche verte, projet) entraîne un réflexe d’investisseur.'])}`,
+${keep(['Un placement, c’est de l’argent qui rapporte parce qu’on ne le dépense pas.', 'Les gains rapportent à leur tour : c’est l’effet boule de neige des intérêts composés.', 'Le temps compte plus que le montant : commencer tôt est le vrai super-pouvoir.', 'Chaque mécanisme de Pépite entraîne un réflexe d’investisseur.'])}`,
       sources: [
         ['Dimson, Marsh et Staunton, Global Investment Returns Yearbook (UBS), synthèse 1900-2023', 'https://allnews.ch/node/118784'],
         ['Cambridge Judge Business School, 125 ans de rendements (2025)', 'https://www.jbs.cam.ac.uk/2025/report-stocks-have-far-outperformed-over-the-past-125-years/'],

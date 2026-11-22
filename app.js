@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '53'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '54'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -368,7 +368,7 @@ ${rolled ? `<p class="result">Dé ${t.bourse.face} : ${t.bourse.rate < 0 ? 'sema
     : t.total > 0 ? `<button class="btn full" data-act="roll" ${ready ? '' : 'disabled'}>Lancer le dé</button>` : `<p style="margin:0">Place d’abord quelques pièces dans ta tirelire : le dé agit sur ce qu’il y a dans ta tirelire.</p>`}
 ${recent.length ? `<div class="recent">${recent.map(e => `<span class="${e.gain < 0 ? 'neg' : e.gain > 0 ? 'g' : ''}">${eurS(e.gain)}</span>`).join('')}</div>` : ''}`}
 </section>`;
-  const stratH = `<h3 class="sec">${rolled ? 'Ta stratégie' : '1. Choisis ta stratégie'}</h3><p class="lead">Chaque face du dé te dit ce qui arrive à ${own ? `ta tirelire de ${f(start)}` : 'une tirelire de 100 € (exemple)'} : en vert tu gagnes, en rouge tu perds. Compte les faces !</p>
+  const stratH = `<h3 class="sec">${rolled ? 'Ta stratégie' : '1. Choisis ta stratégie'}</h3><p class="lead">Chaque face du dé te dit ce qui arrive à ${own ? `ta tirelire de ${f(start)}` : 'une tirelire de 100 € (exemple)'} : en vert tu gagnes, en rouge tu perds. Compte les faces ! Plus ta tirelire est pleine, plus les montants sont gros : le dé gagne, ou perd, une part de tout ce qu’il y a dedans.</p>
 <div class="list">${Object.keys(POST).map(q => postureCard(q, q === p, start, own)).join('')}</div>`;
   return `<h2 class="title">La bourse de la semaine</h2><p class="lead">Une fois par semaine, tu lances le dé : il fait monter ou baisser ta tirelire. C’est un jeu : ce que ton argent gagne ici, c’est ${P().label.toLowerCase()} qui le paie${pays}.</p>
 ${rolled ? diceH + stratH : stratH + diceH}

@@ -344,3 +344,8 @@ i.cs{background:var(--purse)}i.cc{background:var(--grow)}
 .bplus{font:700 34px Fredoka,sans-serif;color:var(--soft)}
 .bgift{display:grid;justify-items:center;gap:4px;padding:10px 12px;border-radius:18px;background:color-mix(in srgb,var(--gold) 22%,var(--card));border:2px dashed var(--goldd)}
 .bgift small{font-weight:800;font-size:13px;color:#6e4400;max-width:90px;text-align:center;line-height:1.2}
+.kids2{display:grid;gap:12px;margin:12px 0 4px}
+.k2>b{font:700 17px Fredoka,sans-serif}
+.k2bar{display:flex;height:22px;border-radius:8px;overflow:hidden;background:var(--line);margin:4px 0}
+.k2bar i{display:block;height:100%}.k2bar .kv{background:var(--purse)}.k2bar .kg{background:var(--grow)}
+.k2>span{font-size:14px;font-weight:700;color:var(--soft)}
