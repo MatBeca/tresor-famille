@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '72'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '73'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -474,7 +474,7 @@ function projetView(k, t) {
 <div class="track"><div class="road"><i style="width:${(p * 100).toFixed(1)}%"></i></div>${flags}<span class="me" style="left:${(p * 100).toFixed(1)}%">${esc(k.name.slice(0, 1).toUpperCase())}</span></div>
 ${reached ? '' : `<p style="margin:6px 0 0">Il te manque <b>${f(g.budget - have)}</b>.${etaTxt(w1) ? ` Si tu continues comme ça, tu l’auras ${etaTxt(w1)}.` : ' Place un peu chaque semaine pour avancer.'}</p>${wAll !== null && w1 !== null && wAll < w1 ? `<p class="soft small" style="margin:6px 0 0">En plaçant toute ta paie (${f(k.weekly)} par semaine) : ${etaTxt(wAll)}.</p>` : ''}${calcHow(cur, avgInv(cur), avgInv(cur) === k.weekly && !tot(cur).pays.length ? 'ta paie' : 'ce que tu places d’habitude (la moyenne de tes dernières paies)')}`}</section>
 ${reached ? `<section class="card celebrate"><h3>C’est pépite ! Objectif atteint</h3><p style="margin:0">Prépare ta présentation ${P().a} : pourquoi tu le veux, combien il coûte, ce qu’il va t’apporter. S’ils sont convaincus, ils débloqueront ton argent.</p></section>` : ''}
-<section class="card"><h3>${msBand(cur) === 'step' ? 'Les étapes' : 'Les paliers'}</h3><p class="soft small" style="margin:0 0 6px">${msHow(cur)}</p><ul class="log">${MS.map(m => { const v = r2(g.budget * m), ok = have >= v; return `<li><span class="${ok ? 'g' : 'soft'}" style="width:26px;flex:none">${ok ? I.check : '○'}</span><span>${m === 1 ? 'Objectif complet' : msLong(m, cur)} : ${f(v)}</span><b class="${ok ? 'g' : 'soft'}">${ok ? 'atteint' : 'encore ' + f(v - have)}</b></li>`; }).join('')}</ul></section>
+<section class="card"><h3>${msBand(cur) === 'step' ? 'Les étapes' : 'Les paliers'}</h3><p class="soft small" style="margin:0 0 6px">${msHow(cur)}</p><ul class="log mslog">${MS.map(m => { const v = r2(g.budget * m), ok = have >= v; return `<li><span class="msi ${ok ? 'g' : 'soft'}">${ok ? I.check : '○'}</span><span class="mst"><b>${m === 1 ? 'Objectif complet' : msLong(m, cur)} : ${f(v)}</b><small class="${ok ? 'g' : 'soft'}">${ok ? 'atteint' : 'encore ' + f(v - have)}</small></span></li>`; }).join('')}</ul></section>
 <div class="row"><button class="btn ghost sm" data-act="goaledit">Modifier</button><button class="btn ghost sm" data-act="goaldrop">${goalDropArm ? 'Confirmer l’abandon' : 'Abandonner ce projet'}</button></div>${doneHtml}`;
 }
 
