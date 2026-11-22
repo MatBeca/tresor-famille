@@ -55,6 +55,12 @@ const I = {
   sprout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-9"/><path d="M12 12C12 7 8 5 4 5c0 5 4 7 8 7zM12 10c0-4 3-6 8-6 0 4-3 6-8 6z"/></svg>'
 };
 
+/* ---------- apparence (par appareil, clair par défaut) ---------- */
+let theme = 'light';
+try { theme = localStorage.getItem('pepite-theme') || 'light'; } catch (e) {}
+function applyTheme() { if (theme === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = theme; }
+applyTheme();
+
 /* ---------- état ---------- */
 let user, auth, fdb;
 let F = null, famLoaded = false, famServer = false, lastF = '';
@@ -443,6 +449,8 @@ ${kids().map(k => `<label>${esc(k.name)}<select data-set="kpost:${k.id}">${Objec
 <section class="card"><h3>Corriger une erreur</h3>
 ${last ? `<div class="row" style="margin-top:4px"><button class="btn ghost sm" data-act="undo" ${dis}>${undoArm ? 'Confirmer : annuler ' + lastTxt : 'Annuler la dernière opération ' + de(K.name)}</button></div>
 <div class="row"><button class="btn danger sm" data-act="resetopen" ${dis}>Vider la tirelire et tout remettre à zéro pour ${esc(K.name)}</button></div>` : `<p class="soft">Rien à annuler pour ${esc(K.name)}.</p>`}</section>
+<section class="card"><h3>Apparence</h3><p class="soft small" style="margin:0">Réglage propre à cet appareil.</p>
+<div class="pills">${[['light', 'Clair'], ['dark', 'Sombre'], ['auto', 'Comme le téléphone']].map(([v, l]) => `<button class="pill" data-act="theme" data-n="${v}" aria-pressed="${theme === v}">${l}</button>`).join('')}</div></section>
 <section class="card"><h3>Compte</h3><p class="soft small" style="margin:0">Connecté avec ${esc(user.email || '')}.</p><div class="row"><button class="btn ghost sm" data-act="logout">Déconnecter cet appareil</button></div></section>`;
 }
 
@@ -683,6 +691,7 @@ document.addEventListener('click', ev => {
     }
     case 'goaldrop': if (ready) { if (!goalDropArm) goalDropArm = true; else { GOAL[cur] = null; saveK(cur); goalDropArm = false; say('Projet abandonné.', 'Tu peux en choisir un autre quand tu veux.'); } } break;
     case 'goalunlock': if (ready) { const g = goalOf(k), T = tot(k); if (g && T.total >= g.budget) { const amount = r2(g.budget), fromLivret = r2(Math.max(0, amount - Math.max(0, T.due))); EV[k] = [...evs(k), { t: 'projet', d: iso(), label: g.name, amount, fromLivret, goal: true }]; GOAL[k] = null; saveK(k); say(`« ${esc(g.name)} » débloqué : ${f(amount)} pour ${esc(kidOf(k).name)}.`, fromLivret > 0 ? `Reprenez ${f(fromLivret)} dans l’argent mis de côté.` : ''); } } break;
+    case 'theme': theme = b.dataset.n; try { localStorage.setItem('pepite-theme', theme); } catch (e) {} applyTheme(); break;
     case 'pdur': form.pdur = b.dataset.n; break;
     case 'ppause': if (ready) { const n = +form.pdur, until = n ? new Date(wk(new Date()) + n * 7 * 864e5).toISOString() : null, reason = (form['preason:' + k] || '').trim().slice(0, 80); PAUSE[k] = { since: iso(), until, reason }; EV[k] = [...evs(k), { t: 'pause', d: iso(), until, reason }]; saveK(k); form['preason:' + k] = ''; say(`Paie ${de(kidOf(k).name)} en pause ${untilTxt(PAUSE[k])}.`); } break;
     case 'presume': if (ready) { PAUSE[k] = null; EV[k] = [...evs(k), { t: 'reprise', d: iso() }]; saveK(k); say(`La paie ${de(kidOf(k).name)} reprend.`); if (k === cur) resetCoins(); } break;
