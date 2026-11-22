@@ -320,3 +320,4 @@ i.cs{background:var(--purse)}i.cc{background:var(--grow)}
 .keys.mini{grid-template-columns:repeat(3,54px);gap:8px}.keys.mini .key{height:46px;display:grid;place-items:center;font-size:20px}
 .src{margin:14px 0 10px;font-size:14px}.src summary{cursor:pointer;font-weight:800;color:var(--soft)}.src ol{padding-left:20px;margin:8px 0 0}.src li{margin:5px 0;line-height:1.4}.src a{color:var(--kidd)}
 @media(max-width:380px){.demojar{grid-template-columns:1fr;justify-items:center}}
+.coin.half{width:40px;height:40px;font-size:13px;align-self:center}
