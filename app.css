@@ -260,4 +260,6 @@ input:focus,select:focus{border-color:var(--kid);outline:none}
 
 /* nom complet sur les écrans d'entrée */
 .wmfull{position:relative;display:inline-block;padding-top:.3em}
-.wmfull .cest{position:absolute;left:-.2em;top:.85em;font:600 .34em/1 Fredoka,Nunito,sans-serif;color:var(--kidtxt);transform:rotate(-6deg);transform-origin:left bottom;letter-spacing:.3px}
+.wmfull .cest{position:absolute;left:-.2em;top:.85em;font:600 .34em/1 Fredoka,Nunito,sans-serif;color:light-dark(#6e4400,#e0a63a);transform:rotate(-6deg);transform-origin:left bottom;letter-spacing:.3px}
+
+.tile .tsub{display:block;font-size:13px;color:var(--soft);font-weight:700;margin-top:-2px}
