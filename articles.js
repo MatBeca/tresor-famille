@@ -240,7 +240,8 @@ ${h.demo(h.diceDemo, 'Avec 100 € : les faces vertes font gagner, les rouges f
       intro: 'Imagine une boule de neige qui roule : plus elle est grosse, plus elle ramasse de neige. L’argent placé fait pareil.',
       body: `<p>Quand le dé te fait gagner, ce gain reste dans ta tirelire. La semaine d’après, le dé joue aussi sur lui : ton gain peut gagner à son tour !</p>
 <p>C’est la <b>couche verte</b> de ta tirelire. Plus ta tirelire est pleine, plus elle grossit vite. Les grands appellent ça <b>les intérêts composés</b>.</p>
-<p>Et le temps est ton super-pouvoir. Inès et Hugo mettent la même chose de côté chaque semaine. Inès commence à 6 ans, Hugo à 12 ans :</p>
+<p>Et le temps est ton super-pouvoir.</p>
+<p>Prenons l’exemple de deux enfants, Inès et Hugo. Ils mettent la même chose de côté chaque semaine. Inès commence à 6 ans, Hugo à 12 ans :</p>
 ${h.kidsDemo}
 <p>Inès a gagné <b>quatre fois plus</b> que Hugo, juste parce qu’elle a commencé plus tôt. Ce n’est pas le montant qui compte le plus, c’est le temps.</p>`,
       know: 'Toi, tu commences avant tes 18 ans. Beaucoup de grands n’ont commencé qu’à 35 ans !',
