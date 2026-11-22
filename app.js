@@ -226,7 +226,7 @@ function obView() {
   let body = '';
   if (o.step === 1) {
     body = `${st}<div class="welcome">${LOGO}<h1>Bienvenue !</h1><p>Avec leur argent de poche, vos enfants découvrent pourquoi épargner et investir tôt change tout. Pièce après pièce, leur tirelire se remplit… jusqu’à devenir une vraie pépite.</p></div>
-<div class="why"><div>${I.coin}<span><b>Une paie chaque semaine</b>Votre enfant décide librement ce qu’il fait de son argent : tout dépenser, tout faire pousser, ou un peu des deux. Et s’il le fait pousser, il découvre peu à peu les arcanes de l’investissement.</span></div>
+<div class="why"><div>${I.coin}<span><b>Une paie chaque semaine</b>Votre enfant décide librement ce qu’il fait de son argent : tout dépenser, tout placer, ou un peu des deux. Et s’il le place, il découvre peu à peu les arcanes de l’investissement.</span></div>
 <div>${I.die}<span><b>Un bonus et une bourse</b>Vous ajoutez un bonus sur l’argent qu’il place. Ensuite, chaque semaine, il peut lancer un dé qui fait varier sa tirelire, à la hausse ou à la baisse, comme les cours en Bourse. Il choisit lui-même son niveau de risque, ou décide de ne pas jouer.</span></div>
 <div>${I.flag}<span><b>Des projets et un horizon</b>Il se fixe un objectif, comme l’achat d’un vélo, et fait grossir sa pépite jusqu’à ses 18 ans.</span></div></div>
 <div class="msg">Ce que l’argent « gagne » dans Pépite (bonus, bourse) est payé par vous : c’est un jeu pour apprendre, pas un vrai placement.</div>
@@ -236,8 +236,8 @@ ${o.legacy ? '<div class="msg">Les données déjà saisies pour vos enfants sero
   } else if (o.step === 2) {
     body = `${st}<h2 class="title">Vos enfants</h2><p class="lead">Chacun aura sa tirelire, sa couleur et son argent de poche.</p>
 <div class="card help" style="margin-top:12px"><h3>Comment fonctionne la paie ?</h3><p style="margin:0;font-size:16px">Chaque semaine, l’enfant reçoit son argent de poche sous forme de pièces de 1 € dans l’appli, et range chaque pièce :</p>
-<ul class="plain"><li><b>Dans son porte-monnaie</b> : il les dépense librement. Vous lui donnez cet argent en vrai quand vous voulez, chaque semaine ou une fois par mois : l’appli vous dit combien.</li><li><b>Dans sa tirelire</b>, pour faire pousser : l’argent reste chez vous, mis de côté. Il reçoit votre bonus et varie avec la bourse de la semaine.</li></ul>
-<p class="soft small" style="margin:8px 0 0">Plus il fait pousser tôt, plus son trésor grossit : c’est toute la leçon.</p></div>
+<ul class="plain"><li><b>Dans son porte-monnaie</b> : il les dépense librement. Vous lui donnez cet argent en vrai quand vous voulez, chaque semaine ou une fois par mois : l’appli vous dit combien.</li><li><b>Dans sa tirelire</b>, pour le placer : l’argent reste chez vous, mis de côté. Il reçoit votre bonus et varie avec la bourse de la semaine.</li></ul>
+<p class="soft small" style="margin:8px 0 0">Plus il place tôt, plus sa pépite grossit : c’est toute la leçon.</p></div>
 ${o.kids.map((k, i) => `<div class="kidform"><header><h3>Enfant ${i + 1}</h3>${o.kids.length > 1 ? `<button class="link" data-act="obdel" data-k="${k.id}">Retirer</button>` : ''}</header>
 <label>Prénom<input id="ob-n-${k.id}" type="text" autocomplete="off" maxlength="20" data-ob="name:${k.id}" value="${esc(k.name)}"></label>
 <div class="grid2"><label>Date de naissance<input id="ob-b-${k.id}" type="date" data-ob="birth:${k.id}" value="${esc(k.birth)}"></label>
@@ -247,9 +247,9 @@ ${o.kids.map((k, i) => `<div class="kidform"><header><h3>Enfant ${i + 1}</h3>${o
 <p class="soft small" style="margin:10px 4px 0">Repère courant : 0,50 € à 1 € par semaine et par année d’âge.</p>`;
   } else {
     body = `${st}<h2 class="title">Les règles du jeu</h2><p class="lead">Tout reste modifiable plus tard dans l’espace parents.</p>
-<div class="card"><h3>Bonus sur l’argent de poche placé</h3><p class="soft small" style="margin:0">Versé uniquement sur les pièces que l’enfant fait pousser. Rien sur celles qu’il met dans son porte-monnaie pour les dépenser : c’est ce qui rend le choix intéressant.</p>
+<div class="card"><h3>Bonus sur l’argent de poche placé</h3><p class="soft small" style="margin:0">Versé uniquement sur les pièces que l’enfant place. Rien sur celles qu’il met dans son porte-monnaie pour les dépenser : c’est ce qui rend le choix intéressant.</p>
 <div class="pills">${[10, 25, 50].map(n => `<button class="pill" data-act="obmatch" data-n="${n}" aria-pressed="${o.match === n}">${n} %</button>`).join('')}</div></div>
-<div class="card"><h3>Bonus sur l’argent reçu</h3><p class="soft small" style="margin:0">Cadeaux, anniversaires, petits services. Là aussi, seulement sur la part qu’il fait pousser.</p>
+<div class="card"><h3>Bonus sur l’argent reçu</h3><p class="soft small" style="margin:0">Cadeaux, anniversaires, petits services. Là aussi, seulement sur la part qu’il place.</p>
 <div class="pills">${[0, 10, 25].map(n => `<button class="pill" data-act="obgift" data-n="${n}" aria-pressed="${o.giftMatch === n}">${n ? n + ' %' : 'Aucun'}</button>`).join('')}</div></div>
 <div class="card"><h3>La bourse de la semaine</h3><p class="soft small" style="margin:0">Chaque semaine, l’enfant peut lancer un dé qui fait monter ou baisser sa tirelire. Il choisit lui-même sa stratégie dans l’onglet Bourse, et peut aussi décider de ne pas jouer. Plus la stratégie est risquée, plus elle rapporte en moyenne, mais plus elle peut faire perdre. Stratégie de départ :</p>
 <div class="preset">${Object.entries(POST).map(([k, d]) => `<button data-act="obdice" data-n="${k}" aria-pressed="${o.dice === k}"><b>${d.name}</b><span>${d.txt}</span></button>`).join('')}</div></div>
@@ -274,7 +274,7 @@ function homeView(k, t) {
   const g = goalOf(cur), J = jar(t, g), due = owed(cur).length, paid = due === 0, rolled = sameWeek(t.bourse && t.bourse.d);
   const prog = Math.min(100, Math.max(0, t.total / (g ? g.budget : J.cap) * 100));
   const hint = g ? (t.total >= g.budget ? `Objectif « ${esc(g.name)} » atteint !` : `Encore ${f(g.budget - t.total)} pour « ${esc(g.name)} »`) : (t.total >= J.cap ? `Palier de ${f(J.cap)} atteint !` : `Encore ${f(J.cap - t.total)} pour le palier de ${f(J.cap)}`);
-  return `<section class="hero"><div><p class="hi">Salut ${esc(k.name)} !</p><p class="lbl">${g && t.total >= g.budget ? 'C’est pépite ! Ta tirelire est pleine' : 'Ta tirelire qui pousse'}</p><div class="amount">${f(t.total)}</div>
+  return `<section class="hero"><div><p class="hi">Salut ${esc(k.name)} !</p><p class="lbl">${g && t.total >= g.budget ? 'C’est pépite ! Ta tirelire est pleine' : 'Ta tirelire'}</p><div class="amount">${f(t.total)}</div>
 <div class="prog">${g ? '<b style="left:25%"></b><b style="left:50%"></b><b style="left:75%"></b>' : ''}<i style="width:${prog.toFixed(1)}%"></i></div><p class="small">${hint}</p></div>${J.svg}</section>
 <div class="tiles"><div class="tile"><small><i style="background:var(--kid)"></i>Mon argent</small><b>${f(t.own)}</b></div>
 <div class="tile"><small><i style="background:var(--gold)"></i>Bonus ${P().de}</small><b>${f(t.bonus)}</b></div>
@@ -292,7 +292,7 @@ ${t.out > 0 ? `<p class="soft small" style="margin:8px 4px 0">Projets réalisés
 function payView(k, t) {
   const pz = pauseOf(cur);
   if (pz) return `<h2 class="title">Jour de paie</h2><section class="card paused"><h3>Ta paie est en pause</h3><p style="margin:0">${P().label} ${F.parents === 'parents' ? 'ont' : 'a'} mis ta paie en pause ${untilTxt(pz)}.</p>
-${pz.reason ? `<p class="msg">« ${esc(pz.reason)} »</p>` : ''}<p class="soft" style="margin:10px 0 0">Ta tirelire reste à toi : elle continue de pousser avec la bourse, et tu peux toujours ranger l’argent que tu reçois.</p></section>`;
+${pz.reason ? `<p class="msg">« ${esc(pz.reason)} »</p>` : ''}<p class="soft" style="margin:10px 0 0">Ta tirelire reste à toi : elle continue de travailler avec la bourse, et tu peux toujours ranger l’argent que tu reçois.</p></section>`;
   const ow = owed(cur), blocked = ow.length === 0, bonusNow = r2(inv * F.match / 100), dis = ready ? '' : 'disabled';
   const coin = (act) => `<button class="coin" data-act="${act}" aria-label="Reprendre cette pièce" ${dis}>1&nbsp;€</button>`;
   const help = payHelp === null ? !t.paie : payHelp, m = String(F.match).replace('.', ',');
@@ -300,7 +300,7 @@ ${pz.reason ? `<p class="msg">« ${esc(pz.reason)} »</p>` : ''}<p class="soft" 
 <section class="card help"><button class="helphead" data-act="payhelp" aria-expanded="${help}"><span>Comment ça marche ?</span>${help ? '<span class="soft small">Masquer</span>' : I.chev}</button>
 ${help ? `<ol class="howto"><li><b>Chaque semaine, tu reçois ta paie</b>${k.weekly} pièce${k.weekly > 1 ? 's' : ''} de 1 €, ton argent de poche.</li>
 <li><b>Pour chaque pièce, tu choisis</b><span class="choice"><span><i class="dot" style="background:var(--purse)"></i><b>Dans mon porte-monnaie</b> : elle est à toi pour la dépenser comme tu veux. ${P().label} ${F.parents === 'parents' ? 'te la donnent' : 'te la donne'} en vrai, chaque semaine ou un peu plus tard.</span>
-<span><i class="dot" style="background:var(--grow)"></i><b>Dans ma tirelire</b> : elle est placée pour pousser. ${P().aj.charAt(0).toUpperCase() + P().aj.slice(1)} ${m} % de bonus, et elle peut grossir chaque semaine avec la bourse.</span></span></li>
+<span><i class="dot" style="background:var(--grow)"></i><b>Dans ma tirelire</b> : elle est placée. ${P().aj.charAt(0).toUpperCase() + P().aj.slice(1)} ${m} % de bonus, et elle peut grossir chaque semaine avec la bourse.</span></span></li>
 <li><b>Ta tirelire est mise de côté</b>Pour récupérer cet argent, tu choisis un projet et tu le présentes ${P().a}.</li></ol>` : ''}</section>
 <section class="card">${blocked ? `<p class="result" style="text-align:center">Ta paie de la semaine est rangée.<br><span class="soft" style="font-size:17px">Rendez-vous lundi !</span></p>` : `
 <p class="result" style="margin:0 0 4px">Paie ${weekTxt(ow[0])}</p>${ow.length > 1 ? `<p class="msg" style="margin-top:6px">Tu as ${ow.length} paies à ranger. On commence par la plus ancienne.</p>` : ''}
@@ -314,7 +314,7 @@ ${help ? `<ol class="howto"><li><b>Chaque semaine, tu reçois ta paie</b>${k.wee
 
 function giftView(k) {
   const dis = ready ? '' : 'disabled';
-  return `<h2 class="title">J’ai reçu de l’argent</h2><p class="lead">Range-le comme ta paie : dans ton porte-monnaie pour le dépenser, ou dans ta tirelire pour le faire pousser${gm() > 0 ? ` (+${String(gm()).replace('.', ',')} % de bonus ${P().de})` : ''}.</p>
+  return `<h2 class="title">J’ai reçu de l’argent</h2><p class="lead">Range-le comme ta paie : dans ton porte-monnaie pour le dépenser, ou dans ta tirelire pour le placer${gm() > 0 ? ` (+${String(gm()).replace('.', ',')} % de bonus ${P().de})` : ''}.</p>
 <section class="card"><div class="grid2"><label>Combien (€)<input id="g-amount" type="text" inputmode="decimal" autocomplete="off" data-f="gamount" value="${esc(form.gamount)}" placeholder="Ex. : 10"></label>
 <label>De qui ?<input id="g-from" type="text" autocomplete="off" maxlength="40" data-f="gfrom" value="${esc(form.gfrom)}" placeholder="Mamie, un anniversaire…"></label></div>
 <div class="list" style="margin-top:16px"><button class="btn ghost" data-act="gift" data-r="0" ${dis}>Tout dans mon porte-monnaie</button><button class="btn gold" data-act="gift" data-r="0.5" ${dis}>Moitié porte-monnaie, moitié tirelire</button><button class="btn gr" data-act="gift" data-r="1" ${dis}>Tout dans ma tirelire</button></div></section>`;
@@ -338,7 +338,7 @@ function bourseView(k, t) {
 <section class="card dicebox">${p === 'none' ? `<p class="result">Tu ne joues pas la bourse.</p><p style="margin:0">Ta tirelire ne bouge pas : pas de gain, pas de perte. Tu peux changer d’avis quand tu veux, juste en dessous.</p>`
   : `<p class="soft small" style="margin:0">Ta stratégie : <b>${POST[p].name}</b></p><div id="die">${die(rolled ? t.bourse.face : 6, 132)}</div>
 ${rolled ? `<p class="result">Dé ${t.bourse.face} : ${t.bourse.rate < 0 ? 'semaine difficile' : t.bourse.rate === 0 ? 'semaine calme' : 'belle semaine'} !</p><p style="margin:0">Ta tirelire a ${t.bourse.gain < 0 ? 'perdu' : 'gagné'} <b class="${t.bourse.gain < 0 ? 'neg' : 'g'}">${f(Math.abs(t.bourse.gain))}</b>. Prochain lancer lundi.</p>`
-    : t.total > 0 ? `<button class="btn full" data-act="roll" ${ready ? '' : 'disabled'}>Lancer le dé</button>` : `<p style="margin:0">Fais d’abord pousser quelques pièces : le dé agit sur ce qu’il y a dans ta tirelire.</p>`}
+    : t.total > 0 ? `<button class="btn full" data-act="roll" ${ready ? '' : 'disabled'}>Lancer le dé</button>` : `<p style="margin:0">Place d’abord quelques pièces dans ta tirelire : le dé agit sur ce qu’il y a dans ta tirelire.</p>`}
 ${recent.length ? `<div class="recent">${recent.map(e => `<span class="${e.rate < 0 ? 'neg' : e.rate > 0 ? 'g' : ''}">${pct(e.rate)}</span>`).join('')}</div>` : ''}`}
 </section>
 <h3 class="sec">Choisis ta stratégie</h3><p class="lead">Plus tu prends de risques, plus tu peux gagner… ou perdre. ${own ? 'Calculé avec ce qu’il y a dans ta tirelire, si tu n’ajoutes rien.' : 'Exemple pour 100 € placés pendant 1 an.'}</p>
@@ -358,7 +358,7 @@ function futurView(k, t) {
   const full = projInv[cur] !== k.weekly ? project(cur, k.weekly).find(p => p.age === sel[cur]) : null;
   const quick = [...new Set([k.weekly, 10, 20, 50])].sort((a, b) => a - b);
   return `<h2 class="title">Et si tu continuais jusqu’à 18 ans ?</h2><p class="lead">Touche une barre pour voir ton trésor à cet âge.</p>
-<section class="card"><div class="step">Je fais pousser <button data-act="pm" aria-label="Moins">−</button><span class="n">${projInv[cur]} €</span><button data-act="pp" aria-label="Plus">+</button> par semaine</div>
+<section class="card"><div class="step">Je place <button data-act="pm" aria-label="Moins">−</button><span class="n">${projInv[cur]} €</span><button data-act="pp" aria-label="Plus">+</button> par semaine</div>
 <div class="pills">${quick.map(n => `<button class="pill" data-act="pset" data-n="${n}" aria-pressed="${projInv[cur] === n}">${n === k.weekly ? `Ma paie (${n} €)` : n + ' €'}</button>`).join('')}</div>
 ${projInv[cur] > k.weekly ? `<p class="soft small" style="margin:10px 0 0">C’est plus que ton argent de poche : il faudrait y ajouter l’argent que tu reçois (cadeaux, anniversaires, petits services).</p>` : ''}
 <div class="bars" style="grid-template-columns:repeat(${pts.length},minmax(0,1fr))">${bars}</div>
@@ -384,7 +384,7 @@ function projetView(k, t) {
 <section class="card goal"><p class="lbl" style="margin:0">Objectif</p><h3 class="gname">${esc(g.name)}</h3>
 <div class="gnum"><span class="amount">${Math.floor(p * 100)} %</span><span>${f(have)} sur ${f(g.budget)}</span></div>
 <div class="track"><div class="road"><i style="width:${(p * 100).toFixed(1)}%"></i></div>${flags}<span class="me" style="left:${(p * 100).toFixed(1)}%">${esc(k.name.slice(0, 1).toUpperCase())}</span></div>
-${reached ? '' : `<p style="margin:6px 0 0">Il te manque <b>${f(g.budget - have)}</b>.${etaTxt(w1) ? ` Si tu continues comme ça, tu l’auras ${etaTxt(w1)}.` : ' Fais pousser un peu chaque semaine pour avancer.'}</p>${wAll !== null && w1 !== null && wAll < w1 ? `<p class="soft small" style="margin:6px 0 0">En faisant pousser toute ta paie : ${etaTxt(wAll)}.</p>` : ''}`}</section>
+${reached ? '' : `<p style="margin:6px 0 0">Il te manque <b>${f(g.budget - have)}</b>.${etaTxt(w1) ? ` Si tu continues comme ça, tu l’auras ${etaTxt(w1)}.` : ' Place un peu chaque semaine pour avancer.'}</p>${wAll !== null && w1 !== null && wAll < w1 ? `<p class="soft small" style="margin:6px 0 0">En plaçant toute ta paie : ${etaTxt(wAll)}.</p>` : ''}`}</section>
 ${reached ? `<section class="card celebrate"><h3>C’est pépite ! Objectif atteint</h3><p style="margin:0">Prépare ta présentation ${P().a} : pourquoi tu le veux, combien il coûte, ce qu’il va t’apporter. S’ils sont convaincus, ils débloqueront ton argent.</p></section>` : ''}
 <section class="card"><h3>Les paliers</h3><ul class="log">${MS.map(m => { const v = r2(g.budget * m), ok = have >= v; return `<li><span class="${ok ? 'g' : 'soft'}" style="width:26px;flex:none">${ok ? I.check : '○'}</span><span>${m === 1 ? 'Objectif complet' : 'Palier ' + m * 100 + ' %'} : ${f(v)}</span><b class="${ok ? 'g' : 'soft'}">${ok ? 'atteint' : 'encore ' + f(v - have)}</b></li>`; }).join('')}</ul></section>
 <div class="row"><button class="btn ghost sm" data-act="goaledit">Modifier</button><button class="btn ghost sm" data-act="goaldrop">${goalDropArm ? 'Confirmer l’abandon' : 'Abandonner ce projet'}</button></div>${doneHtml}`;
@@ -427,7 +427,7 @@ ${kids().map(k => { const T = tot(k.id); return `<div style="padding:12px 0;bord
 <p class="soft small" style="margin:4px 0 0">Déjà mis de côté au total : ${f(T.livret)}</p>
 ${T.due < 0 ? `<p class="soft small" style="margin:2px 0 0">Vous avez ${f(-T.due)} d’avance après de mauvaises semaines en bourse : rien à ajouter.</p>` : ''}
 </div>`; }).join('')}</section>
-<section class="card"><h3>Mettre la paie en pause</h3><p class="soft small" style="margin:0">En cas de conflit, la paie peut être suspendue. Les semaines en pause ne sont pas rattrapées. La tirelire, elle, reste à l’enfant : elle continue de pousser et il peut toujours y ranger l’argent reçu.</p>
+<section class="card"><h3>Mettre la paie en pause</h3><p class="soft small" style="margin:0">En cas de conflit, la paie peut être suspendue. Les semaines en pause ne sont pas rattrapées. La tirelire, elle, reste à l’enfant : elle continue de travailler avec la bourse et il peut toujours y ranger l’argent reçu.</p>
 ${kids().map(k => { const pz = pauseOf(k.id); return `<div style="padding:12px 0;border-bottom:1px solid var(--line)"><b>${esc(k.name)}</b>${pz ? `<p style="margin:2px 0 0">En pause ${untilTxt(pz)}${pz.reason ? ` · « ${esc(pz.reason)} »` : ''}</p><div class="row" style="margin-top:8px"><button class="btn gr sm" data-act="presume" data-k="${k.id}" ${dis}>Reprendre la paie maintenant</button></div>`
   : `<div class="pills">${[['1', 'Cette semaine'], ['2', '2 semaines'], ['0', 'Jusqu’à nouvel ordre']].map(([v, l]) => `<button class="pill" data-act="pdur" data-n="${v}" aria-pressed="${form.pdur === v}">${l}</button>`).join('')}</div>
 <label>Message pour ${esc(k.name)} (facultatif)<input id="pr-${k.id}" type="text" autocomplete="off" maxlength="80" data-f="preason:${k.id}" value="${esc(form['preason:' + k.id] || '')}" placeholder="Ex. : on en reparle ensemble dimanche"></label>
@@ -444,7 +444,7 @@ ${kids().map(k => { const pz = pauseOf(k.id); return `<div style="padding:12px 0
 <label>Par semaine (€)<input id="k-w-${k.id}" type="number" min="1" max="50" value="${k.weekly}" data-set="kweekly:${k.id}"></label></div>
 <div class="swatches">${PAL.map(c => `<button class="sw" style="--c:${c}" data-act="kcolor" data-k="${k.id}" data-c="${c}" aria-pressed="${k.color === c}" aria-label="Couleur"></button>`).join('')}</div></div>`).join('')}
 <div class="row"><button class="btn ghost full" data-act="kadd" ${dis}>Ajouter un enfant</button></div></section>
-<section class="card"><h3>Les règles du jeu</h3><p class="soft small" style="margin:0">Une paie par semaine, du lundi au dimanche. Si vous la versez en retard, les paies non rangées restent disponibles ${BACKLOG} semaines, puis elles sont perdues. </p><p class="soft small" style="margin:6px 0 0">Les bonus ne s’appliquent qu’à l’argent placé (les pièces que l’enfant fait pousser), jamais à celui qui va dans le porte-monnaie.</p>
+<section class="card"><h3>Les règles du jeu</h3><p class="soft small" style="margin:0">Une paie par semaine, du lundi au dimanche. Si vous la versez en retard, les paies non rangées restent disponibles ${BACKLOG} semaines, puis elles sont perdues. </p><p class="soft small" style="margin:6px 0 0">Les bonus ne s’appliquent qu’à l’argent placé (les pièces que l’enfant place), jamais à celui qui va dans le porte-monnaie.</p>
 <label>Les enfants vous appellent<select data-set="parents">${Object.entries(PAR).filter(([k]) => k !== 'papamaman' || F.parents === k).map(([k, v]) => `<option value="${k}" ${F.parents === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>
 <div class="grid2"><label>Bonus argent de poche (%)<input id="r-m" type="number" min="0" max="100" value="${F.match}" data-set="match"></label>
 <label>Bonus argent reçu (%)<input id="r-g" type="number" min="0" max="100" value="${gm()}" data-set="giftMatch"></label></div>
