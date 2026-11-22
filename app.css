@@ -5,7 +5,7 @@
    TYPE: Fredoka pour les titres et les montants, Nunito pour le texte */
 :root{color-scheme:light dark;
   --bg:light-dark(#fff8ee,#14131d);--card:light-dark(#fff,#211f2e);--ink:light-dark(#22203a,#f7f2ea);
-  --soft:light-dark(#6c6686,#b8b2cc);--line:light-dark(#f0e4d2,#34314a);--glass:light-dark(#eef5ff,#2a2840);
+  --soft:light-dark(#6c6686,#b8b2cc);--line:light-dark(#f0e4d2,#423e5e);--purse:light-dark(#a39cb8,#9d96b8);--glass:light-dark(#eef5ff,#2a2840);
   --gold:#f5b323;--goldd:#c98a00;--grow:#13a05a;--growd:#0b7440;--red:#e0434f;
   --kid:#2f6feb;--kidd:color-mix(in srgb,var(--kid) 70%,#000);
   --kidt:light-dark(color-mix(in srgb,var(--kid) 13%,#fff),color-mix(in srgb,var(--kid) 22%,#211f2e));
@@ -251,3 +251,9 @@ input:focus,select:focus{border-color:var(--kid);outline:none}
 .pfaces i{font-style:normal;font-weight:800;font-size:13px;background:var(--glass);border-radius:99px;padding:2px 8px}
 .post .pr{font-size:15px}
 .intro .story{font:600 19px Fredoka,sans-serif;color:var(--ink);margin-bottom:8px}
+
+/* compteurs parents */
+.ledger{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;margin-top:8px}
+.ledger b{white-space:nowrap}
+.ledger .btn{margin-bottom:5px}
+@media(max-width:400px){.ledger{grid-template-columns:minmax(0,1fr) auto}.ledger .btn{grid-column:1/-1}}
