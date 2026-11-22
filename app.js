@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '46'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '47'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -230,7 +230,6 @@ function loginView() {
   return `<main class="view full"><div class="welcome">${LOGOBIG}<h1>${WMFULL}</h1><p>Pièce après pièce, ta pépite grandit</p></div>
 <div class="intro"><p class="story">Semaine après semaine, la tirelire se remplit… jusqu’à devenir une vraie pépite.</p><p>Pépite aide les parents à montrer à leurs enfants, avec leur argent de poche, pourquoi épargner et investir tôt change tout.</p><p class="soft small">Bonus, bourse et intérêts sont un jeu financé par vous, les parents : ce n’est pas un vrai placement.</p></div>
 <div class="row" style="margin-top:14px"><button class="btn gold full" data-act="tour">Découvrir Pépite en 1 minute</button></div>
-<button class="item art-item" data-act="go" data-v="lire" style="margin:10px 0 4px"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent · 4 lectures courtes</small><b>Pourquoi ça marche\u00a0: la méthode Pépite expliquée</b></span><span class="end">${I.chev}</span></button>
 <div class="tabs2"><button data-act="lmode" data-m="in" aria-pressed="${!up}">J’ai un compte</button><button data-act="lmode" data-m="up" aria-pressed="${up}">Créer un compte</button></div>
 <form class="card" id="loginf" autocomplete="on">
 <h3>${up ? 'Créer le compte de la famille' : 'Connexion de cet appareil'}</h3>
@@ -239,7 +238,8 @@ function loginView() {
 ${loginErr ? `<p class="neg" style="margin:10px 0 0;font-weight:700">${esc(loginErr)}</p>` : ''}${loginMsg ? `<div class="msg">${esc(loginMsg)}</div>` : ''}
 <div class="row"><button class="btn full" type="submit" ${busy ? 'disabled' : ''}>${up ? 'Créer le compte' : 'Se connecter'}</button></div>
 ${up ? '' : '<button class="link" type="button" data-act="reset">Mot de passe oublié ?</button>'}
-<p class="soft small" style="margin:8px 0 0">Un seul compte pour toute la famille : un parent se connecte une fois sur chaque appareil.</p></form></main>`;
+<p class="soft small" style="margin:8px 0 0">Un seul compte pour toute la famille : un parent se connecte une fois sur chaque appareil.</p></form>
+<button class="item art-item" data-act="go" data-v="lire" style="margin:18px 0 4px"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent · 4 lectures courtes</small><b>Pourquoi ça marche\u00a0: la méthode Pépite expliquée</b></span><span class="end">${I.chev}</span></button></main>`;
 }
 
 function newOb() { return { step: 1, parents: 'parents', kids: [{ id: uid6(), name: '', birth: '', weekly: '', color: PAL[0] }], match: 25, giftMatch: 10, dice: 'equilibre', pin: '', legacy: null, err: '' }; }
@@ -505,7 +505,7 @@ function tourModal() {
 <div class="tvis"><div class="demoin" inert aria-hidden="true">${s.visual}</div></div>
 <h3 id="tt">${s.title}</h3><p>${s.short}</p>
 <div class="tdots" aria-hidden="true">${Array.from({ length: n }, (_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div>
-${last ? `<div class="list"><button class="btn full" data-act="tend">Créer le compte de ma famille</button><button class="btn ghost full" data-act="tread">Comprendre la méthode avant de me lancer</button></div>`
+${last ? `<div class="list"><button class="btn full" data-act="tend">Créer le compte de ma famille</button></div>`
   : `<div class="row"><button class="btn ghost" data-act="tprev" ${i ? '' : 'disabled'}>Retour</button><button class="btn" data-act="tnext">${i ? 'Suivant' : 'C’est parti'}</button></div>`}
 </div></div>`;
 }
@@ -522,7 +522,7 @@ function artView() {
   return `<button class="backlink" data-act="go" data-v="${inOb ? 'home' : 'lire'}">${I.chev}<span>${inOb ? 'Revenir à l’inscription' : 'La méthode'}</span></button>
 <article class="art"><p class="kicker">Article ${x.n} sur ${L.length} · ${x.theme} · ${x.min} min</p><h2>${x.title}</h2><p class="alead">${x.lead}</p>${body}
 ${x.sources.length ? `<details class="src"><summary>Sources (${x.sources.length})</summary><ol>${x.sources.map(([t, u]) => `<li><a href="${u}" target="_blank" rel="noopener">${t}</a></li>`).join('')}</ol></details>` : ''}</article>
-${next ? `<button class="item art-item nextart" data-act="art" data-n="${next.id}"><span class="ic artn">${next.n}</span><span><small>Article suivant</small><b>${next.title}</b></span><span class="end">${I.chev}</span></button>` : `<div class="row"><button class="btn full" data-act="${user ? 'go' : 'signup'}" data-v="${inOb ? 'home' : 'parents'}">${inOb ? 'Revenir à l’inscription' : user ? 'Retour à l’espace parents' : 'Créer le compte de ma famille'}</button></div>`}`;
+${!user ? `<div class="row"><button class="btn full" data-act="signup">Créer le compte de ma famille</button></div>` : ''}${next ? `<button class="item art-item nextart" data-act="art" data-n="${next.id}"><span class="ic artn">${next.n}</span><span><small>Article suivant</small><b>${next.title}</b></span><span class="end">${I.chev}</span></button>` : (user ? `<div class="row"><button class="btn full" data-act="go" data-v="${inOb ? 'home' : 'parents'}">${inOb ? 'Revenir à l’inscription' : 'Retour à l’espace parents'}</button></div>` : '')}`;
 }
 
 function resetModal() {
