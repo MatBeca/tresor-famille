@@ -353,3 +353,10 @@ i.cs{background:var(--purse)}i.cc{background:var(--grow)}
 .how summary{cursor:pointer;font-weight:800;color:var(--kidd)}
 .how ol{margin:8px 0 6px;padding-left:22px}.how li{margin:5px 0;line-height:1.45}
 .how p{margin:0;font-size:14px;color:var(--soft)}
+/* À propos */
+.aboutid{display:flex;gap:14px;align-items:center;margin-bottom:12px}
+.aboutid img{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid var(--gold);flex:none}
+.aboutid h2{font-size:25px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.chips span{background:color-mix(in srgb,var(--gold) 20%,var(--card));color:#6e4400;border-radius:99px;padding:5px 12px;font:800 13px Nunito,sans-serif}
+.ic.aboutic{overflow:hidden;padding:0}.ic.aboutic img{width:100%;height:100%;object-fit:cover;border-radius:inherit}

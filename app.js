@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '59'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '60'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -244,7 +244,8 @@ ${loginErr ? `<p class="neg" style="margin:10px 0 0;font-weight:700">${esc(login
 <div class="row"><button class="btn full" type="submit" ${busy ? 'disabled' : ''}>${up ? 'Créer le compte' : 'Se connecter'}</button></div>
 ${up ? '' : '<button class="link" type="button" data-act="reset">Mot de passe oublié ?</button>'}
 <p class="soft small" style="margin:8px 0 0">Un seul compte pour toute la famille : un parent se connecte une fois sur chaque appareil.</p></form>
-<button class="item art-item" data-act="go" data-v="lire" style="margin:18px 0 4px"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent · 4 lectures courtes</small><b>Pourquoi ça marche\u00a0: la méthode Pépite expliquée</b></span><span class="end">${I.chev}</span></button></main>`;
+<button class="item art-item" data-act="go" data-v="lire" style="margin:18px 0 4px"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent · 4 lectures courtes</small><b>Pourquoi ça marche\u00a0: la méthode Pépite expliquée</b></span><span class="end">${I.chev}</span></button>
+<button class="link" data-act="go" data-v="apropos" style="display:block;margin:6px auto 0">Qui a créé Pépite ?</button></main>`;
 }
 
 function newOb() { return { step: 1, parents: 'parents', kids: [{ id: uid6(), name: '', birth: '', weekly: '', color: PAL[0] }], match: 25, giftMatch: 10, dice: 'equilibre', pin: '', legacy: null, err: '' }; }
@@ -518,6 +519,7 @@ ${last ? `<div class="row" style="margin-top:4px"><button class="btn ghost sm" d
 <div class="row"><button class="btn danger sm" data-act="resetopen" ${dis}>Vider la tirelire et tout remettre à zéro pour ${esc(K.name)}</button></div>` : `<p class="soft">Rien à annuler pour ${esc(K.name)}.</p>`}</section>
 <section class="card"><h3>Apparence</h3><p class="soft small" style="margin:0">Réglage propre à cet appareil.</p>
 <div class="pills">${[['light', 'Clair'], ['dark', 'Sombre']].map(([v, l]) => `<button class="pill" data-act="theme" data-n="${v}" aria-pressed="${theme === v}">${l}</button>`).join('')}</div></section>
+<button class="item art-item" data-act="go" data-v="apropos"><span class="ic artn aboutic"><img src="img/matthieu.jpg" alt="" width="40" height="40"></span><span><small>À propos</small><b>Qui a créé Pépite\u00a0?</b></span><span class="end">${I.chev}</span></button>
 <section class="card"><h3>Compte</h3><p class="soft small" style="margin:0">Connecté avec ${esc(user.email || '')}. Version de l’appli : ${VERSION}.</p><div class="row"><button class="btn ghost sm" data-act="logout">Déconnecter cet appareil</button></div></section>`;
 }
 
@@ -539,6 +541,19 @@ function tourModal() {
 ${last ? `<div class="list"><button class="btn full" data-act="tend">Créer le compte de ma famille</button></div>`
   : `<div class="row"><button class="btn ghost" data-act="tprev" ${i ? '' : 'disabled'}>Retour</button><button class="btn" data-act="tnext">${i ? 'Suivant' : 'C’est parti'}</button></div>`}
 </div></div>`;
+}
+
+function aproposView() {
+  const back = user ? 'parents' : 'home';
+  return `<button class="backlink" data-act="go" data-v="${back}">${I.chev}<span>${user ? 'Espace parents' : 'Retour'}</span></button>
+<article class="art about"><div class="aboutid"><img src="img/matthieu.jpg" alt="Portrait de Matthieu, créateur de Pépite" width="96" height="96"><div><p class="kicker" style="margin:0">À propos</p><h2>Qui a créé Pépite\u00a0?</h2><p class="soft" style="margin:2px 0 0">Matthieu, papa de trois enfants</p></div></div>
+<p>J’ai découvert l’investissement à 35\u00a0ans. Avant, rien\u00a0: pas un euro placé pendant 25\u00a0ans, faute de savoir comment faire. Personne ne me l’avait appris, et j’aurais rêvé que mes parents le fassent.</p>
+<p>Alors j’ai appris à la dure. Je me suis formé au métier de conseiller en investissements financiers (CIF), puis j’ai suivi avec ORICA les formations IOBSP niveau\u00a01 et IAS niveau\u00a03, pour comprendre ces arcanes de l’intérieur.</p>
+<div class="chips"><span>Formé au métier de CIF</span><span>IOBSP niveau 1</span><span>IAS niveau 3 · ORICA</span></div>
+<p>À la maison, je mettais chaque mois de l’argent de côté pour mes deux grandes, 7 et 9\u00a0ans, avec un bonus de ma part dans leur tirelire. Mais c’était compliqué à tenir, et il manquait l’essentiel\u00a0: les intérêts composés, ceux-là mêmes qui m’ont tant manqué en démarrant à 35\u00a0ans.</p>
+<blockquote>Pépite, c’est l’outil que j’aurais aimé avoir\u00a0: pour leur donner 25\u00a0ans d’avance.</blockquote>
+<p class="note">Pépite est un outil pédagogique. Il ne constitue pas un conseil en investissement.</p></article>
+${user ? '' : `<div class="row"><button class="btn full" data-act="signup">Créer le compte de ma famille</button></div>`}`;
 }
 function lireView() {
   const back = user ? 'parents' : 'home';
@@ -573,7 +588,7 @@ function mainView() {
   const k = kidOf(cur);
   if (!k) return splash('Aucun enfant');
   const t = tot(cur);
-  const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : view === 'lire' ? lireView() : view === 'art' ? artView() : homeView(k, t);
+  const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : view === 'lire' ? lireView() : view === 'art' ? artView() : view === 'apropos' ? aproposView() : homeView(k, t);
   return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view">${content}</main>${tabbar()}${resetFor ? resetModal() : ''}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
 }
 
@@ -582,7 +597,7 @@ function render() {
   if (rolling) return;
   let html, color = '#2f5fe0', key;
   if (user === undefined) { html = splash(); key = 'splash'; }
-  else if (!user) { if (!tourAuto && view === 'home') { tourAuto = true; let seen = null; try { seen = localStorage.getItem('pepite-tour'); } catch (e) {} if (!seen) tour = 0; } const pub = view === 'lire' || view === 'art'; html = pub ? `<main class="view full">${view === 'lire' ? lireView() : artView()}</main>` : loginView() + (tour !== null ? tourModal() : ''); key = 'login:' + (pub ? view + ':' + artId : '') + (!pub && tour !== null ? ':tour' + tour : ''); }
+  else if (!user) { if (!tourAuto && view === 'home') { tourAuto = true; let seen = null; try { seen = localStorage.getItem('pepite-tour'); } catch (e) {} if (!seen) tour = 0; } const pub = view === 'lire' || view === 'art' || view === 'apropos'; html = pub ? `<main class="view full">${view === 'lire' ? lireView() : view === 'apropos' ? aproposView() : artView()}</main>` : loginView() + (tour !== null ? tourModal() : ''); key = 'login:' + (pub ? view + ':' + artId : '') + (!pub && tour !== null ? ':tour' + tour : ''); }
   else if (!famLoaded) { html = splash('Ouverture de la banque…'); key = 'splash2'; }
   else if (!F) { if (!ob) { ob = newOb(); tryLegacy(); } if (view === 'art') { key = 'obart:' + artId; html = `<main class="view full">${artView()}</main>`; } else { key = 'ob' + ob.step; html = obView(); } color = ob.step === 2 && ob.kids[0] ? ob.kids[0].color : PAL[1]; }
   else { html = mainView(); key = 'main:' + view + ':' + (view === 'art' ? artId : '') + ':' + cur + ':' + (lock && !pinOk ? (pinAsk ? 'pin' : 'lk') : '') + (resetFor ? ':modal' : ''); const k = kidOf(cur); if (k) color = k.color; }
@@ -763,7 +778,7 @@ document.addEventListener('click', ev => {
     case 'obnext': if (obValidate()) { ob.step++; window.scrollTo(0, 0); } break;
     case 'obprev': ob.step--; ob.err = ''; window.scrollTo(0, 0); break;
     case 'obfinish': obFinish(); return;
-    case 'go': view = b.dataset.v; if (!['parents', 'lire', 'art'].includes(view)) { pinOk = false; } pinAsk = false; pinBuf = ''; pinBad = false; window.scrollTo(0, 0); break;
+    case 'go': view = b.dataset.v; if (!['parents', 'lire', 'art', 'apropos'].includes(view)) { pinOk = false; } pinAsk = false; pinBuf = ''; pinBad = false; window.scrollTo(0, 0); break;
     case 'kid': cur = k; goalEdit = false; resetCoins(); try { localStorage.setItem('pepite-cur', cur); } catch (e) {} break;
     case 'toPig': if (tray.length) depC.push(tray.shift()); break;
     case 'toGrow': if (tray.length) invC.push(tray.shift()); break;
