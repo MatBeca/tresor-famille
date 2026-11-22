@@ -397,3 +397,5 @@ main.view.guided{padding-bottom:300px}
 .mslog .mst{display:flex;flex-direction:column;gap:2px;min-width:0}
 .mslog .mst b{margin:0;white-space:normal;font-weight:800}
 .mslog .mst small{font-weight:700;font-size:14px}
+.mech .mdef{font-style:italic;color:var(--soft);margin:0 0 6px}
+.mech p+p{margin-top:0}
