@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '69'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '71'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -81,7 +81,7 @@ let F = null, famLoaded = false, famServer = false, lastF = '';
 const EV = {}, GOAL = {}, PAUSE = {}, KL = {}, lastK = {}, kidUnsubs = {};
 let goalEdit = false, goalDropArm = false, resetFor = null, payHelp = null;
 let famUnsub = null, ready = false, status = '', offlineTimer = null;
-let view = 'home', cur = null, lock = null, pinOk = false, pinBuf = '', pinBad = false, pinAsk = false;
+let view = 'home', cur = null, lock = null, pinOk = false, pinBuf = '', pinBad = false, pinAsk = false, pinFor = null;
 const KID_UNDO = ['paie', 'recu', 'posture']; // ce qu'un enfant peut annuler seul sur un appareil verrouillé
 let tray = [], invC = [], depC = [], rolling = false;
 let toast = null, toastT = null, undoArm = false, wipeArm = false, delArm = null;
@@ -155,9 +155,10 @@ function owed(id) {
 const weekTxt = w => w === wk(new Date()) ? 'de cette semaine' : 'de la semaine du ' + new Date(w).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
 function tot(id) {
-  const t = { own: 0, bonus: 0, gains: 0, out: 0, pig: 0, purse: 0, given: 0, vire: 0, fromL: 0, paie: null, bourse: null, pays: [], rolls: [] };
+  const t = { own: 0, bonus: 0, gains: 0, out: 0, pig: 0, purse: 0, given: 0, vire: 0, fromL: 0, paie: null, bourse: null, pays: [], rolls: [], waiting: [] };
   for (const e of evs(id)) {
-    if (e.t === 'paie' || e.t === 'recu') { t.own += e.inv; t.bonus += e.bonus; t.pig += e.dep; if (e.t === 'paie') { t.purse += e.dep; t.paie = e.d; t.pays.push(e.inv); } }
+    if (e.t === 'recu' && (e.pending || e.refused)) { if (e.pending) t.waiting.push(e); }
+    else if (e.t === 'paie' || e.t === 'recu') { t.own += e.inv; t.bonus += e.bonus; t.pig += e.dep; if (e.t === 'paie') { t.purse += e.dep; t.paie = e.d; t.pays.push(e.inv); } }
     else if (e.t === 'donne') { t.given += e.amount; }
     else if (e.t === 'bourse') { t.gains += e.gain; t.bourse = e; t.rolls.push(e); }
     else if (e.t === 'projet') { t.out += e.amount; t.fromL += (e.fromLivret ?? e.amount); }
@@ -185,11 +186,20 @@ function eta(id, perWeek) {
 }
 const avgInv = id => { const p = tot(id).pays.slice(-8); return p.length ? p.reduce((a, b) => a + b, 0) / p.length : kidOf(id).weekly; };
 const etaTxt = w => w === null ? null : w <= 1 ? 'dès la semaine prochaine' : `dans ${w} semaines, vers ${new Date(Date.now() + w * 7 * 864e5).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`;
+// Les paliers se disent selon l'âge : étapes avant 9 ans, fractions de 9 à 10 ans, pourcentages ensuite.
+const msBand = id => { const k = kidOf(id); if (!k || !validBirth(k.birth)) return 'pct'; const a = ageAt(k.birth, new Date()); return a < 9 ? 'step' : a < 11 ? 'frac' : 'pct'; };
+const FRAC = { 0.25: 'un quart', 0.5: 'la moitié', 0.75: 'trois quarts' };
+const cap1 = s => s.charAt(0).toUpperCase() + s.slice(1);
+const msShort = (m, id) => ({ step: `${m * 4}`, frac: { 0.25: '¼', 0.5: '½', 0.75: '¾' }[m], pct: `${m * 100} %` })[msBand(id)];
+const msLong = (m, id) => ({ step: `Étape ${m * 4}`, frac: cap1(FRAC[m]), pct: `Palier ${m * 100} %` })[msBand(id)];
+const msHow = id => ({ step: 'Ton projet est coupé en 4 étapes. À chaque étape franchie, ta pépite grossit !', frac: 'Ton projet est coupé en 4 parts : un quart, la moitié, trois quarts, puis tout. À chaque part, ta pépite grossit !', pct: '25 %, c’est un quart du prix ; 50 %, la moitié ; 75 %, les trois quarts. À chaque palier, ta pépite grossit.' })[msBand(id)];
+// Le bonus en mots d'enfant : « pour 4 pièces placées, papa ajoute 1 pièce » tant que l'enfant ne manie pas les pourcentages.
+const bonusKid = (m, unit = 'pièces placées', one = '1 pièce') => { const n = 100 / m; return msBand(cur) !== 'pct' && Number.isInteger(n) && n > 1 ? `pour ${n} ${unit}, ${P().aj} ${one}` : `${P().aj} ${String(m).replace('.', ',')} % de bonus`; };
 function milestone(before, after) {
   const g = goalOf(cur);
   if (!g) { const c = CAPS.find(x => before < x && after >= x); return c ? `C’est pépite ! Ta tirelire passe les ${f(c)}.` : ''; }
   const b = before / g.budget, a = after / g.budget;
-  for (const m of [1, 0.75, 0.5, 0.25]) if (b < m && a >= m) return m === 1 ? `C’est pépite ! Objectif « ${esc(g.name)} » atteint !` : `Palier ${m * 100} % atteint pour « ${esc(g.name)} » !`;
+  for (const m of [1, 0.75, 0.5, 0.25]) if (b < m && a >= m) return m === 1 ? `C’est pépite ! Objectif « ${esc(g.name)} » atteint !` : ({ step: `Étape ${m * 4} sur 4 franchie pour « ${esc(g.name)} » : ta pépite grossit !`, frac: `${cap1(FRAC[m])} du chemin pour « ${esc(g.name)} » : ta pépite grossit !`, pct: `Palier ${m * 100} % atteint pour « ${esc(g.name)} » !` })[msBand(cur)];
   return '';
 }
 function sayMs(before, msg, sub) { const ms = milestone(before, tot(cur).total); if (ms) say(ms, msg); else say(msg, sub); }
@@ -322,11 +332,11 @@ function homeView(k, t) {
 <div class="tile"><small><i style="background:var(--grow)"></i>Gagné tout seul</small><b class="${t.gains < 0 ? 'neg' : 'g'}">${f(t.gains)}</b></div>
 <div class="tile"><small><i style="background:var(--purse)"></i>Porte-monnaie à recevoir</small><b>${f(t.purseDue)}</b></div></div>
 ${t.out > 0 ? `<p class="soft small" style="margin:8px 4px 0">Projets réalisés : ${f(t.out)}</p>` : ''}
-<h3 class="sec">Mon projet</h3><div class="list"><button class="item" data-act="go" data-v="projet"><span class="ic" style="background:var(--kidt);color:var(--kidtxt)">${I.flag}</span><span>${g ? `<b>${esc(g.name)} : ${Math.floor(Math.min(1, Math.max(0, t.total) / g.budget) * 100)} %</b><small>${t.total >= g.budget ? 'Atteint : prépare ta présentation !' : `${f(Math.max(0, t.total))} sur ${f(g.budget)}`}</small>` : '<b>Choisis un projet</b><small>Un vélo, un jeu, ton futur permis ? Pas obligatoire, mais motivant.</small>'}</span><span class="end">${I.chev}</span></button></div>
+<h3 class="sec">Mon projet</h3><div class="list"><button class="item" data-act="go" data-v="projet"><span class="ic" style="background:var(--kidt);color:var(--kidtxt)">${I.flag}</span><span>${g ? `<b>${esc(g.name)}${msBand(cur) === 'pct' ? ` : ${Math.floor(Math.min(1, Math.max(0, t.total) / g.budget) * 100)} %` : ''}</b><small>${t.total >= g.budget ? 'Atteint : prépare ta présentation !' : `${f(Math.max(0, t.total))} sur ${f(g.budget)}`}</small>` : '<b>Choisis un projet</b><small>Un vélo, un jeu, ton futur permis ? Pas obligatoire, mais motivant.</small>'}</span><span class="end">${I.chev}</span></button></div>
 <h3 class="sec">Cette semaine</h3><div class="list">
 <button class="item" data-act="go" data-v="paie"><span class="ic" style="background:#fff3c4;color:#a87300">${I.coin}</span><span><b>Ma paie</b><small>${pauseOf(cur) ? 'En pause ' + untilTxt(pauseOf(cur)) : paid ? 'Rangée, bravo !' : due > 1 ? `${due} paies t’attendent` : `${f(k.weekly)} t’attendent`}</small></span><span class="end ${paid && !pauseOf(cur) ? 'done' : ''}">${paid && !pauseOf(cur) ? I.check : I.chev}</span></button>
 <button class="item" data-act="go" data-v="bourse"><span class="ic" style="background:var(--glass)">${I.die}</span><span><b>La bourse</b><small>${!bourseOpen(cur) ? `S’ouvre quand ta tirelire aura ${f(BOURSE_MIN)}` : !t.rolls.length && !rolled ? 'Nouveau : la bourse est ouverte !' : postOf(cur) === 'none' ? 'Tu ne joues pas la bourse' : rolled ? `Dé ${t.bourse.face} : ${eurS(t.bourse.gain)}` : 'Lance le dé de la semaine'}</small></span><span class="end ${rolled ? 'done' : ''}">${rolled ? I.check : I.chev}</span></button>
-<button class="item" data-act="go" data-v="recu"><span class="ic" style="background:color-mix(in srgb,var(--grow) 14%,transparent);color:var(--grow)">${I.gift}</span><span><b>J’ai reçu de l’argent</b><small>Un cadeau, un anniversaire ?</small></span><span class="end">${I.chev}</span></button>
+<button class="item" data-act="go" data-v="recu"><span class="ic" style="background:color-mix(in srgb,var(--grow) 14%,transparent);color:var(--grow)">${I.gift}</span><span><b>J’ai reçu de l’argent</b><small>${t.waiting.length ? `${t.waiting.length} en attente de validation` : 'Un cadeau, un anniversaire ?'}</small></span><span class="end">${I.chev}</span></button>
 <button class="item" data-act="go" data-v="carnet"><span class="ic" style="background:var(--glass)">${I.book}</span><span><b>Mon carnet</b><small>Tout ce qui est entré et sorti</small></span><span class="end">${I.chev}</span></button></div>`;
 }
 
@@ -340,7 +350,7 @@ ${pz.reason ? `<p class="msg">« ${esc(pz.reason)} »</p>` : ''}<p class="soft" 
 <section class="card help"><button class="helphead" data-act="payhelp" aria-expanded="${help}"><span>Comment ça marche ?</span>${help ? '<span class="soft small">Masquer</span>' : I.chev}</button>
 ${help ? `<ol class="howto"><li><b>Chaque semaine, tu reçois ta paie</b>${coinsTxt(k.weekly)}, ton argent de poche.</li>
 <li><b>Pour chaque pièce, tu choisis</b><span class="choice"><span><i class="dot" style="background:var(--purse)"></i><b>Dans mon porte-monnaie</b> : elle est à toi pour la dépenser comme tu veux. ${P().label} ${F.parents === 'parents' ? 'te la donnent' : 'te la donne'} en vrai, chaque semaine ou un peu plus tard.</span>
-<span><i class="dot" style="background:var(--grow)"></i><b>Dans ma tirelire</b> : elle est placée. ${P().aj.charAt(0).toUpperCase() + P().aj.slice(1)} ${m} % de bonus, et elle peut grossir chaque semaine avec la bourse.</span></span></li>
+<span><i class="dot" style="background:var(--grow)"></i><b>Dans ma tirelire</b> : elle est placée. ${cap1(bonusKid(m))}, et elle peut grossir chaque semaine avec la bourse.</span></span></li>
 <li><b>Ta tirelire est mise de côté</b>Pour récupérer cet argent, tu choisis un projet et tu le présentes ${P().a}.</li></ol>` : ''}</section>
 <section class="card">${blocked ? `<p class="result" style="text-align:center">Ta paie de la semaine est rangée.<br><span class="soft" style="font-size:17px">Rendez-vous la semaine prochaine !</span></p>` : `
 <p class="result" style="margin:0 0 4px">Paie ${weekTxt(ow[0])}</p>${ow.length > 1 ? `<p class="msg" style="margin-top:6px">Tu as ${ow.length} paies à ranger. On commence par la plus ancienne.</p>` : ''}
@@ -353,8 +363,11 @@ ${help ? `<ol class="howto"><li><b>Chaque semaine, tu reçois ta paie</b>${coins
 }
 
 function giftView(k) {
-  const dis = ready ? '' : 'disabled';
-  return `<h2 class="title">J’ai reçu de l’argent</h2><p class="lead">Range-le comme ta paie : dans ton porte-monnaie pour le dépenser, ou dans ta tirelire pour le placer${gm() > 0 ? ` (+${String(gm()).replace('.', ',')} % de bonus ${P().de})` : ''}.</p>
+  const dis = ready ? '' : 'disabled', W = tot(cur).waiting;
+  if (pinFor) return pinView();
+  const wait = W.length ? `<section class="card waitcard"><h3>En attente de validation</h3><p class="soft small" style="margin:0">L’argent compte dans ta tirelire quand ${P().label.toLowerCase()} l’${['parents', 'papamaman'].includes(F.parents) ? 'ont' : 'a'} validé.</p>
+<ul class="log">${W.map(e => `<li><span>${giftLine(e)}</span><button class="btn sm" data-act="gval" data-d="${e.d}" ${dis}>Un parent valide</button></li>`).join('')}</ul></section>` : '';
+  return `${wait}<h2 class="title">J’ai reçu de l’argent</h2><p class="lead">Range-le comme ta paie : dans ton porte-monnaie pour le dépenser, ou dans ta tirelire pour le placer${gm() > 0 ? ` (${bonusKid(gm(), '€ placés', '1 €')})` : ''}.</p>
 <section class="card"><div class="grid2"><label>Combien (€)<input id="g-amount" type="text" inputmode="decimal" autocomplete="off" data-f="gamount" value="${esc(form.gamount)}" placeholder="Ex. : 10"></label>
 <label>De qui ?<input id="g-from" type="text" autocomplete="off" maxlength="40" data-f="gfrom" value="${esc(form.gfrom)}" placeholder="Mamie, un anniversaire…"></label></div>
 <div class="list" style="margin-top:16px"><button class="btn ghost" data-act="gift" data-r="0" ${dis}>Tout dans mon porte-monnaie</button><button class="btn gold" data-act="gift" data-r="0.5" ${dis}>Moitié porte-monnaie, moitié tirelire</button><button class="btn gr" data-act="gift" data-r="1" ${dis}>Tout dans ma tirelire</button></div></section>`;
@@ -447,20 +460,21 @@ function projetView(k, t) {
   }
   const have = Math.max(0, t.total), p = Math.min(1, have / g.budget), reached = have >= g.budget;
   const w1 = eta(cur, avgInv(cur)), wAll = eta(cur, k.weekly);
-  const flags = MS.map(m => `<span class="flag ${p >= m ? 'on' : ''}" style="left:${m * 100}%">${p >= m ? I.check : ''}</span><span class="flagl" style="left:${m * 100}%">${m === 1 ? esc(g.name) : m * 100 + ' %'}</span>`).join('');
+  const flags = MS.map(m => `<span class="flag ${p >= m ? 'on' : ''}" style="left:${m * 100}%">${p >= m ? I.check : ''}</span><span class="flagl" style="left:${m * 100}%">${m === 1 ? esc(g.name) : msShort(m, cur)}</span>`).join('');
   return `<h2 class="title">Mon projet</h2>
 <section class="card goal"><p class="lbl" style="margin:0">Objectif</p><h3 class="gname">${esc(g.name)}</h3>
-<div class="gnum"><span class="amount">${Math.floor(p * 100)} %</span><span>${f(have)} sur ${f(g.budget)}</span></div>
+<div class="gnum">${msBand(cur) === 'pct' ? `<span class="amount">${Math.floor(p * 100)} %</span><span>${f(have)} sur ${f(g.budget)}</span>` : `<span class="amount">${f(have)}</span><span>sur ${f(g.budget)}</span>`}</div>
 <div class="track"><div class="road"><i style="width:${(p * 100).toFixed(1)}%"></i></div>${flags}<span class="me" style="left:${(p * 100).toFixed(1)}%">${esc(k.name.slice(0, 1).toUpperCase())}</span></div>
 ${reached ? '' : `<p style="margin:6px 0 0">Il te manque <b>${f(g.budget - have)}</b>.${etaTxt(w1) ? ` Si tu continues comme ça, tu l’auras ${etaTxt(w1)}.` : ' Place un peu chaque semaine pour avancer.'}</p>${wAll !== null && w1 !== null && wAll < w1 ? `<p class="soft small" style="margin:6px 0 0">En plaçant toute ta paie (${f(k.weekly)} par semaine) : ${etaTxt(wAll)}.</p>` : ''}${calcHow(cur, avgInv(cur), avgInv(cur) === k.weekly && !tot(cur).pays.length ? 'ta paie' : 'ce que tu places d’habitude (la moyenne de tes dernières paies)')}`}</section>
 ${reached ? `<section class="card celebrate"><h3>C’est pépite ! Objectif atteint</h3><p style="margin:0">Prépare ta présentation ${P().a} : pourquoi tu le veux, combien il coûte, ce qu’il va t’apporter. S’ils sont convaincus, ils débloqueront ton argent.</p></section>` : ''}
-<section class="card"><h3>Les paliers</h3><ul class="log">${MS.map(m => { const v = r2(g.budget * m), ok = have >= v; return `<li><span class="${ok ? 'g' : 'soft'}" style="width:26px;flex:none">${ok ? I.check : '○'}</span><span>${m === 1 ? 'Objectif complet' : 'Palier ' + m * 100 + ' %'} : ${f(v)}</span><b class="${ok ? 'g' : 'soft'}">${ok ? 'atteint' : 'encore ' + f(v - have)}</b></li>`; }).join('')}</ul></section>
+<section class="card"><h3>${msBand(cur) === 'step' ? 'Les étapes' : 'Les paliers'}</h3><p class="soft small" style="margin:0 0 6px">${msHow(cur)}</p><ul class="log">${MS.map(m => { const v = r2(g.budget * m), ok = have >= v; return `<li><span class="${ok ? 'g' : 'soft'}" style="width:26px;flex:none">${ok ? I.check : '○'}</span><span>${m === 1 ? 'Objectif complet' : msLong(m, cur)} : ${f(v)}</span><b class="${ok ? 'g' : 'soft'}">${ok ? 'atteint' : 'encore ' + f(v - have)}</b></li>`; }).join('')}</ul></section>
 <div class="row"><button class="btn ghost sm" data-act="goaledit">Modifier</button><button class="btn ghost sm" data-act="goaldrop">${goalDropArm ? 'Confirmer l’abandon' : 'Abandonner ce projet'}</button></div>${doneHtml}`;
 }
 
 function carnetView(k) {
   const ev = evs(cur).slice(-40).reverse().map(e => {
     if (e.t === 'paie') return `<li><time>${dateFr(e.d)}</time><span>Paie : ${f(e.inv)} placés, ${f(e.dep)} dans le porte-monnaie</span><b class="g">+${f(e.inv + e.bonus)}</b></li>`;
+    if (e.t === 'recu' && (e.pending || e.refused)) return `<li><time>${dateFr(e.d)}</time><span>Reçu${e.from ? ' de ' + esc(e.from) : ''} : ${f(e.inv + e.dep)}</span><b class="soft">${e.pending ? 'en attente' : 'refusé'}</b></li>`;
     if (e.t === 'recu') return `<li><time>${dateFr(e.d)}</time><span>Reçu${e.from ? ' de ' + esc(e.from) : ''} : ${f(e.inv)} placés, ${f(e.dep)} dans le porte-monnaie</span><b class="g">+${f(e.inv + e.bonus)}</b></li>`;
     if (e.t === 'bourse') return `<li><time>${dateFr(e.d)}</time><span>Bourse : dé ${e.face}</span><b class="${e.gain < 0 ? 'neg' : 'g'}">${e.gain < 0 ? '−' : '+'}${f(Math.abs(e.gain))}</b></li>`;
     if (e.t === 'posture') return `<li><time>${dateFr(e.d)}</time><span>Stratégie de bourse : ${POST[e.p] ? POST[e.p].name : e.p}</span><b class="soft">—</b></li>`;
@@ -475,7 +489,7 @@ function carnetView(k) {
 
 const lastTxtOf = last => last ? ({ paie: 'la paie du ', bourse: 'le lancer du ', recu: 'l’argent reçu le ', vire: 'le virement du ', donne: 'le porte-monnaie donné le ', projet: 'le projet du ', pause: 'la pause du ', reprise: 'la reprise du ', posture: 'le choix de stratégie du ' }[last.t] || '') + dateFr(last.d) : '';
 function pinView() {
-  return `<section class="pin">${lock && pinAsk ? `<button class="backlink" data-act="pinout">${I.chev}<span>Paramètres</span></button>` : ''}<h2 class="title">${lock && pinAsk ? 'Déverrouiller l’appareil' : 'Espace parents'}</h2><p class="lead">Tape le code parents.</p>
+  return `<section class="pin">${pinFor ? `<button class="backlink" data-act="pinout">${I.chev}<span>Retour</span></button>` : ''}${lock && pinAsk ? `<button class="backlink" data-act="pinout">${I.chev}<span>Paramètres</span></button>` : ''}<h2 class="title">${pinFor ? 'Validation par un parent' : lock && pinAsk ? 'Déverrouiller l’appareil' : 'Espace parents'}</h2><p class="lead">Tape le code parents.</p>
 <div class="dots">${[0, 1, 2, 3].map(i => `<i class="${i < pinBuf.length ? 'on' : ''}"></i>`).join('')}</div>${pinBad ? '<p class="neg" style="margin:0;font-weight:800">Mauvais code</p>' : ''}
 <div class="keys">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button class="key" data-act="pin" data-n="${n}">${n}</button>`).join('')}<span></span><button class="key" data-act="pin" data-n="0">0</button><button class="key" data-act="pinback" style="font-size:16px">Effacer</button></div></section>`;
 }
@@ -499,7 +513,9 @@ function parentsView() {
   const dis = ready ? '' : 'disabled', K = kidOf(cur), last = evs(cur)[evs(cur).length - 1];
   const lastTxt = lastTxtOf(last);
   const pk = form.pkid && kidOf(form.pkid) ? form.pkid : cur;
-  return `<h2 class="title">Espace parents</h2>
+  const toOk = kids().flatMap(k => tot(k.id).waiting.map(e => ({ k, e })));
+  const okCard = toOk.length ? `<section class="card waitcard"><h3>À valider</h3><p class="soft small" style="margin:0">Argent reçu déclaré par les enfants. Il ne compte qu’une fois validé.</p><ul class="log">${toOk.map(({ k, e }) => `<li><span><b>${esc(k.name)}</b> · ${dateFr(e.d)}<br>${giftLine(e)}</span><span class="row" style="margin:0;gap:6px;flex-wrap:nowrap"><button class="btn gr sm" data-act="gok" data-k="${k.id}" data-d="${e.d}" ${ready ? '' : 'disabled'}>Valider</button><button class="btn ghost sm" data-act="gno" data-k="${k.id}" data-d="${e.d}" ${ready ? '' : 'disabled'}>Refuser</button></span></li>`).join('')}</ul></section>` : '';
+  return `<h2 class="title">Espace parents</h2>${okCard}
 <button class="item art-item parentread" data-act="go" data-v="lire"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent · 4 lectures courtes</small><b>La méthode Pépite, pour bien accompagner votre enfant</b></span><span class="end">${I.chev}</span></button>
 ${lock ? `<div class="msg">Cet appareil est verrouillé sur ${esc(K.name)}.<div class="row" style="margin-top:8px"><button class="btn sm" data-act="unlockdev">Déverrouiller l’appareil</button></div></div>` : ''}
 <section class="card"><h3>L’argent, en vrai</h3>
@@ -529,6 +545,8 @@ ${kids().map(k => { const pz = pauseOf(k.id); return `<div style="padding:12px 0
 <div class="swatches">${PAL.map((c, ci) => `<button class="sw" style="--c:${c}" title="${PALN[ci]}" data-act="kcolor" data-k="${k.id}" data-c="${c}" aria-pressed="${k.color === c}" aria-label="${PALN[ci]}"></button>`).join('')}</div></div>`).join('')}
 <div class="row"><button class="btn ghost full" data-act="kadd" ${dis}>Ajouter un enfant</button></div></section>
 <section class="card"><h3>Les règles du jeu</h3><p class="soft small" style="margin:0">Une paie par semaine, à ranger le jour qui vous arrange (la semaine va du lundi au dimanche). Si vous la versez en retard, les paies non rangées restent disponibles ${BACKLOG} semaines, puis elles sont perdues. </p><p class="soft small" style="margin:6px 0 0">Les bonus ne s’appliquent qu’à l’argent placé (les pièces que l’enfant place), jamais à celui qui va dans le porte-monnaie.</p>
+<p style="margin:12px 0 4px;font-weight:800">Faire valider l’argent reçu par un parent</p><div class="pills">${[[true, 'Oui'], [false, 'Non']].map(([v, l]) => `<button class="pill" data-act="giftcheck" data-n="${v}" aria-pressed="${giftCheck() === v}" ${ready ? '' : 'disabled'}>${l}</button>`).join('')}</div>
+<p class="soft small" style="margin:4px 0 0">Quand un enfant déclare de l’argent reçu, il ne compte qu’après votre validation : avec le code parents sur son écran, ou ici, dans « À valider ».</p>
 <p style="margin:12px 0 4px;font-weight:800">Augmenter la paie de 0,50 € à chaque anniversaire</p><div class="pills">${[[true, 'Oui'], [false, 'Non']].map(([v, l]) => `<button class="pill" data-act="raise" data-n="${v}" aria-pressed="${!!F.raise === v}" ${ready ? '' : 'disabled'}>${l}</button>`).join('')}</div>
 <p class="soft small" style="margin:4px 0 0">Le jour de son anniversaire, la paie de l’enfant augmente toute seule. Elle est aussi prise en compte dans les projections.</p>
 <label>Les enfants vous appellent<select data-set="parents">${Object.entries(PAR).filter(([k]) => k !== 'papamaman' || F.parents === k).map(([k, v]) => `<option value="${k}" ${F.parents === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>
@@ -792,17 +810,31 @@ function roll() {
     render();
   }, quick ? 30 : 1300);
 }
+const giftCheck = () => F.giftCheck !== false; // l'argent reçu doit être validé par un parent (oui par défaut)
 function doGift(ratio) {
   const amt = r2(num(form.gamount));
   if (!(amt > 0)) { say('Écris d’abord combien tu as reçu.'); return; }
   if (amt > 100000) { say('Montant trop élevé : 100 000 € maximum.'); return; }
   const inv2 = r2(amt * ratio), dep2 = r2(amt - inv2), bonus = r2(inv2 * gm() / 100), from = form.gfrom.trim();
   const before = tot(cur).total;
-  EV[cur] = [...evs(cur), { t: 'recu', d: iso(), from, inv: inv2, dep: dep2, bonus }];
+  const need = giftCheck();
+  EV[cur] = [...evs(cur), { t: 'recu', d: iso(), from, inv: inv2, dep: dep2, bonus, ...(need ? { pending: true } : {}) }];
   saveK(cur);
+  if (need) { say(`C’est noté ! ${P().label} doi${['parents', 'papamaman'].includes(F.parents) ? 'vent' : 't'} valider avant que l’argent compte.`); form.gamount = ''; form.gfrom = ''; return; }
   sayMs(before, inv2 ? `Super ! ${f(inv2 + bonus)} rejoignent ta tirelire.` : `${f(dep2)} dans ton porte-monnaie.`, inv2 ? `${dep2 ? `Garde ${f(dep2)} dans ton porte-monnaie et donne` : 'Donne'} ${f(inv2)} ${P().a} pour qu’ils soient mis en lieu sûr.` : '');
   form.gamount = ''; form.gfrom = ''; view = 'home';
 }
+function okGift(id, d, yes) {
+  const e = evs(id).find(x => x.t === 'recu' && x.d === d && x.pending); if (!e || !ready) return;
+  const before = tot(id).total;
+  EV[id] = evs(id).map(x => x === e ? (yes ? { ...x, pending: false, ok: iso() } : { ...x, pending: false, refused: iso() }) : x);
+  saveK(id);
+  if (!yes) { say(`Refusé : ${f(e.inv + e.dep)}${e.from ? ' de ' + esc(e.from) : ''} ne compte pas.`); return; }
+  if (id === cur && view === 'recu') { view = 'home'; window.scrollTo(0, 0); }
+  if (id === cur) sayMs(before, e.inv ? `Validé ! ${f(e.inv + e.bonus)} rejoignent ta tirelire.` : `Validé ! ${f(e.dep)} dans ton porte-monnaie.`, e.inv ? `Pense à mettre ${f(e.inv)} en lieu sûr.` : '');
+  else say(`Validé pour ${esc(kidOf(id).name)}.`);
+}
+const giftLine = e => `${f(e.inv + e.dep)}${e.from ? ' de ' + esc(e.from) : ''} : ${e.inv ? f(e.inv) + ' dans la tirelire' : ''}${e.inv && e.dep ? ', ' : ''}${e.dep ? f(e.dep) + ' dans le porte-monnaie' : ''}`;
 function doProject() {
   const k = form.pkid && kidOf(form.pkid) ? form.pkid : cur, a = r2(num(form.pamount)), label = form.plabel.trim(), T = tot(k);
   if (!label) { say('Indiquez le projet présenté.'); return; }
@@ -889,7 +921,7 @@ document.addEventListener('click', ev => {
     case 'obnext': if (obValidate()) { ob.step++; window.scrollTo(0, 0); } break;
     case 'obprev': ob.step--; ob.err = ''; window.scrollTo(0, 0); break;
     case 'obfinish': obFinish(); return;
-    case 'go': view = b.dataset.v; if (!['parents', 'lire', 'art', 'apropos'].includes(view)) { pinOk = false; } pinAsk = false; pinBuf = ''; pinBad = false; window.scrollTo(0, 0); break;
+    case 'go': pinFor = null; view = b.dataset.v; if (!['parents', 'lire', 'art', 'apropos'].includes(view)) { pinOk = false; } pinAsk = false; pinBuf = ''; pinBad = false; window.scrollTo(0, 0); break;
     case 'kid': cur = k; goalEdit = false; resetCoins(); try { localStorage.setItem('pepite-cur', cur); } catch (e) {} break;
     case 'toPig': if (tray.length) depC.push(tray.shift()); break;
     case 'toGrow': if (tray.length) invC.push(tray.shift()); break;
@@ -916,11 +948,11 @@ document.addEventListener('click', ev => {
     case 'bar': sel[cur] = +b.dataset.age; break;
     case 'pin':
       if (pinBuf.length < 4) pinBuf += b.dataset.n; pinBad = false;
-      if (pinBuf.length === 4) { if (pinBuf === F.pin) { if (pinAsk) { lock = null; pinAsk = false; pinOk = false; try { localStorage.removeItem('pepite-lock'); } catch (e) {} say('Appareil déverrouillé.'); } else pinOk = true; } else pinBad = true; pinBuf = ''; }
+      if (pinBuf.length === 4) { if (pinBuf === F.pin) { if (pinFor) { const pf = pinFor; pinFor = null; okGift(pf.k, pf.d, true); } else if (pinAsk) { lock = null; pinAsk = false; pinOk = false; try { localStorage.removeItem('pepite-lock'); } catch (e) {} say('Appareil déverrouillé.'); } else pinOk = true; } else pinBad = true; pinBuf = ''; }
       break;
     case 'pinback': pinBuf = pinBuf.slice(0, -1); break;
     case 'askpin': pinAsk = true; pinBuf = ''; pinBad = false; window.scrollTo(0, 0); break;
-    case 'pinout': pinAsk = false; pinBuf = ''; pinBad = false; break;
+    case 'pinout': pinFor = null; pinAsk = false; pinBuf = ''; pinBad = false; break;
     case 'unlockdev': lock = null; pinOk = false; try { localStorage.removeItem('pepite-lock'); } catch (e) {} say('Appareil déverrouillé.'); break;
     case 'lock': if (/^\d{4}$/.test(F.pin || '')) { lock = cur = k; pinOk = false; view = 'home'; resetCoins(); try { localStorage.setItem('pepite-lock', lock); } catch (e) {} window.scrollTo(0, 0); say(`Appareil réservé à ${esc(kidOf(k).name)}.`, 'Le code parents rouvre tout.'); } break;
     case 'donne': if (ready) { const T = tot(k); if (T.purseDue > 0) { EV[k] = [...evs(k), { t: 'donne', d: iso(), amount: T.purseDue }]; saveK(k); say(`${f(T.purseDue)} donnés à ${esc(kidOf(k).name)} pour son porte-monnaie.`, 'Le compteur repart de zéro.'); } } break;
@@ -957,6 +989,10 @@ document.addEventListener('click', ev => {
       break;
     }
     case 'raise': if (ready) { F.raise = b.dataset.n === 'true'; kids().forEach(k => { if (validBirth(k.birth)) k.raisedAge = ageAt(k.birth, new Date()); }); saveF(); say(F.raise ? 'La paie augmentera de 0,50 € à chaque anniversaire.' : 'La paie ne changera plus toute seule.'); } break;
+    case 'gval': if (ready) { if (F.pin) { pinFor = { k: cur, d: b.dataset.d }; pinBuf = ''; pinBad = false; window.scrollTo(0, 0); } else okGift(cur, b.dataset.d, true); } break;
+    case 'gok': okGift(b.dataset.k, b.dataset.d, true); break;
+    case 'gno': okGift(b.dataset.k, b.dataset.d, false); break;
+    case 'giftcheck': if (ready) { F.giftCheck = b.dataset.n === 'true'; saveF(); } break;
     case 'mycolor': { const x = kidOf(cur); if (x && ready && PAL.includes(b.dataset.c)) { x.color = b.dataset.c; saveF(); } break; }
     case 'kcolor': { const x = kidOf(k); if (x && ready) { x.color = b.dataset.c; saveF(); } break; }
     case 'kadd': if (ready) { const id = uid6(); const used = kids().map(z => z.color); F.kids.push({ id, start: iso(), posture: F.defaultPosture || 'equilibre', name: 'Nouvel enfant', birth: '2018-01-01', weekly: 3, color: PAL.find(c => !used.includes(c)) || PAL[0] }); EV[id] = []; KL[id] = true; saveK(id); saveF(); syncKids(); cur = id; say('Enfant ajouté : complétez sa fiche.'); } break;

@@ -383,3 +383,5 @@ main.view.guided{padding-bottom:300px}
 .demoin .post .tag{display:none}
 .guide .gbody p.gpar{font:700 13px/1.35 Nunito,sans-serif;color:var(--soft);margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
 .guide .gbody p.gpar b{color:var(--ink)}
+.waitcard{border-color:color-mix(in srgb,var(--gold) 60%,var(--line));background:color-mix(in srgb,var(--gold) 8%,var(--card))}
+.waitcard .log li{display:flex;flex-direction:column;align-items:stretch;gap:8px}.waitcard .log li .row{justify-content:flex-start}.waitcard .log li>.btn{align-self:flex-start}
