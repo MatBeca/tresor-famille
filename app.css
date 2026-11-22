@@ -399,3 +399,11 @@ main.view.guided{padding-bottom:300px}
 .mslog .mst small{font-weight:700;font-size:14px}
 .mech .mdef{font-style:italic;color:var(--soft);margin:0 0 6px}
 .mech p+p{margin-top:0}
+/* Leçons de l'enfant */
+.lesson .alead{font:600 19px/1.45 Fredoka,sans-serif;color:var(--ink)}
+.lesson p{font-size:17px}
+.quiz{margin:18px 0 6px;padding:14px;border-radius:20px;background:color-mix(in srgb,var(--kid) 8%,var(--card));border:2px solid color-mix(in srgb,var(--kid) 30%,var(--line))}
+.quiz h4{font:700 18px Fredoka,sans-serif;margin:0 0 4px}.quiz p{margin:0 0 10px}
+.quiz .btn{text-align:left;justify-content:flex-start}
+.qfb{font-weight:800;margin:10px 0 0 !important}
+.ic.artn svg[viewBox="0 0 24 24"]{width:22px;height:22px}

@@ -104,7 +104,7 @@ ${keep(['Épargner et investir ne s’improvisent pas : la plupart d’entre no
       ]
     },
     {
-      id: 'interets', n: 2, theme: 'Les intérêts composés', min: 5,
+      id: 'interets', n: 2, theme: 'Les intérêts composés', min: 3,
       title: 'Quand l’argent fait des petits',
       lead: 'Un placement, c’est de l’argent qu’on laisse de côté et qui rapporte. Pour qu’il rapporte beaucoup, il y a un secret en deux mots, intérêts composés, et un ingrédient, le temps. Explication sans jargon.',
       body: `
@@ -120,8 +120,17 @@ ${compoundChart()}
 ${twoKids()}
 <p>Inès a mis deux fois plus d’argent que Hugo, mais son argent lui a rapporté plus de quatre fois plus : 448 € contre 101 €. Ce n’est pas le montant qui a fait la différence, ce sont ses six années d’avance. Et la boule continue de rouler : 1 000 € laissés de côté à 18 ans deviennent environ 9 900 € à 65 ans, sans rien ajouter.</p>
 <p>Une règle de poche pour le dîner : divisez 72 par le taux, vous obtenez le nombre d’années qu’il faut pour doubler votre argent. À 5 %, un peu plus de 14 ans.</p>
-<h3>Ce que Pépite fait apprendre</h3>
-<p>Cinq notions que tout investisseur devrait connaître, et la fonctionnalité de Pépite qui les fait vivre.</p>
+${keep(['Un placement, c’est de l’argent qui rapporte parce qu’on ne le dépense pas.', 'Les gains rapportent à leur tour : c’est l’effet boule de neige des intérêts composés.', 'Le temps compte plus que le montant : commencer tôt est le vrai super-pouvoir.'])}`,
+      sources: [
+        ['Dimson, Marsh et Staunton, Global Investment Returns Yearbook (UBS), synthèse 1900-2023', 'https://allnews.ch/node/118784'],
+        ['Cambridge Judge Business School, 125 ans de rendements (2025)', 'https://www.jbs.cam.ac.uk/2025/report-stocks-have-far-outperformed-over-the-past-125-years/']
+      ]
+    },
+    {
+      id: 'notions', n: 3, theme: 'Ce que Pépite fait apprendre', min: 3,
+      title: 'Cinq notions d’investisseur, apprises en jouant',
+      lead: 'Épargne régulière, abondement, risque, intérêts composés, horizon de placement : les mots des grands, et la fonctionnalité de Pépite qui fait vivre chacun.',
+      body: `
 <div class="mech"><h4>L’épargne régulière</h4><p class="mdef">Mettre de côté une somme à intervalle fixe, plutôt qu’au hasard de ce qui reste en fin de mois.</p><p><b>Dans Pépite :</b> la paie en pièces. Chaque semaine, l’enfant range ses pièces une par une : dans le porte-monnaie pour dépenser, ou dans la tirelire pour placer. Il fait un vrai choix, 52 fois par an. C’est cette répétition qui transforme le geste en habitude.</p></div>
 <div class="mech"><h4>L’abondement</h4><p class="mdef">Un complément versé par quelqu’un d’autre, souvent l’employeur, sur l’argent que vous épargnez.</p><p><b>Dans Pépite :</b> le bonus des parents. « Tu places 4 pièces, on t’en donne 1. » Il ne s’applique qu’à l’argent placé, jamais à celui qui part dans le porte-monnaie : l’enfant voit tout de suite qu’épargner rapporte plus que dépenser.</p></div>
 <div class="mech"><h4>Le couple risque / rendement</h4><p class="mdef">Plus un placement peut rapporter, plus il peut aussi baisser. Moins de risque, c’est moins de surprises, mais aussi moins de gains.</p><p><b>Dans Pépite :</b> le dé de la bourse. Chaque semaine, l’enfant choisit son niveau de risque, puis lance le dé. En Prudent, il gagne peu mais ne perd presque jamais. En Aventurier, il peut gagner gros, mais il connaîtra de vraies semaines rouges. Équilibré est entre les deux, et « Je ne joue pas » ne rapporte rien mais ne risque rien. En moyenne, Prudent rapporte environ 5 % par an, Équilibré 11 % et Aventurier 17 % : c’est volontairement plus rapide que la vraie Bourse, pour voir en quelques mois ce qu’elle montre en plusieurs années.</p></div>
@@ -131,17 +140,15 @@ ${twoKids()}
 <p>C’est l’une des expériences les plus célèbres de la psychologie. À la fin des années 1960, à l’université Stanford, le psychologue Walter Mischel pose un marshmallow devant un enfant de 4 ou 5 ans et lui propose un marché : il peut le manger tout de suite, ou attendre quelques minutes seul dans la pièce et en recevoir deux. Les enfants qui attendaient semblaient mieux réussir plus tard, et l’on en a longtemps conclu que la patience était un don.</p>
 <p>La recherche a depuis nuancé. En 2018, l’expérience refaite avec plus de 900 enfants a trouvé un lien bien plus faible avec la réussite future (Watts, Duncan et Quan). Et en 2013, à l’université de Rochester, des chercheurs ont ajouté une étape juste avant le test : l’adulte faisait une petite promesse à l’enfant, de plus beaux crayons par exemple. Avec la moitié des enfants, il la tenait. Avec les autres, non. Les premiers ont ensuite attendu en moyenne 12 minutes devant le marshmallow, les seconds 3 minutes (Kidd, Palmeri et Aslin). La patience dépend d’abord de la confiance.</p>
 <p>C’est pour cela que Pépite tient un registre : chaque pièce est notée, chaque bonus calculé, rien ne se perd. L’enfant attend parce qu’il sait que ce qui est promis arrive.</p>
-${keep(['Un placement, c’est de l’argent qui rapporte parce qu’on ne le dépense pas.', 'Les gains rapportent à leur tour : c’est l’effet boule de neige des intérêts composés.', 'Le temps compte plus que le montant : commencer tôt est le vrai super-pouvoir.', 'Chaque mécanisme de Pépite entraîne un réflexe d’investisseur.'])}`,
+${keep(['Chaque fonctionnalité de Pépite entraîne un vrai réflexe d’investisseur.', 'Ce qu’on fait de ses mains, on le comprend mieux.', 'La patience s’apprend quand la promesse est tenue : c’est le rôle du registre.'])}`,
       sources: [
-        ['Dimson, Marsh et Staunton, Global Investment Returns Yearbook (UBS), synthèse 1900-2023', 'https://allnews.ch/node/118784'],
-        ['Cambridge Judge Business School, 125 ans de rendements (2025)', 'https://www.jbs.cam.ac.uk/2025/report-stocks-have-far-outperformed-over-the-past-125-years/'],
         ['Watts, Duncan et Quan (2018), Psychological Science, présentation APS', 'https://www.psychologicalscience.org/publications/observer/obsonline/a-new-approach-to-the-marshmallow-test-yields-complex-findings.html'],
         ['Kidd, Palmeri et Aslin (2013), Rational snacking, Cognition', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC3730121/'],
         ['Université de Rochester, communiqué sur l’étude Kidd et al.', 'https://www.rochester.edu/news/printable.php?id=4622']
       ]
     },
     {
-      id: 'rythme', n: 3, theme: 'Le bon rythme', min: 4,
+      id: 'rythme', n: 4, theme: 'Le bon rythme', min: 4,
       title: 'Quand commencer, combien donner ?',
       lead: 'Notre proposition tient en une ligne : on commence à 6 ans avec 1,50 € par semaine, et on ajoute 50 centimes à chaque anniversaire. Voici pourquoi, et pourquoi vous restez libre de tout.',
       body: `
@@ -170,7 +177,7 @@ ${keep(['On démarre à 6 ans avec 1,50 € par semaine, puis 50 centimes de pl
       ]
     },
     {
-      id: 'fonctions', n: 4, theme: 'Les fonctionnalités', min: 3,
+      id: 'fonctions', n: 5, theme: 'Les fonctionnalités', min: 3,
       title: 'Pépite, mode d’emploi en images',
       lead: 'Tout ce que fait l’appli, écran par écran.',
       body: () => features(h).map((x, i) => `<h3>${i + 1}. ${x.title}</h3>\n<p>${x.long}</p>\n${demo(x.visual, x.cap)}`).join('\n') + `
@@ -178,5 +185,72 @@ ${keep(['On démarre à 6 ans avec 1,50 € par semaine, puis 50 centimes de pl
 <p>La paie mise en pause en cas de conflit, avec un message pour l’enfant. L’onglet Futur qui projette la tirelire jusqu’à ses 18\u00a0ans. Le carnet qui garde tout l’historique. Plusieurs enfants, chacun sa couleur. Un mode sombre. Et un bouton pour annuler la dernière opération quand quelqu’un s’est trompé.</p>`,
       sources: []
     }
+  ];
+}
+
+
+/* ---------- Leçons pour les enfants (versions vulgarisées des articles parents) ---------- */
+export function lessons(h) {
+  const bonusTxt = h.bonusKid(h.match), fe = features(h);
+  h = { ...h, demo, payDemo: fe[0].visual, bonusDemo: fe[2].visual, diceDemo: fe[3].visual, nugDemo: fe[5].visual, kidsDemo: twoKids() };
+  return [
+    { id: 'epargne', n: 1, term: 'L’épargne', title: 'Pourquoi garder de l’argent pour plus tard ?',
+      intro: 'Ton argent a deux maisons : le porte-monnaie et la tirelire. Chacune a son rôle.',
+      body: `<p>Le <b>porte-monnaie</b>, c’est pour maintenant : un goûter, une petite surprise, un cadeau pour un copain.</p>
+<p>La <b>tirelire</b>, c’est pour plus tard : quelque chose de plus grand, que tu ne pourrais pas acheter avec une seule paie.</p>
+${h.demo(h.payDemo, 'Une pièce gardée pour maintenant, deux pièces mises de côté.')}
+<p>Garder un peu d’argent pour plus tard, ça s’appelle <b>épargner</b>. Pas besoin de tout mettre de côté : l’important, c’est de le faire un peu chaque semaine. C’est comme le brossage des dents, ça devient une habitude.</p>`,
+      know: 'Un adulte sur quatre en France ne met pas du tout d’argent de côté. Toi, tu apprends dès maintenant !',
+      quiz: { q: 'Tu rêves d’une trottinette à 60 € et ta paie est de 2 € par semaine. Que fais-tu ?', a: ['Je dépense toute ma paie chaque semaine', 'Je mets une partie dans ma tirelire chaque semaine'], ok: 1, yes: 'Bravo ! Semaine après semaine, ta tirelire grossit jusqu’à la trottinette.', no: 'Si tu dépenses tout, ta tirelire reste vide et la trottinette ne viendra jamais.' },
+      act: ['paie', 'Ranger ma paie'] },
+    { id: 'bonus', n: 2, term: 'L’abondement', title: 'Le bonus : des pièces en cadeau',
+      intro: 'Quand tu mets des pièces dans ta tirelire, on t’en ajoute. C’est le bonus !',
+      body: `<p>Voici la règle chez toi : <b>${bonusTxt}</b>.</p>
+${h.demo(h.bonusDemo, 'Des pièces placées, une pièce offerte.')}
+<p>Pourquoi ? Pour te récompenser d’avoir pensé à plus tard. Attention : l’argent que tu mets dans ton porte-monnaie, lui, n’a pas de bonus.</p>
+<p>Chez les grands, ça existe aussi : certaines entreprises ajoutent de l’argent quand leurs employés en mettent de côté. Ça s’appelle <b>l’abondement</b>. Tu connais déjà un mot de grand !</p>`,
+      know: 'Le bonus, c’est de l’argent gagné sans rien faire de plus : juste en choisissant la tirelire.',
+      quiz: { q: 'Sur quel argent reçois-tu un bonus ?', a: ['L’argent du porte-monnaie', 'L’argent de la tirelire', 'Les deux'], ok: 1, yes: 'Exact ! Le bonus récompense l’argent que tu gardes pour plus tard.', no: 'Pas tout à fait : le bonus ne tombe que sur l’argent mis dans la tirelire.' },
+      act: ['paie', 'Voir mon bonus'] },
+    { id: 'risque', n: 3, term: 'Le risque et le rendement', title: 'Le dé : prudent ou aventurier ?',
+      intro: 'Avec la bourse, ton argent peut grossir… ou rétrécir un peu. À toi de choisir jusqu’où tu oses aller.',
+      body: `<p><b>Prudent</b> : tu gagnes un tout petit peu, et tu ne perds presque jamais.</p>
+<p><b>Aventurier</b> : tu peux gagner gros, mais certaines semaines, tu perds vraiment.</p>
+<p><b>Équilibré</b> est entre les deux. Et <b>Je ne joue pas</b> : rien ne bouge, ni gain ni perte.</p>
+${h.demo(h.diceDemo, 'Avec 100 € : les faces vertes font gagner, les rouges font perdre.')}
+<p>Voici la règle d’or de l’argent : <b>plus tu peux gagner gros, plus tu peux perdre gros</b>. Les grands appellent ça <b>le risque et le rendement</b>.</p>
+<p>Et une mauvaise semaine, ce n’est pas grave : ce qui compte, c’est toute l’année.</p>`,
+      know: 'Même les champions de la Bourse ont des mauvaises semaines. Ils ne paniquent pas : ils attendent.',
+      quiz: { q: 'Quelle stratégie peut te faire perdre le plus ?', a: ['Prudent', 'Équilibré', 'Aventurier'], ok: 2, yes: 'Oui ! Aventurier peut rapporter le plus… et faire perdre le plus.', no: 'Non : c’est Aventurier, la stratégie qui ose le plus.' },
+      act: ['bourse', 'Aller à la bourse'] },
+    { id: 'composes', n: 4, term: 'Les intérêts composés', title: 'La boule de neige de l’argent',
+      intro: 'Imagine une boule de neige qui roule : plus elle est grosse, plus elle ramasse de neige. L’argent placé fait pareil.',
+      body: `<p>Quand le dé te fait gagner, ce gain reste dans ta tirelire. La semaine d’après, le dé joue aussi sur lui : ton gain peut gagner à son tour !</p>
+<p>C’est la <b>couche verte</b> de ta tirelire. Plus ta tirelire est pleine, plus elle grossit vite. Les grands appellent ça <b>les intérêts composés</b>.</p>
+<p>Et le temps est ton super-pouvoir. Inès et Hugo mettent la même chose de côté chaque semaine. Inès commence à 6 ans, Hugo à 12 ans :</p>
+${h.kidsDemo}
+<p>Inès a gagné <b>quatre fois plus</b> que Hugo, juste parce qu’elle a commencé plus tôt. Ce n’est pas le montant qui compte le plus, c’est le temps.</p>`,
+      know: 'Toi, tu commences avant tes 18 ans. Beaucoup de grands n’ont commencé qu’à 35 ans !',
+      quiz: { q: 'Qui gagne le plus avec la boule de neige ?', a: ['Celui qui commence tôt', 'Celui qui commence tard'], ok: 0, yes: 'Oui ! Plus la boule roule longtemps, plus elle grossit.', no: 'Non : celui qui commence tôt laisse plus de temps à sa boule de neige.' },
+      act: ['futur', 'Voir mon futur'] },
+    { id: 'patience', n: 5, term: 'L’horizon de placement', title: 'Attendre pour avoir mieux',
+      intro: 'Un jour, un savant a proposé un marché à des enfants : un bonbon tout de suite, ou deux bonbons s’ils attendaient quelques minutes. Toi, tu aurais fait quoi ?',
+      body: `<p>Ta tirelire, c’est un peu pareil : l’argent que tu laisses travailler longtemps grossit plus que celui que tu dépenses tout de suite.</p>
+<p>C’est pour ça que l’argent de ta tirelire est <b>bloqué</b>. Pour le récupérer, tu choisis un projet. À chaque étape, ta pépite grossit :</p>
+${h.demo(h.nugDemo, 'De la petite pépite à « C’est pépite ! »')}
+<p>Quand ton projet est atteint, tu le présentes à tes parents : pourquoi tu le veux, combien il coûte, ce qu’il va t’apporter. S’ils sont convaincus, ils débloquent ton argent.</p>
+<p>Le temps pendant lequel on ne touche pas à son argent, les grands l’appellent <b>l’horizon de placement</b>.</p>`,
+      know: 'Pas d’idée de projet ? Pas grave : ta tirelire grossit quand même. Certains commencent même à mettre de côté pour leur permis de conduire !',
+      quiz: { q: 'Que dois-tu faire pour récupérer l’argent de ta tirelire ?', a: ['Le prendre quand je veux', 'Présenter mon projet à mes parents'], ok: 1, yes: 'C’est ça ! Un projet bien expliqué débloque ton argent.', no: 'Non : l’argent de la tirelire attend ton projet, c’est ce qui le fait grossir.' },
+      act: ['projet', 'Voir mon projet'] },
+    { id: 'bourse', n: 6, term: 'La Bourse', title: 'C’est quoi, la vraie Bourse ?',
+      intro: 'Ton dé imite quelque chose qui existe pour de vrai : la Bourse. Voici comment elle marche.',
+      body: `<p>Pense à une entreprise que tu connais : celle qui fabrique tes céréales, tes baskets ou ton jeu vidéo préféré. Pour grandir, elle a besoin d’argent.</p>
+<p>Alors elle se découpe en tout petits morceaux, appelés <b>actions</b>, que tout le monde peut acheter. Avoir une action, c’est posséder un minuscule bout de l’entreprise !</p>
+<p>Si l’entreprise marche bien, ton morceau vaut plus cher. Si elle a des difficultés, il peut baisser. <b>La Bourse</b>, c’est le grand marché où l’on achète et vend ces morceaux.</p>
+<p>Il existe aussi des placements qui ne baissent jamais, comme le <b>Livret A</b> à la banque. Mais ils grossissent très lentement. Sur de longues années, la Bourse a rapporté beaucoup plus, avec des hauts et des bas. Exactement comme ton dé.</p>`,
+      know: 'Ton dé est plus rapide que la vraie Bourse : il montre en quelques mois ce qu’elle met des années à faire.',
+      quiz: { q: 'Une action, c’est…', a: ['Un petit morceau d’entreprise', 'Un jeu de cartes', 'Une pièce de monnaie spéciale'], ok: 0, yes: 'Exactement ! Avec une action, tu possèdes un minuscule bout d’entreprise.', no: 'Non : une action, c’est un petit morceau d’une entreprise.' },
+      act: ['bourse', 'Aller à la bourse'] }
   ];
 }

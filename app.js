@@ -1,10 +1,10 @@
-import { articles, features } from './articles.js';
+import { articles, features, lessons } from './articles.js';
 import { Idiomorph } from './vendor/idiomorph.esm.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '76'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '78'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -88,7 +88,7 @@ let toast = null, toastT = null, undoArm = false, wipeArm = false, delArm = null
 const projInv = {}, sel = {}, projStrat = {}; // projStrat : stratégie essayée dans Futur (simulation, ne change pas la vraie)
 const form = { preason: '', pdur: '1', resetname: '', goalname: '', goalbudget: '', gamount: '', gfrom: '', plabel: '', pamount: '', pkid: '', email: '', pass: '', newpin: '' };
 let loginMode = 'in', loginMsg = '', loginErr = '', busy = false;
-let ob = null, artId = null, tour = null, tourAuto = false, guide = null, guidePlan = null, guideKind = 'pay', guidePaid = false, guideShown = -1, guideOff = {};
+let ob = null, artId = null, lessonId = null, kq = {}, tour = null, tourAuto = false, guide = null, guidePlan = null, guideKind = 'pay', guidePaid = false, guideShown = -1, guideOff = {};
 const BOURSE_MIN = 15; // la bourse s'ouvre quand la tirelire atteint 15 € (dès là, Équilibré et Aventurier font bouger le dé)
 try { lock = localStorage.getItem('pepite-lock'); cur = localStorage.getItem('pepite-cur'); } catch (e) {}
 
@@ -262,7 +262,7 @@ ${loginErr ? `<p class="neg" style="margin:10px 0 0;font-weight:700">${esc(login
 <div class="row"><button class="btn full" type="submit" ${busy ? 'disabled' : ''}>${up ? 'Créer le compte' : 'Se connecter'}</button></div>
 ${up ? '' : '<button class="link" type="button" data-act="reset">Mot de passe oublié ?</button>'}
 <p class="soft small" style="margin:8px 0 0">Un seul compte pour toute la famille : un parent se connecte une fois sur chaque appareil.</p></form>
-<button class="item art-item" data-act="go" data-v="lire" style="margin:18px 0 4px"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent · 4 lectures courtes</small><b>Pourquoi ça marche\u00a0: la méthode Pépite expliquée</b></span><span class="end">${I.chev}</span></button>
+<button class="item art-item" data-act="go" data-v="lire" style="margin:18px 0 4px"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent · 5 lectures courtes</small><b>Pourquoi ça marche\u00a0: la méthode Pépite expliquée</b></span><span class="end">${I.chev}</span></button>
 <button class="link" data-act="go" data-v="apropos" style="display:block;margin:6px auto 0">Qui a créé Pépite ?</button></main>`;
 }
 
@@ -337,6 +337,7 @@ ${t.out > 0 ? `<p class="soft small" style="margin:8px 4px 0">Projets réalisés
 <button class="item" data-act="go" data-v="paie"><span class="ic" style="background:#fff3c4;color:#a87300">${I.coin}</span><span><b>Ma paie</b><small>${pauseOf(cur) ? 'En pause ' + untilTxt(pauseOf(cur)) : paid ? 'Rangée, bravo !' : due > 1 ? `${due} paies t’attendent` : `${f(k.weekly)} t’attendent`}</small></span><span class="end ${paid && !pauseOf(cur) ? 'done' : ''}">${paid && !pauseOf(cur) ? I.check : I.chev}</span></button>
 <button class="item" data-act="go" data-v="bourse"><span class="ic" style="background:var(--glass)">${I.die}</span><span><b>La bourse</b><small>${!bourseOpen(cur) ? `S’ouvre quand ta tirelire aura ${f(BOURSE_MIN)}` : !t.rolls.length && !rolled ? 'Nouveau : la bourse est ouverte !' : postOf(cur) === 'none' ? 'Tu ne joues pas la bourse' : rolled ? `Dé ${t.bourse.face} : ${eurS(t.bourse.gain)}` : 'Lance le dé de la semaine'}</small></span><span class="end ${rolled ? 'done' : ''}">${rolled ? I.check : I.chev}</span></button>
 <button class="item" data-act="go" data-v="recu"><span class="ic" style="background:color-mix(in srgb,var(--grow) 14%,transparent);color:var(--grow)">${I.gift}</span><span><b>J’ai reçu de l’argent</b><small>${t.waiting.length ? `${t.waiting.length} en attente de validation` : 'Un cadeau, un anniversaire ?'}</small></span><span class="end">${I.chev}</span></button>
+<button class="item" data-act="go" data-v="lecons"><span class="ic" style="background:color-mix(in srgb,var(--gold) 22%,var(--card));color:#6e4400">${NUG('', '')}</span><span><b>Comprendre l’argent</b><small>6 petites leçons et des quiz</small></span><span class="end">${I.chev}</span></button>
 <button class="item" data-act="go" data-v="carnet"><span class="ic" style="background:var(--glass)">${I.book}</span><span><b>Mon carnet</b><small>Tout ce qui est entré et sorti</small></span><span class="end">${I.chev}</span></button></div>`;
 }
 
@@ -502,6 +503,26 @@ function pinView() {
 <div class="keys">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button class="key" data-act="pin" data-n="${n}">${n}</button>`).join('')}<span></span><button class="key" data-act="pin" data-n="0">0</button><button class="key" data-act="pinback" style="font-size:16px">Effacer</button></div></section>`;
 }
 
+
+/* ---------- Leçons de l'enfant ---------- */
+const lessonList = () => lessons({ ...H(), bonusKid, match: F.match });
+function leconsView() {
+  const L = lessonList();
+  return `<h2 class="title">Comprendre l’argent</h2><p class="lead">${L.length} petites leçons pour devenir un as de l’argent. Chacune se lit, ou s’écoute, en deux minutes.</p>
+<div class="list">${L.map(x => { const done = kq[x.id] === x.quiz.ok; return `<button class="item art-item" data-act="lecon" data-n="${x.id}"><span class="ic artn">${done ? I.check : x.n}</span><span><small>${x.term}</small><b>${x.title}</b></span><span class="end">${I.chev}</span></button>`; }).join('')}</div>`;
+}
+function leconView() {
+  const L = lessonList(), i = Math.max(0, L.findIndex(x => x.id === lessonId)), x = L[i], next = L[i + 1], ans = kq[x.id];
+  return `<button class="backlink" data-act="go" data-v="lecons">${I.chev}<span>Mes leçons</span></button>
+<article class="art lesson"><p class="kicker">Leçon ${x.n} · ${x.term}</p><h2>${x.title}</h2>
+<button class="link gspeak" data-act="kread" style="margin:6px 0 4px">${I.speak}Écoute la leçon</button>
+<p class="alead">${x.intro}</p>${x.body}
+<div class="keep"><h4>Le savais-tu ?</h4><p style="margin:0">${x.know}</p></div>
+<section class="quiz"><h4>Petit quiz</h4><p>${x.quiz.q}</p><div class="list">${x.quiz.a.map((t, j) => `<button class="btn ${ans === j ? (j === x.quiz.ok ? 'gr' : 'danger') : 'ghost'} full" data-act="kq" data-n="${j}">${t}</button>`).join('')}</div>
+${ans !== undefined ? `<p class="qfb ${ans === x.quiz.ok ? 'g' : 'neg'}">${ans === x.quiz.ok ? x.quiz.yes : x.quiz.no + ' Essaie encore !'}</p>` : ''}</section>
+<div class="row"><button class="btn gold full" data-act="go" data-v="${x.act[0]}">À essayer dans Pépite : ${x.act[1]}</button></div></article>
+${next ? `<button class="item art-item nextart" data-act="lecon" data-n="${next.id}"><span class="ic artn">${next.n}</span><span><small>Leçon suivante</small><b>${next.title}</b></span><span class="end">${I.chev}</span></button>` : `<div class="row"><button class="btn full" data-act="go" data-v="lecons">Toutes mes leçons</button></div>`}`;
+}
 function lockedView() {
   const dis = ready ? '' : 'disabled', K = kidOf(cur), last = evs(cur)[evs(cur).length - 1], can = last && KID_UNDO.includes(last.t);
   return `<h2 class="title">Paramètres</h2>
@@ -510,6 +531,7 @@ function lockedView() {
 <section class="card"><h3>Corriger une erreur</h3>
 ${!last ? `<p class="soft" style="margin:0">Rien à annuler.</p>` : can ? `<p class="soft small" style="margin:0">Une erreur en rangeant tes pièces\u00a0? Tu peux annuler ${lastTxtOf(last)} et recommencer.</p><div class="row"><button class="btn ghost sm" data-act="undo" ${dis}>${undoArm ? 'Confirmer : annuler ' + lastTxtOf(last) : 'Annuler ' + lastTxtOf(last)}</button></div>`
   : `<p class="soft small" style="margin:0">Seul un parent peut annuler ${lastTxtOf(last)}.</p>`}</section>
+<section class="card"><h3>Mes leçons</h3><p class="soft small" style="margin:0">6 petites leçons pour comprendre l’argent, avec un quiz.</p><div class="row"><button class="btn ghost sm" data-act="go" data-v="lecons">Ouvrir mes leçons</button></div></section>
 <section class="card"><h3>Le guide de Pépite</h3><p class="soft small" style="margin:0">Pépite te remontre tout, pas à pas.</p><div class="row"><button class="btn ghost sm" data-act="gstart">Revoir le guide</button></div></section>
 <section class="card"><h3>Ma couleur</h3><p class="soft small" style="margin:0">Choisis la couleur de ta tirelire et de ton appli.</p>
 <div class="swatches">${PAL.map((c, ci) => `<button class="sw" style="--c:${c}" title="${PALN[ci]}" data-act="mycolor" data-c="${c}" aria-pressed="${K.color === c}" aria-label="${PALN[ci]}" ${dis}></button>`).join('')}</div></section>
@@ -524,7 +546,7 @@ function parentsView() {
   const toOk = kids().flatMap(k => tot(k.id).waiting.map(e => ({ k, e })));
   const okCard = toOk.length ? `<section class="card waitcard"><h3>À valider</h3><p class="soft small" style="margin:0">Argent reçu déclaré par les enfants. Il ne compte qu’une fois validé.</p><ul class="log">${toOk.map(({ k, e }) => `<li><span><b>${esc(k.name)}</b> · ${dateFr(e.d)}<br>${giftLine(e)}</span><span class="row" style="margin:0;gap:6px;flex-wrap:nowrap"><button class="btn gr sm" data-act="gok" data-k="${k.id}" data-d="${e.d}" ${ready ? '' : 'disabled'}>Valider</button><button class="btn ghost sm" data-act="gno" data-k="${k.id}" data-d="${e.d}" ${ready ? '' : 'disabled'}>Refuser</button></span></li>`).join('')}</ul></section>` : '';
   return `<h2 class="title">Espace parents</h2>${okCard}
-<button class="item art-item parentread" data-act="go" data-v="lire"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent · 4 lectures courtes</small><b>La méthode Pépite, pour bien accompagner votre enfant</b></span><span class="end">${I.chev}</span></button>
+<button class="item art-item parentread" data-act="go" data-v="lire"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent · 5 lectures courtes</small><b>La méthode Pépite, pour bien accompagner votre enfant</b></span><span class="end">${I.chev}</span></button>
 ${lock ? `<div class="msg">Cet appareil est verrouillé sur ${esc(K.name)}.<div class="row" style="margin-top:8px"><button class="btn sm" data-act="unlockdev">Déverrouiller l’appareil</button></div></div>` : ''}
 <section class="card"><h3>L’argent, en vrai</h3>
 <p class="soft small" style="margin:0">Pépite tient les comptes, et vous réglez quand vous voulez : chaque semaine, une fois par mois… Deux compteurs par enfant :</p>
@@ -609,7 +631,7 @@ ${user ? '' : `<div class="row"><button class="btn full" data-act="signup">Crée
 function lireView() {
   const back = user ? 'parents' : 'home';
   return `<button class="backlink" data-act="go" data-v="${back}">${I.chev}<span>${user ? 'Espace parents' : 'Retour'}</span></button>
-<p class="kicker">Toi, parent</p><h2 class="title">La méthode Pépite, expliquée aux parents</h2><p class="lead">Pourquoi commencer si tôt, comment l’argent fait des petits, combien donner, et tout ce que fait l’appli. Quatre lectures courtes pour tout comprendre et bien accompagner votre enfant.</p>
+<p class="kicker">Toi, parent</p><h2 class="title">La méthode Pépite, expliquée aux parents</h2><p class="lead">Pourquoi commencer si tôt, comment l’argent fait des petits, ce que votre enfant apprend vraiment, combien donner, et tout ce que fait l’appli. Cinq lectures courtes pour tout comprendre et bien accompagner votre enfant.</p>
 <div class="list">${artList().map(x => `<button class="item art-item" data-act="art" data-n="${x.id}"><span class="ic artn">${x.n}</span><span><small>${x.theme} · ${x.min} min</small><b>${x.title}</b></span><span class="end">${I.chev}</span></button>`).join('')}</div>`;
 }
 function artView() {
@@ -707,7 +729,7 @@ function mainView() {
     else if (!k.bguided && view === 'bourse' && bourseOpen(cur) && !evs(cur).some(e => e.t === 'bourse')) { guideKind = 'bourse'; guide = 0; }
   }
   const t = tot(cur);
-  const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : view === 'lire' ? lireView() : view === 'art' ? artView() : view === 'apropos' ? aproposView() : homeView(k, t);
+  const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : view === 'lire' ? lireView() : view === 'art' ? artView() : view === 'apropos' ? aproposView() : view === 'lecons' ? leconsView() : view === 'lecon' ? leconView() : homeView(k, t);
   return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view${guide !== null ? ' guided' : ''}">${content}</main>${guide !== null && (guideKind === 'bourse' ? view === 'bourse' : ['home', 'paie', 'bourse', 'projet'].includes(view)) ? guideView(k) : ''}${tabbar()}${resetFor ? resetModal() : ''}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
 }
 
@@ -719,7 +741,7 @@ function render() {
   else if (!user) { if (!tourAuto && view === 'home') { tourAuto = true; let seen = null; try { seen = localStorage.getItem('pepite-tour'); } catch (e) {} if (!seen) tour = 0; } const pub = view === 'lire' || view === 'art' || view === 'apropos'; html = pub ? `<main class="view full">${view === 'lire' ? lireView() : view === 'apropos' ? aproposView() : artView()}</main>` : loginView() + (tour !== null ? tourModal() : ''); key = 'login:' + (pub ? view + ':' + artId : '') + (!pub && tour !== null ? ':tour' + tour : ''); }
   else if (!famLoaded) { html = splash('Ouverture de la banque…'); key = 'splash2'; }
   else if (!F) { if (!ob) { ob = newOb(); tryLegacy(); } if (view === 'art') { key = 'obart:' + artId; html = `<main class="view full">${artView()}</main>`; } else { key = 'ob' + ob.step; html = obView(); } color = ob.step === 2 && ob.kids[0] ? ob.kids[0].color : PAL[1]; }
-  else { html = mainView(); key = 'main:' + view + ':' + (view === 'art' ? artId : '') + ':' + cur + ':' + (lock && !pinOk ? (pinAsk ? 'pin' : 'lk') : '') + (resetFor ? ':modal' : ''); const k = kidOf(cur); if (k) color = k.color; }
+  else { html = mainView(); key = 'main:' + view + ':' + (view === 'art' ? artId : view === 'lecon' ? lessonId : '') + ':' + cur + ':' + (lock && !pinOk ? (pinAsk ? 'pin' : 'lk') : '') + (resetFor ? ':modal' : ''); const k = kidOf(cur); if (k) color = k.color; }
   document.documentElement.style.setProperty('--kid', color); document.documentElement.style.setProperty('--kidon', onColor(color));
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', color);
   const app = document.getElementById('app');
@@ -1002,6 +1024,9 @@ document.addEventListener('click', ev => {
     case 'gno': okGift(b.dataset.k, b.dataset.d, false); break;
     case 'giftcheck': if (ready) { F.giftCheck = b.dataset.n === 'true'; saveF(); } break;
     case 'pstrat': if (POST[b.dataset.n]) projStrat[cur] = b.dataset.n; break;
+    case 'lecon': view = 'lecon'; lessonId = b.dataset.n; window.scrollTo(0, 0); break;
+    case 'kq': { const x = lessonList().find(l => l.id === lessonId); if (x) kq[x.id] = +b.dataset.n; break; }
+    case 'kread': { const el = document.querySelector('.lesson'); if (!el) return; try { if (speechSynthesis.speaking) { speechSynthesis.cancel(); return; } const txt = [...el.querySelectorAll('h2, .alead, p:not(.kicker):not(.qfb), h4')].filter(e => !e.closest('.quiz') && !e.closest('figure')).map(e => e.innerText).join('. '); const u = new SpeechSynthesisUtterance(txt); u.lang = 'fr-FR'; u.rate = 0.95; const v = speechSynthesis.getVoices().find(z => /^fr/i.test(z.lang)); if (v) u.voice = v; speechSynthesis.speak(u); } catch (e) {} return; }
     case 'mycolor': { const x = kidOf(cur); if (x && ready && PAL.includes(b.dataset.c)) { x.color = b.dataset.c; saveF(); } break; }
     case 'kcolor': { const x = kidOf(k); if (x && ready) { x.color = b.dataset.c; saveF(); } break; }
     case 'kadd': if (ready) { const id = uid6(); const used = kids().map(z => z.color); F.kids.push({ id, start: iso(), posture: F.defaultPosture || 'equilibre', name: 'Nouvel enfant', birth: '2018-01-01', weekly: 3, color: PAL.find(c => !used.includes(c)) || PAL[0] }); EV[id] = []; KL[id] = true; saveK(id); saveF(); syncKids(); cur = id; say('Enfant ajouté : complétez sa fiche.'); } break;
