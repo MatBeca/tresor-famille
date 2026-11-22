@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '56'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '57'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -352,11 +352,14 @@ function giftView(k) {
 }
 
 function miniDie(n, c) { return `<svg viewBox="0 0 100 100" width="30" height="30" aria-hidden="true"><rect x="6" y="6" width="88" height="88" rx="22" fill="#fff" stroke="${c}" stroke-width="8"/>${PIPS[n].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="10" fill="#22203a"/>`).join('')}</svg>`; }
+// À partir de combien d'euros dans la tirelire au moins une face du dé rapporte ou coûte 50 centimes.
+const diceFrom = p => { const mx = Math.max(...POST[p].faces.map(Math.abs)); return mx ? Math.ceil(0.25 / (mx / 100) * 2) / 2 : null; };
 function postureCard(p, sel, start, own) {
   const d = POST[p];
   if (p === 'none') return `<button class="post ${sel ? 'on' : ''}" data-act="posture" data-n="none" aria-pressed="${sel}"><span class="ph"><b>${d.name}</b>${sel ? `<span class="tag">Ma stratégie</span>` : ''}</span><span class="pt">${d.txt}</span><span class="pr">Les 6 faces ne changent rien : ta tirelire ne bouge pas.</span><span class="soft small">${d.like}</span></button>`;
   const v = d.faces.map(x => r50(start * x / 100)), up = v.filter(x => x > 0).length, dn = v.filter(x => x < 0).length, eq = 6 - up - dn;
-  const cnt = [up ? `<span class="g">${up} face${up > 1 ? 's' : ''} sur 6 ${up > 1 ? 'font' : 'fait'} gagner</span>` : '', eq ? `${eq} ne change${eq > 1 ? 'nt' : ''} rien` : '', dn ? `<span class="neg">${dn} ${dn > 1 ? 'font' : 'fait'} perdre</span>` : ''].filter(Boolean).join(' · ');
+  const still = up + dn === 0;
+  const cnt = still ? `Avec ${f(start)} dans ta tirelire, le dé ne change encore rien. Il commencera à bouger à partir de <b>${f(diceFrom(p))}</b>.` : [up ? `<span class="g">${up} face${up > 1 ? 's' : ''} sur 6 ${up > 1 ? 'font' : 'fait'} gagner</span>` : '', eq ? `${eq} ne change${eq > 1 ? 'nt' : ''} rien` : '', dn ? `<span class="neg">${dn} ${dn > 1 ? 'font' : 'fait'} perdre</span>` : ''].filter(Boolean).join(' · ');
   return `<button class="post ${sel ? 'on' : ''}" data-act="posture" data-n="${p}" aria-pressed="${sel}">
 <span class="ph"><b>${d.name}</b>${sel ? `<span class="tag">Ma stratégie</span>` : ''}</span><span class="pt">${d.txt}</span>
 <span class="dfaces">${v.map((x, i) => `<span class="df ${x > 0 ? 'up' : x < 0 ? 'dn' : ''}">${miniDie(i + 1, x > 0 ? '#13a05a' : x < 0 ? '#e0434f' : '#a39cb8')}<b>${eurS(x)}</b></span>`).join('')}</span>
@@ -364,7 +367,7 @@ function postureCard(p, sel, start, own) {
 }
 function bourseView(k, t) {
   const p = postOf(cur), rolled = sameWeek(t.bourse && t.bourse.d), recent = t.rolls.slice(-8).reverse();
-  const own = t.total >= 20, start = own ? r2(t.total) : 100;
+  const own = true, start = Math.max(0, r2(t.total)); // toujours la vraie tirelire de l'enfant
   const pays = F.parents === 'parents' || F.parents === 'papamaman' ? 'nt' : '';
   const diceH = `<h3 class="sec">${rolled ? 'Le dé de la semaine' : '2. Lance le dé'}</h3><section class="card dicebox">${p === 'none' ? `<p class="result">Tu ne joues pas la bourse.</p><p style="margin:0">Ta tirelire ne bouge pas : pas de gain, pas de perte. Tu peux changer d’avis quand tu veux, juste en dessous.</p>`
   : `<p class="soft small" style="margin:0">Ta stratégie : <b>${POST[p].name}</b></p><div id="die">${die(rolled ? t.bourse.face : 6, 132)}</div>
