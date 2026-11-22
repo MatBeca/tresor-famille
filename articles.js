@@ -190,6 +190,18 @@ ${keep(['On démarre à 6 ans avec 1,50 € par semaine, puis 50 centimes de pl
 
 
 /* ---------- Leçons pour les enfants (versions vulgarisées des articles parents) ---------- */
+// Bonus illustré selon le taux réel de la famille : n pièces placées, g offertes
+export function bonusPlan(m) {
+  if (!(m > 0)) return null;
+  for (let n = 1; n <= 10; n++) { const g = n * m / 100; if (Number.isInteger(g) && g >= 1) return { n, g }; }
+  return null;
+}
+function bonusVis(h, m) {
+  const p = bonusPlan(m); if (!p) return '';
+  const w = p.n > 6 || p.g > 6 ? 38 : 50;
+  const many = k => `<div class="bcoins" style="grid-template-columns:repeat(${Math.min(k, k > 4 ? Math.ceil(k / 2) : 2)},${w}px)">${Array.from({ length: k }, () => h.coinEl(1)).join('')}</div>`;
+  return `<div class="bonusdemo${w < 50 ? ' sm' : ''}">${many(p.n)}<span class="bplus">+</span><div class="bgift">${many(p.g)}<small>${p.g > 1 ? 'offertes' : 'offerte'} par les parents</small></div></div>`;
+}
 export function lessons(h) {
   const bonusTxt = h.bonusKid(h.match), fe = features(h);
   h = { ...h, demo, payDemo: fe[0].visual, bonusDemo: fe[2].visual, diceDemo: fe[3].visual, nugDemo: fe[5].visual, kidsDemo: twoKids() };
@@ -205,8 +217,8 @@ ${h.demo(h.payDemo, 'Une pièce gardée pour maintenant, deux pièces mises de c
       act: ['paie', 'Ranger ma paie'] },
     { id: 'bonus', n: 2, term: 'L’abondement', title: 'Le bonus : des pièces en cadeau',
       intro: 'Quand tu mets des pièces dans ta tirelire, on t’en ajoute. C’est le bonus !',
-      body: `<p>Voici la règle chez toi : <b>${bonusTxt}</b>.</p>
-${h.demo(h.bonusDemo, 'Des pièces placées, une pièce offerte.')}
+      body: `<p>${h.match > 0 ? `Voici la règle chez toi : <b>${bonusTxt}</b>.` : 'Chez toi, tes parents n’ont pas encore mis de bonus. Mais voici comment ça marche.'}</p>
+${(() => { const p = bonusPlan(h.match); return p ? h.demo(bonusVis(h, h.match), `${p.n} pièce${p.n > 1 ? 's' : ''} placée${p.n > 1 ? 's' : ''}, ${p.g} pièce${p.g > 1 ? 's' : ''} offerte${p.g > 1 ? 's' : ''}.`) : ''; })()}
 <p>Pourquoi ? Pour te récompenser d’avoir pensé à plus tard. Attention : l’argent que tu mets dans ton porte-monnaie, lui, n’a pas de bonus.</p>
 <p>Chez les grands, ça existe aussi : certaines entreprises ajoutent de l’argent quand leurs employés en mettent de côté. Ça s’appelle <b>l’abondement</b>. Tu connais déjà un mot de grand !</p>`,
       know: 'Le bonus, c’est de l’argent gagné sans rien faire de plus : juste en choisissant la tirelire.',

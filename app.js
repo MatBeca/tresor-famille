@@ -1,10 +1,10 @@
-import { articles, features, lessons } from './articles.js';
+import { articles, features, lessons, bonusPlan } from './articles.js';
 import { Idiomorph } from './vendor/idiomorph.esm.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
-const VERSION = '80'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '81'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -194,7 +194,7 @@ const msShort = (m, id) => ({ step: `${m * 4}`, frac: { 0.25: '¼', 0.5: '½', 0
 const msLong = (m, id) => ({ step: `Étape ${m * 4}`, frac: cap1(FRAC[m]), pct: `Palier ${m * 100} %` })[msBand(id)];
 const msHow = id => ({ step: 'Ton projet est coupé en 4 étapes. À chaque étape franchie, ta pépite grossit !', frac: 'Ton projet est coupé en 4 parts : un quart, la moitié, trois quarts, puis tout. À chaque part, ta pépite grossit !', pct: '25 %, c’est un quart du prix ; 50 %, la moitié ; 75 %, les trois quarts. À chaque palier, ta pépite grossit.' })[msBand(id)];
 // Le bonus en mots d'enfant : « pour 4 pièces placées, papa ajoute 1 pièce » tant que l'enfant ne manie pas les pourcentages.
-const bonusKid = (m, unit = 'pièces placées', one = '1 pièce') => { const n = 100 / m; return msBand(cur) !== 'pct' && Number.isInteger(n) && n > 1 ? `pour ${n} ${unit}, ${P().aj} ${one}` : `${P().aj} ${String(m).replace('.', ',')} % de bonus`; };
+const bonusKid = (m, unit = 'pièces placées', one = '1 pièce') => { const p = bonusPlan(m); if (msBand(cur) !== 'pct' && p && p.n > 1) { const gift = p.g === 1 ? one : one.replace(/^1 (\S+)/, (_, w) => `${p.g} ${w === '€' ? w : w + 's'}`); return `pour ${p.n} ${unit}, ${P().aj} ${gift}`; } return `${P().aj} ${String(m).replace('.', ',')} % de bonus`; };
 function milestone(before, after) {
   const g = goalOf(cur);
   if (!g) { const c = CAPS.find(x => before < x && after >= x); return c ? `C’est pépite ! Ta tirelire passe les ${f(c)}.` : ''; }
