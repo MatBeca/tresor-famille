@@ -111,7 +111,14 @@ const sumC = a => Math.round(a.reduce((x, y) => x + y, 0) * 100) / 100;
 function coinsOf(w) { const n = Math.floor(w + 1e-9); return [...Array(n).fill(1), ...(w - n >= 0.5 - 1e-9 ? [0.5] : [])]; }
 function coinsTxt(w) { const c = coinsOf(w), n = c.filter(v => v === 1).length, h = c.length > n; return [n ? `${n} pièce${n > 1 ? 's' : ''} de 1 €` : '', h ? '1 pièce de 50 centimes' : ''].filter(Boolean).join(' et '); }
 const halfNum = v => { const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) ? Math.round(n * 2) / 2 : NaN; };
-const coinEl = (v, act) => act ? `<button class="coin${v < 1 ? ' half' : ''}" data-act="${act}" aria-label="Reprendre cette pièce" ${ready ? '' : 'disabled'}>${v < 1 ? '50&nbsp;c' : '1&nbsp;€'}</button>` : `<span class="coin${v < 1 ? ' half' : ''}">${v < 1 ? '50&nbsp;c' : '1&nbsp;€'}</span>`;
+function coinSVG(v) {
+  const half = v < 1, o = half ? { b: '#f0ae1c', l: '#ffd760', d: '#c78300', s: '#6e4400' } : { b: '#d7dde7', l: '#f6f8fb', d: '#a7afbe', s: '#3f4558' };
+  const body = `<circle cx="32" cy="32" r="29" fill="${o.d}"/><circle cx="30.6" cy="30.6" r="27.4" fill="${o.b}"/><path d="M6.5 27A26 26 0 0 1 27 6.5L30.5 15.5 15.5 30.5Z" fill="${o.l}"/><circle cx="32" cy="32" r="29" fill="none" stroke="${o.s}" stroke-width="3"/>`;
+  const core = half ? `<circle cx="32" cy="32" r="21.5" fill="none" stroke="${o.d}" stroke-width="1.8"/><text x="32" y="38.5" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="18" fill="#6e4400">50<tspan font-size="12" dx="1">c</tspan></text>`
+    : `<circle cx="32" cy="32" r="17.5" fill="#d08a00"/><circle cx="31.2" cy="31.2" r="16.3" fill="#f5b323"/><path d="M15.6 29A16 16 0 0 1 29 15.6L31 22.5 22.5 31Z" fill="#ffe68a"/><circle cx="32" cy="32" r="17.5" fill="none" stroke="#6e4400" stroke-width="2.4"/><text x="32" y="39.5" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="20" fill="#6e4400">1<tspan font-size="13" dx="1">€</tspan></text>`;
+  return `<svg viewBox="0 0 64 64" aria-hidden="true">${body}${core}<path d="M13.5 21.5 18.5 15.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>`;
+}
+const coinEl = (v, act) => { const lbl = v < 1 ? '50 centimes' : '1 euro'; return act ? `<button class="coin${v < 1 ? ' half' : ''}" data-act="${act}" aria-label="Reprendre cette pièce de ${lbl}" ${ready ? '' : 'disabled'}>${coinSVG(v)}</button>` : `<span class="coin${v < 1 ? ' half' : ''}" role="img" aria-label="Pièce de ${lbl}">${coinSVG(v)}</span>`; };
 function say(msg, sub) { toast = { msg, sub }; clearTimeout(toastT); toastT = setTimeout(() => { toast = null; render(); }, 4500); }
 
 const BACKLOG = 4;
@@ -480,7 +487,7 @@ ${last ? `<div class="row" style="margin-top:4px"><button class="btn ghost sm" d
 }
 
 
-function artList() { return articles({ jar, miniDie, growNug, f, eurS, I }); }
+function artList() { return articles({ jar, miniDie, growNug, f, eurS, I, coinEl }); }
 function lireView() {
   const back = user ? 'parents' : 'home';
   return `<button class="backlink" data-act="go" data-v="${back}">${I.chev}<span>${user ? 'Espace parents' : 'Retour'}</span></button>
