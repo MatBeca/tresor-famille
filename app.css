@@ -13,7 +13,7 @@
 :root{color-scheme:light dark;
   --bg:light-dark(#fff8ee,#14131d);--card:light-dark(#fff,#211f2e);--ink:light-dark(#22203a,#f7f2ea);
   --soft:light-dark(#6c6686,#b8b2cc);--line:light-dark(#f0e4d2,#423e5e);--purse:light-dark(#a39cb8,#9d96b8);--glass:light-dark(#eef5ff,#2a2840);
-  --gold:#f5b323;--goldd:#c98a00;--grow:#13a05a;--growd:#0b7440;--red:#e0434f;
+  --gold:#f5b323;--goldd:#c98a00;--grow:#13a05a;--growd:#0b7440;--red:#e0434f;--own:var(--kid);
   --kid:#2f6feb;--kidon:#fff;--kidd:color-mix(in srgb,var(--kid) 70%,#000);
   --kidt:light-dark(color-mix(in srgb,var(--kid) 13%,#fff),color-mix(in srgb,var(--kid) 22%,#211f2e));
   --kidtxt:light-dark(var(--kidd),color-mix(in srgb,var(--kid) 55%,#fff))}

@@ -5,7 +5,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc, collection, collectionGroup, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
-const VERSION = '96'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '97'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -32,6 +32,11 @@ const PAL = ['#f0505a', '#2f6feb', '#8e5ce6', '#f07c00', '#e0438f', '#139fb5',
   '#7cc242', '#f7c600', '#38aef0', '#24408e', '#a3214f', '#8a5a35'];
 const PALN = ['Rouge', 'Bleu', 'Violet', 'Orange', 'Rose', 'Turquoise', 'Vert pomme', 'Jaune', 'Bleu ciel', 'Bleu marine', 'Bordeaux', 'Chocolat'];
 // Texte lisible sur la couleur de l'enfant : foncé sur les couleurs claires (jaune, vert pomme, ciel), blanc sinon.
+// Couleur de « mon argent » dans les graphiques : celle de l'enfant, sauf si elle se confond avec le vert des gains ou l'or du bonus.
+const OWN_ALT = '#5b5fd6';
+const ownColor = c => { const n = parseInt((c || '#000000').slice(1), 16), r = (n >> 16) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, l = (mx + mn) / 2, sat = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+  let h = !d ? 0 : mx === r ? 60 * (((g - b) / d) % 6) : mx === g ? 60 * ((b - r) / d + 2) : 60 * ((r - g) / d + 4); if (h < 0) h += 360;
+  return sat > 0.35 && ((h >= 70 && h <= 175) || (h >= 25 && h <= 60 && sat > 0.6)) ? OWN_ALT : c; };
 const onColor = c => { const n = parseInt(c.slice(1), 16), l = [n >> 16, n >> 8 & 255, n & 255].map(v => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * l[0] + 0.7152 * l[1] + 0.0722 * l[2] > 0.36 ? '#22203a' : '#fff'; };
 const PAR = {
   parents: { label: 'Les parents', de: 'des parents', a: 'à tes parents', aj: 'tes parents ajoutent' },
@@ -233,7 +238,7 @@ function jar(t, g) {
   const cap = g ? Math.max(g.budget, t.total) : t.total <= 0 ? 20 : (CAPS.find(c => c >= t.total) || Math.ceil(t.total / 10000) * 10000);
   const pos = t.own + t.bonus + Math.max(0, t.gains), k = pos > 0 ? Math.max(0, t.total) / pos : 0, H = 196;
   const h = [t.own * k / cap * H, t.bonus * k / cap * H, Math.max(0, t.gains) * k / cap * H];
-  const fills = ['var(--kid)', 'var(--gold)', 'var(--grow)'];
+  const fills = ['var(--own)', 'var(--gold)', 'var(--grow)'];
   let y = 266, layers = '', gy = 266;
   h.forEach((v, i) => { y -= v; if (i === 2) gy = y; layers += `<rect x="16" y="${y.toFixed(1)}" width="188" height="${v.toFixed(1)}" style="fill:${fills[i]}"/>`; if (v > 0.5 && y < 268) layers += `<rect x="16" y="${(y - 1).toFixed(1)}" width="188" height="2" style="fill:#fff;opacity:.9"/>`; });
   const yb = y + h[2]; // bas de la couche « gagné tout seul »
@@ -339,7 +344,7 @@ function homeView(k, t) {
   const hint = g ? (t.total >= g.budget ? `Objectif « ${esc(g.name)} » atteint !` : `Encore ${f(g.budget - t.total)} pour « ${esc(g.name)} »`) : (t.total >= J.cap ? `Palier de ${f(J.cap)} atteint !` : `Encore ${f(J.cap - t.total)} pour le palier de ${f(J.cap)}`);
   return `<section class="hero"><div><p class="hi">Salut ${esc(k.name)} !</p><p class="lbl">${g && t.total >= g.budget ? 'C’est pépite ! Ta tirelire est pleine' : 'Ta tirelire'}</p><div class="amount">${f(t.total)}</div>
 <div class="progrow"><div class="prog">${g ? '<b style="left:25%"></b><b style="left:50%"></b><b style="left:75%"></b>' : ''}<i style="width:${prog.toFixed(1)}%"></i></div>${growNug(prog)}</div><p class="small">${hint}</p></div>${J.svg}</section>
-<div class="tiles"><div class="tile"><small><i style="background:var(--kid)"></i>Mon argent</small><b>${f(t.own)}</b></div>
+<div class="tiles"><div class="tile"><small><i style="background:var(--own)"></i>Mon argent</small><b>${f(t.own)}</b></div>
 <div class="tile"><small><i style="background:var(--gold)"></i>Bonus ${P().de}</small><b>${f(t.bonus)}</b></div>
 <div class="tile"><small><i style="background:var(--grow)"></i>Gagné tout seul</small><b class="${t.gains < 0 ? 'neg' : 'g'}">${f(t.gains)}</b></div>
 <div class="tile"><small><i style="background:var(--purse)"></i>Porte-monnaie à recevoir</small><b>${f(t.purseDue)}</b></div></div>
@@ -436,7 +441,7 @@ function futurView(k, t) {
   // Même échelle pour toutes les stratégies : sinon la plus haute barre fait toujours la même taille et on ne voit pas la différence.
   const max = Math.max(1, ...Object.keys(POST).flatMap(q => project(cur, projInv[cur], q).map(p => p.total))), Pt = pts.find(p => p.age === sel[cur]);
   const bars = pts.map(p => { const pos = p.own + p.bonus + Math.max(0, p.gains) || 1, s = v => (Math.max(0, v) / pos * 100).toFixed(2);
-    return `<button class="bar ${p.age === sel[cur] ? 'on' : ''}" data-act="bar" data-age="${p.age}" aria-label="À ${p.age} ans : ${f(r50(p.total))}"><span class="area"><span class="stk" style="height:${(p.total / max * 100).toFixed(2)}%"><i style="height:${s(p.own)}%;background:var(--kid)"></i><i style="height:${s(p.bonus)}%;background:var(--gold)"></i><i style="height:${s(p.gains)}%;background:var(--grow)"></i></span></span><span class="age">${p.age}</span></button>`; }).join('');
+    return `<button class="bar ${p.age === sel[cur] ? 'on' : ''}" data-act="bar" data-age="${p.age}" aria-label="À ${p.age} ans : ${f(r50(p.total))}"><span class="area"><span class="stk" style="height:${(p.total / max * 100).toFixed(2)}%"><i style="height:${s(p.own)}%;background:var(--own)"></i><i style="height:${s(p.bonus)}%;background:var(--gold)"></i><i style="height:${s(p.gains)}%;background:var(--grow)"></i></span></span><span class="age">${p.age}</span></button>`; }).join('');
   const full = projInv[cur] !== k.weekly ? project(cur, k.weekly, ps).find(p => p.age === sel[cur]) : null;
   const cmp = Object.keys(POST).map(q => ({ q, v: r50(project(cur, projInv[cur], q).find(p => p.age === sel[cur]).total) })), cmax = Math.max(1, ...cmp.map(c => c.v));
   const quick = [...new Set([k.weekly, 10, 20, 50])].sort((a, b) => a - b);
@@ -939,7 +944,7 @@ function render() {
   else if (!famLoaded) { html = splash('Ouverture de la banque…'); key = 'splash2'; }
   else if (!F) { if (!ob) { ob = newOb(); tryLegacy(); } if (view === 'art') { key = 'obart:' + artId; html = `<main class="view full">${artView()}</main>`; } else { key = 'ob' + ob.step; html = obView(); } color = ob.step === 2 && ob.kids[0] ? ob.kids[0].color : PAL[1]; }
   else { html = mainView(); key = 'main:' + view + ':' + (view === 'art' ? artId : view === 'lecon' ? lessonId : '') + ':' + cur + ':' + (lock && !pinOk ? (pinAsk ? 'pin' : 'lk') : '') + (resetFor ? ':modal' : ''); const k = kidOf(cur); if (k) color = k.color; if (view === 'admin') key += ':' + (adminData ? adminData.at : '') + adminErr; }
-  document.documentElement.style.setProperty('--kid', color); document.documentElement.style.setProperty('--kidon', onColor(color));
+  document.documentElement.style.setProperty('--kid', color); document.documentElement.style.setProperty('--kidon', onColor(color)); document.documentElement.style.setProperty('--own', ownColor(color));
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', color);
   const app = document.getElementById('app');
   // Changement d'écran : on remplace tout ; sinon on ne met à jour que ce qui change (clics et saisies préservés).
