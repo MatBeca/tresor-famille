@@ -5,7 +5,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc, collection, collectionGroup, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
-const VERSION = '97'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '99'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -268,7 +268,7 @@ function loginView() {
   const up = loginMode === 'up';
   return `<main class="view full"><div class="welcome">${LOGOBIG}<h1>${WMFULL}</h1><p>Pièce après pièce, ta pépite grandit</p></div>
 <div class="intro"><p class="story">Semaine après semaine, la tirelire se remplit… jusqu’à devenir une vraie pépite.</p><p>Pépite aide les parents à montrer à leurs enfants, avec leur argent de poche, pourquoi épargner et investir tôt change tout.</p><p class="soft small">Bonus, bourse et intérêts sont un jeu financé par vous, les parents : ce n’est pas un vrai placement.</p></div>
-<div class="row" style="margin-top:14px"><button class="btn gold full" data-act="tour">Découvrir Pépite en 1 minute</button></div>
+<div class="row" style="margin-top:14px"><button class="btn gold full" data-act="tour">Découvrir Pépite en 1 minute</button></div><div class="row" style="margin-top:8px"><button class="btn ghost full vbtn" data-act="video"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Voir le tuto vidéo (2 min 30)</button></div>
 <div class="tabs2"><button data-act="lmode" data-m="in" aria-pressed="${!up}">J’ai un compte</button><button data-act="lmode" data-m="up" aria-pressed="${up}">Créer un compte</button></div>
 <form class="card" id="loginf" autocomplete="on">
 <h3>${up ? 'Créer le compte de la famille' : 'Connexion de cet appareil'}</h3>
@@ -393,17 +393,30 @@ function giftView(k) {
 
 function miniDie(n, c) { return `<svg viewBox="0 0 100 100" width="30" height="30" aria-hidden="true"><rect x="6" y="6" width="88" height="88" rx="22" fill="#fff" stroke="${c}" stroke-width="8"/>${PIPS[n].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="10" fill="#22203a"/>`).join('')}</svg>`; }
 // À partir de combien d'euros dans la tirelire au moins une face du dé rapporte ou coûte 50 centimes.
+// Montant de chaque face en pièces de 50 c. L'arrondi peut effacer la moyenne d'une stratégie (petites tirelires) :
+// on corrige la face la plus haute (ou la plus basse) pour que la somme des 6 faces reste fidèle au pourcentage moyen.
+function faceEur(total, faces) {
+  const v = faces.map(x => r50(total * x / 100)), sum = v.reduce((a, b) => a + b, 0);
+  const diff = r50(total * faces.reduce((a, b) => a + b, 0) / 100 - sum);
+  if (diff && v.some(x => x)) {
+    const hi = v.indexOf(Math.max(...v)), lo = v.indexOf(Math.min(...v)), second = [...v].sort((a, b) => b - a)[1];
+    if (diff > 0) v[hi] = r2(v[hi] + diff);
+    else if (v[hi] + diff >= second && v[hi] + diff > 0) v[hi] = r2(v[hi] + diff);
+    else v[lo] = r2(v[lo] + diff);
+  }
+  return v;
+}
 const diceFrom = p => { const mx = Math.max(...POST[p].faces.map(Math.abs)); return mx ? Math.ceil(0.25 / (mx / 100) * 2) / 2 : null; };
 function postureCard(p, sel, start, own) {
   const d = POST[p];
   if (p === 'none') return `<button class="post ${sel ? 'on' : ''}" data-act="posture" data-n="none" aria-pressed="${sel}"><span class="ph"><b>${d.name}</b>${sel ? `<span class="tag">Ma stratégie</span>` : ''}</span><span class="pt">${d.txt}</span><span class="pr">Les 6 faces ne changent rien : ta tirelire ne bouge pas.</span><span class="soft small">${d.like}</span></button>`;
-  const v = d.faces.map(x => r50(start * x / 100)), up = v.filter(x => x > 0).length, dn = v.filter(x => x < 0).length, eq = 6 - up - dn;
+  const v = faceEur(start, d.faces), tot6 = r2(v.reduce((a, b) => a + b, 0)), up = v.filter(x => x > 0).length, dn = v.filter(x => x < 0).length, eq = 6 - up - dn;
   const still = up + dn === 0;
   const cnt = still ? `Avec ${f(start)} dans ta tirelire, le dé ne change encore rien. Il commencera à bouger à partir de <b>${f(diceFrom(p))}</b>.` : [up ? `<span class="g">${up} face${up > 1 ? 's' : ''} sur 6 ${up > 1 ? 'font' : 'fait'} gagner</span>` : '', eq ? `${eq} ne change${eq > 1 ? 'nt' : ''} rien` : '', dn ? `<span class="neg">${dn} ${dn > 1 ? 'font' : 'fait'} perdre</span>` : ''].filter(Boolean).join(' · ');
   return `<button class="post ${sel ? 'on' : ''}" data-act="posture" data-n="${p}" aria-pressed="${sel}">
 <span class="ph"><b>${d.name}</b>${sel ? `<span class="tag">Ma stratégie</span>` : ''}</span><span class="pt">${d.txt}</span>
 <span class="dfaces">${v.map((x, i) => `<span class="df ${x > 0 ? 'up' : x < 0 ? 'dn' : ''}">${miniDie(i + 1, x > 0 ? '#13a05a' : x < 0 ? '#e0434f' : '#a39cb8')}<b>${eurS(x)}</b></span>`).join('')}</span>
-<span class="pr">${cnt}</span><span class="soft small">${d.like}</span></button>`;
+<span class="pr">${cnt}</span>${still ? '' : `<span class="pr small">Si chaque face sort une fois : <b class="${tot6 > 0 ? 'g' : tot6 < 0 ? 'neg' : ''}">${tot6 > 0 ? '+' : ''}${f(tot6)}</b> en tout.</span>`}<span class="soft small">${d.like}</span></button>`;
 }
 function bourseView(k, t) {
   if (!bourseOpen(cur)) {
@@ -428,7 +441,7 @@ ${recent.length ? `<div class="recent">${recent.map(e => `<span class="${e.gain 
 <div class="list">${Object.keys(POST).map(q => postureCard(q, q === p, start, own)).join('')}</div>`;
   return `<h2 class="title">La bourse de la semaine</h2><p class="lead">Une fois par semaine, tu lances le dé : il fait monter ou baisser ta tirelire. C’est un jeu : ce que ton argent gagne ici, c’est ${P().label.toLowerCase()} qui le paie${pays}.</p>
 ${rolled ? diceH + stratH : stratH + diceH}
-<p class="soft small" style="margin:10px 4px 0">${rolled && p !== 'none' ? 'Un changement de stratégie comptera pour le prochain lancer. ' : ''}Le dé est plus généreux que la vraie Bourse, pour qu’on voie l’effet plus vite.</p>`;
+<p class="soft small" style="margin:10px 4px 0">${rolled && p !== 'none' ? 'Un changement de stratégie comptera pour le prochain lancer. ' : ''}Le dé est plus généreux que la vraie Bourse, pour qu’on voie l’effet plus vite. Avec une petite tirelire, prendre plus de risques rapporte à peine plus : l’écart se creuse quand la tirelire grossit, et avec le temps. Regarde « Futur ».</p>`;
 }
 
 function futurView(k, t) {
@@ -526,7 +539,7 @@ const lessonList = () => lessons({ ...H(), bonusKid, match: F.match });
 function leconsView() {
   const L = lessonList();
   const par = lessonFrom === 'parents';
-  return `${par ? `<button class="backlink" data-act="go" data-v="parents">${I.chev}<span>Espace parents</span></button><p class="kicker">Côté enfant</p>` : ''}<h2 class="title">Comprendre l’argent</h2><p class="lead">${par ? `Les ${L.length} leçons que lit votre enfant, avec leur quiz. Les mêmes notions que vos articles, à hauteur d’enfant : de quoi en reparler ensemble à table.` : `${L.length} petites leçons pour devenir un as de l’argent. Chacune se lit, ou s’écoute, en deux minutes.`}</p>
+  return `${par ? `<button class="backlink" data-act="go" data-v="parents">${I.chev}<span>Espace parents</span></button><p class="kicker">Côté enfant</p>` : ''}<h2 class="title">Comprendre l’argent</h2><p class="lead">${par ? `Les ${L.length} leçons que lit votre enfant, avec leur quiz. Les mêmes notions que vos articles, à hauteur d’enfant : de quoi en reparler ensemble à table.` : `${L.length} petites leçons pour devenir un as de l’argent. Chacune se lit, ou s’écoute, en deux minutes.`}</p><button class="item art-item vitem" data-act="video" style="margin-bottom:12px"><span class="ic artn vic"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg></span><span><small>La vidéo · 2 min 30</small><b>Comment marche Pépite</b></span><span class="end">${I.chev}</span></button>
 <div class="list">${L.map(x => { const done = kq[x.id] === x.quiz.ok || !!(kidOf(cur) && kidOf(cur).lq && kidOf(cur).lq[x.id]); return `<button class="item art-item" data-act="lecon" data-n="${x.id}"><span class="ic artn">${done ? I.check : x.n}</span><span><small>${x.term}</small><b>${x.title}</b></span><span class="end">${I.chev}</span></button>`; }).join('')}</div>`;
 }
 function leconView() {
@@ -564,6 +577,7 @@ function parentsView() {
   const toOk = kids().flatMap(k => tot(k.id).waiting.map(e => ({ k, e })));
   const okCard = toOk.length ? `<section class="card waitcard"><h3>À valider</h3><p class="soft small" style="margin:0">Argent reçu déclaré par les enfants. Il ne compte qu’une fois validé.</p><ul class="log">${toOk.map(({ k, e }) => `<li><span><b>${esc(k.name)}</b> · ${dateFr(e.d)}<br>${giftLine(e)}</span><span class="row" style="margin:0;gap:6px;flex-wrap:nowrap"><button class="btn gr sm" data-act="gok" data-k="${k.id}" data-d="${e.d}" ${ready ? '' : 'disabled'}>Valider</button><button class="btn ghost sm" data-act="gno" data-k="${k.id}" data-d="${e.d}" ${ready ? '' : 'disabled'}>Refuser</button></span></li>`).join('')}</ul></section>` : '';
   return `<h2 class="title">Espace parents</h2>${okCard}
+<button class="item art-item vitem" data-act="video"><span class="ic artn vic"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg></span><span><small>Le tuto vidéo · 2 min 30</small><b>Comment marche Pépite, à regarder avec votre enfant</b></span><span class="end">${I.chev}</span></button>
 <button class="item art-item parentread" data-act="go" data-v="lire"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent · 5 lectures courtes</small><b>La méthode Pépite, pour bien accompagner votre enfant</b></span><span class="end">${I.chev}</span></button>
 <button class="item art-item parentkid" data-act="go" data-v="lecons" data-from="parents"><span class="ic artn">${I.book}</span><span><small>Côté enfant · 6 leçons et quiz</small><b>Ce que lit votre enfant, pour en parler ensemble</b></span><span class="end">${I.chev}</span></button>
 <button class="item art-item" data-act="go" data-v="avis"><span class="ic artn">${I.gift}</span><span><small>Ton avis compte</small><b>Donner mon avis sur Pépite</b></span><span class="end">${I.chev}</span></button>
@@ -794,6 +808,20 @@ async function sendAvis() {
     form.avis = ''; avisMood = ''; avisSent = true;
   } catch (e) { say('Envoi impossible pour le moment : vérifie la connexion.'); }
   busy = false; render();
+}
+
+
+/* ---------- tuto vidéo : lecteur posé hors du rendu de l'appli, pour ne jamais être relancé ---------- */
+function openVideo() {
+  if (document.querySelector('.vmodal')) return;
+  const m = document.createElement('div');
+  m.className = 'vmodal'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-label', 'Tuto vidéo de Pépite');
+  m.innerHTML = `<div class="vbox"><video src="video/tuto.mp4" poster="video/tuto.jpg" controls playsinline autoplay preload="auto"></video><button class="btn ghost full" data-vclose>Fermer la vidéo</button></div>`;
+  const close = () => { const v = m.querySelector('video'); if (v) v.pause(); m.remove(); document.removeEventListener('keydown', esc); };
+  const esc = e => { if (e.key === 'Escape') close(); };
+  m.addEventListener('click', e => { if (e.target === m || e.target.closest('[data-vclose]')) close(); });
+  document.addEventListener('keydown', esc);
+  document.body.append(m);
 }
 
 const H = () => ({ jar, miniDie, growNug, f, eurS, r50, I, coinEl });
@@ -1035,7 +1063,7 @@ function roll() {
   setTimeout(() => {
     if (spin) clearInterval(spin);
     if (el) el.style.transform = '';
-    const before = tot(cur).total, rate = facesOf(cur)[face - 1], gain = r50(Math.max(0, before) * rate / 100);
+    const before = tot(cur).total, rate = facesOf(cur)[face - 1], gain = faceEur(Math.max(0, before), facesOf(cur))[face - 1];
     EV[cur] = [...evs(cur), { t: 'bourse', d: iso(), face, rate, gain }];
     rolling = false; saveK(cur);
     sayMs(before, rate > 0 ? `Dé ${face} : +${f(gain)} dans ta tirelire !` : rate < 0 ? `Dé ${face} : ta tirelire perd ${f(Math.abs(gain))}.` : `Dé ${face} : rien ne bouge cette semaine.`, rate < 0 ? 'Ça arrive, la semaine prochaine sera peut-être meilleure.' : '');
@@ -1229,6 +1257,7 @@ document.addEventListener('click', ev => {
     case 'pstrat': if (POST[b.dataset.n]) projStrat[cur] = b.dataset.n; break;
     case 'amood': avisMood = b.dataset.n; break;
     case 'avissend': sendAvis(); return;
+    case 'video': openVideo(); return;
     case 'install': if (installEv) { const e = installEv; installEv = null; e.prompt(); e.userChoice.finally(() => render()); } break;
     case 'stats': if (ready) { if (b.dataset.n === 'off') { F.noStats = true; delete F.stats; } else { delete F.noStats; touchStats(true); } saveF(); } break;
     case 'export': exportData(); break;

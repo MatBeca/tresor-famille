@@ -452,3 +452,11 @@ a.btn{display:block;text-align:center;text-decoration:none}
 
 .avislist{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:10px}.avislist li{border-bottom:1px dashed var(--line);padding-bottom:8px}.avislist p{margin:2px 0 0;white-space:pre-wrap}
 textarea{width:100%;font:inherit;font-size:16px;font-weight:600;border-radius:14px;border:2px solid var(--line);background:var(--bg);padding:11px 13px;resize:vertical;color:var(--ink)}textarea:focus{border-color:var(--kid);outline:none}
+
+/* tuto vidéo */
+.vbtn{display:flex;align-items:center;justify-content:center;gap:8px}
+.vic{background:var(--ink)!important;color:#fff}
+.vmodal{position:fixed;inset:0;z-index:50;background:rgba(20,18,34,.82);display:grid;place-items:center;padding:16px;padding-top:max(16px,env(safe-area-inset-top))}
+.vbox{width:min(100%,calc((100dvh - 110px) * 9 / 16));display:grid;gap:10px}
+.vbox video{width:100%;aspect-ratio:9/16;border-radius:22px;background:#000;display:block}
+.vbox .btn{background:var(--card)}
