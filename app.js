@@ -1,11 +1,11 @@
-import { articles, features, lessons, bonusPlan } from './articles.js';
+import { articles, features, lessons, bonusPlan, bonusVis } from './articles.js';
 import { Idiomorph } from './vendor/idiomorph.esm.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, EmailAuthProvider, reauthenticateWithCredential, deleteUser } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc, collection, collectionGroup, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
-const VERSION = '95'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '96'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -359,13 +359,13 @@ function payView(k, t) {
 ${pz.reason ? `<p class="msg">« ${esc(pz.reason)} »</p>` : ''}<p class="soft" style="margin:10px 0 0">Ta tirelire reste à toi : elle continue de travailler avec la bourse, et tu peux toujours ranger l’argent que tu reçois.</p></section>`;
   const ow = owed(cur), blocked = ow.length === 0, inv = sumC(invC), dep = sumC(depC), bonusNow = r2(inv * F.match / 100), dis = ready ? '' : 'disabled';
   const help = payHelp === null ? !t.paie : payHelp, m = String(F.match).replace('.', ',');
-  return `<h2 class="title">Jour de paie</h2><p class="lead">${coinsTxt(k.weekly)} à ranger, une par une.</p>
+  return `<h2 class="title">Jour de paie</h2><p class="lead">${blocked ? `Ta paie : ${coinsTxt(k.weekly)} chaque semaine.` : `${coinsTxt(k.weekly)} à ranger, une par une.`}</p>
 <section class="card help"><button class="helphead" data-act="payhelp" aria-expanded="${help}"><span>Comment ça marche ?</span>${help ? '<span class="soft small">Masquer</span>' : I.chev}</button>
 ${help ? `<ol class="howto"><li><b>Chaque semaine, tu reçois ta paie</b>${coinsTxt(k.weekly)}, ton argent de poche.</li>
 <li><b>Pour chaque pièce, tu choisis</b><span class="choice"><span><i class="dot" style="background:var(--purse)"></i><b>Dans mon porte-monnaie</b> : elle est à toi pour la dépenser comme tu veux. ${P().label} ${F.parents === 'parents' ? 'te la donnent' : 'te la donne'} en vrai, chaque semaine ou un peu plus tard.</span>
 <span><i class="dot" style="background:var(--grow)"></i><b>Dans ma tirelire</b> : elle est placée. ${cap1(bonusKid(m))}, et elle peut grossir chaque semaine avec la bourse.</span></span></li>
 <li><b>Ta tirelire est mise de côté</b>Pour récupérer cet argent, tu choisis un projet et tu le présentes ${P().a}.</li></ol>` : ''}</section>
-<section class="card">${blocked ? `<p class="result" style="text-align:center">Ta paie de la semaine est rangée.<br><span class="soft" style="font-size:17px">Rendez-vous la semaine prochaine !</span></p>` : `
+<section class="card">${blocked ? `<p class="result" style="text-align:center">Ta paie de la semaine est rangée.<br><span class="soft" style="font-size:17px">Rendez-vous la semaine prochaine !</span></p>${F.match > 0 && bonusPlan(F.match) ? `<div class="paybonus"><p class="soft small" style="margin:10px 0 4px;text-align:center">Rappel : ${bonusKid(F.match)}.</p>${bonusVis(H(), F.match)}</div>` : ''}` : `
 <p class="result" style="margin:0 0 4px">Paie ${weekTxt(ow[0])}</p>${ow.length > 1 ? `<p class="msg" style="margin-top:6px">Tu as ${ow.length} paies à ranger. On commence par la plus ancienne.</p>` : ''}
 <div class="tray" aria-label="Pièces à ranger">${tray.map(v => coinEl(v, 'coinhint')).join('') || '<span class="soft">Toutes les pièces sont rangées !</span>'}</div>
 <div class="moves"><button class="btn ghost" data-act="toPig" ${tray.length && ready ? '' : 'disabled'}>Dans mon porte-monnaie</button><button class="btn gr" data-act="toGrow" ${tray.length && ready ? '' : 'disabled'}>Dans ma tirelire</button></div>
@@ -875,7 +875,7 @@ function guideSteps(k) {
     { text: 'Bien rangé ! Appuie sur « Valider ma paie ».', target: '[data-act=pay]', done: () => guidePaid });
   else S.push(
     { text: pl.paused ? 'Ta paie est en pause pour l’instant. Quand elle reviendra, tu la rangeras ici, dans « Paie ».' : 'Ta paie de la semaine est déjà rangée. Chaque semaine, elle t’attendra ici, dans « Paie ».', target: '.tab[data-v=paie]', next: 'Suivant' },
-    { text: `Et ça, c’est le bonus : ${bonusTxt()}. L’argent du porte-monnaie, lui, n’a pas de bonus.`, parent: 'c’est le moment de lui rappeler votre bonus, avec de vraies pièces si vous en avez sous la main.', target: '.tiles .tile:nth-child(2)', next: 'Compris !' });
+    { text: `Et ça, c’est le bonus : ${bonusTxt()}. L’argent du porte-monnaie, lui, n’a pas de bonus.`, parent: 'c’est le moment de lui rappeler votre bonus, avec de vraies pièces si vous en avez sous la main.', target: view === 'paie' ? '.paybonus' : '.tiles .tile:nth-child(2)', next: 'Compris !' });
   if (pl.open) S.push(
     { text: 'Ta tirelire a atteint 15 € : la bourse est ouverte ! Appuie sur « Bourse ».', target: '.tab[data-v=bourse]', done: () => view === 'bourse' },
     { text: 'Chaque semaine, tu lances un dé : il fait gagner ou perdre un petit bout de ta tirelire. Les faces vertes font gagner, les rouges font perdre. Ici, tu choisis ta stratégie.', target: '.post.on', next: 'Suivant' },

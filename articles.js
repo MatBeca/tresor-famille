@@ -196,7 +196,7 @@ export function bonusPlan(m) {
   for (let n = 1; n <= 10; n++) { const g = n * m / 100; if (Number.isInteger(g) && g >= 1) return { n, g }; }
   return null;
 }
-function bonusVis(h, m) {
+export function bonusVis(h, m) {
   const p = bonusPlan(m); if (!p) return '';
   const w = p.n > 6 || p.g > 6 ? 38 : 50;
   const many = k => `<div class="bcoins" style="grid-template-columns:repeat(${Math.min(k, k > 4 ? Math.ceil(k / 2) : 2)},${w}px)">${Array.from({ length: k }, () => h.coinEl(1)).join('')}</div>`;
