@@ -6,7 +6,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
-const VERSION = '111'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '112'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -249,8 +249,11 @@ function project(id, perWeek, strat) {
 
 /* ---------- dessins ---------- */
 function die(n, size) { return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" role="img" aria-label="Dé : ${n}"><rect x="6" y="9" width="88" height="88" rx="22" fill="#d9d3e6"/><rect x="6" y="4" width="88" height="88" rx="22" fill="#fff" stroke="#22203a" stroke-width="5"/>${PIPS[n].map(([x, y]) => `<circle cx="${x}" cy="${y - 2}" r="9" fill="#22203a"/>`).join('')}</svg>`; }
+// Sans projet, le bocal change d'échelle dès qu'il est rempli aux trois quarts.
+const JAR = [20, 50, 100, 200, 500, 1000, 1500, 2000, 3500, 5000, 10000];
+const jarScale = v => JAR.find(S => v < 0.75 * S) || Math.ceil(v / 0.75 / 10000) * 10000;
 function jar(t, g) {
-  const cap = g ? Math.max(g.budget, t.total) : t.total <= 0 ? 20 : (CAPS.find(c => c >= t.total) || Math.ceil(t.total / 10000) * 10000);
+  const cap = g ? Math.max(g.budget, t.total) : jarScale(t.total);
   const pos = t.own + t.bonus + Math.max(0, t.gains), k = pos > 0 ? Math.max(0, t.total) / pos : 0, H = 196;
   const h = [t.own * k / cap * H, t.bonus * k / cap * H, Math.max(0, t.gains) * k / cap * H];
   const fills = ['var(--own)', 'var(--gold)', 'var(--grow)'];
@@ -360,8 +363,9 @@ function pepCard() {
 }
 function homeView(k, t) {
   const g = goalOf(cur), J = jar(t, g), due = owed(cur).length, paid = due === 0, rolled = sameWeek(t.bourse && t.bourse.d);
-  const prog = Math.min(100, Math.max(0, t.total / (g ? g.budget : J.cap) * 100));
-  const hint = g ? (t.total >= g.budget ? `Objectif « ${esc(g.name)} » atteint !` : `Encore ${f(g.budget - t.total)} pour « ${esc(g.name)} »`) : (t.total >= J.cap ? `Palier de ${f(J.cap)} atteint !` : `Encore ${f(J.cap - t.total)} pour le palier de ${f(J.cap)}`);
+  const pal = Math.max(0, t.total) <= 0 ? CAPS[0] : (CAPS.find(c => c >= t.total) || Math.ceil(t.total / 10000) * 10000); // prochain palier fêté
+  const prog = Math.min(100, Math.max(0, t.total / (g ? g.budget : pal) * 100));
+  const hint = g ? (t.total >= g.budget ? `Objectif « ${esc(g.name)} » atteint !` : `Encore ${f(g.budget - t.total)} pour « ${esc(g.name)} »`) : (t.total >= pal ? `Palier de ${f(pal)} atteint !` : `Encore ${f(pal - t.total)} pour le palier de ${f(pal)}`);
   return `<section class="hero"><div><p class="hi">Salut ${esc(k.name)} !</p><p class="lbl">${g && t.total >= g.budget ? 'C’est pépite ! Ta tirelire est pleine' : 'Ta tirelire'}</p><div class="amount">${f(t.total)}</div>
 <div class="progrow"><div class="prog">${g ? '<b style="left:25%"></b><b style="left:50%"></b><b style="left:75%"></b>' : ''}<i style="width:${prog.toFixed(1)}%"></i></div>${growNug(prog)}</div><p class="small">${hint}</p></div>${J.svg}</section>
 ${!paid && !pauseOf(cur) ? `<button class="todo" data-act="go" data-v="paie"><span class="ic">${I.coin}</span><span><b>Ta paie t’attend !</b><small>${due > 1 ? `${due} paies à ranger` : streakOf(cur) >= 2 ? `Range-la pour garder ta série de ${streakOf(cur)} semaines` : 'Range tes pièces de la semaine'}</small></span><span class="end">${I.chev}</span></button>` : bourseOpen(cur) && postOf(cur) !== 'none' && !rolled && t.rolls.length ? `<button class="todo" data-act="go" data-v="bourse"><span class="ic">${I.die}</span><span><b>Ton dé de la semaine t’attend</b><small>Va-t-il faire monter ta tirelire ?</small></span><span class="end">${I.chev}</span></button>` : ''}
