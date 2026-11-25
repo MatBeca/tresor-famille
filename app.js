@@ -6,7 +6,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
-const VERSION = '113'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '114'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -256,7 +256,7 @@ const capOf = v => CAPS.find(c => c > v) || Math.ceil((v + 1) / 10000) * 10000;
 // Passage de palier sans projet : on mémorise sur l'appareil la dernière échelle vue pour rejouer l'animation une seule fois.
 let jarAnim = null;
 function jarLevel(t, g) {
-  if (g) return null;
+  if (g || !ready) return null; // pas avant que les comptes de l'enfant soient chargés
   const sc = capOf(Math.max(t.jpeak, t.total)), key = 'pepite-jar-' + cur; let seen = null;
   try { seen = JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) {}
   if (seen && sc > seen.s && !(jarAnim && jarAnim.kid === cur && jarAnim.to === sc) && guide === null) {
