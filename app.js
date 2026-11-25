@@ -5,7 +5,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc, collection, collectionGroup, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
-const VERSION = '100'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '101'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -62,6 +62,7 @@ const WM = `<svg class="wm" role="img" aria-label="Pépite" viewBox="-10 -1010 2
 const WMFULL = `<span class="wmfull" role="img" aria-label="C’est Pépite"><span class="cest" aria-hidden="true">c’est</span>${WM.replace('role="img" aria-label="Pépite"', 'aria-hidden="true"')}</span>`;
 const LOCK = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 const I = {
+  star: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z"/></svg>',
   speak: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
   jar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2.5" width="8" height="3" rx="1"/><path d="M6.5 7.5c0-1.1.9-2 2-2h7c1.1 0 2 .9 2 2V19a2.5 2.5 0 0 1-2.5 2.5h-6A2.5 2.5 0 0 1 6.5 19z"/><path d="M6.5 13.5h11"/></svg>',
   coin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/></svg>',
@@ -178,7 +179,6 @@ function streakOf(id) {
   for (let i = 0; i < 260; i++) { if (set.has(w)) n++; else if (!isPaused(w)) break; w = back(w); }
   return n;
 }
-const STREAKS = [3, 5, 10, 15, 20, 26, 39, 52];
 // Leçons : une de plus à chaque semaine de paie rangée (toutes visibles côté parent).
 const lessonsOpen = id => lessonFrom === 'parents' ? 99 : Math.min(99, 1 + paidWeeks(id).size);
 const weekTxt = w => w === wk(new Date()) ? 'de cette semaine' : 'de la semaine du ' + new Date(w).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -357,8 +357,8 @@ function homeView(k, t) {
   const prog = Math.min(100, Math.max(0, t.total / (g ? g.budget : J.cap) * 100));
   const hint = g ? (t.total >= g.budget ? `Objectif « ${esc(g.name)} » atteint !` : `Encore ${f(g.budget - t.total)} pour « ${esc(g.name)} »`) : (t.total >= J.cap ? `Palier de ${f(J.cap)} atteint !` : `Encore ${f(J.cap - t.total)} pour le palier de ${f(J.cap)}`);
   return `<section class="hero"><div><p class="hi">Salut ${esc(k.name)} !</p><p class="lbl">${g && t.total >= g.budget ? 'C’est pépite ! Ta tirelire est pleine' : 'Ta tirelire'}</p><div class="amount">${f(t.total)}</div>
-<div class="progrow"><div class="prog">${g ? '<b style="left:25%"></b><b style="left:50%"></b><b style="left:75%"></b>' : ''}<i style="width:${prog.toFixed(1)}%"></i></div>${growNug(prog)}</div><p class="small">${hint}</p>${streakOf(cur) >= 2 ? `<p class="streak">${NUG('', '')}<b>${streakOf(cur)} semaines de suite</b></p>` : ''}</div>${J.svg}</section>
-${!paid && !pauseOf(cur) ? `<button class="todo" data-act="go" data-v="paie"><span class="ic">${I.coin}</span><span><b>Ta paie t’attend !</b><small>${due > 1 ? `${due} paies à ranger` : 'Range tes pièces de la semaine'}</small></span><span class="end">${I.chev}</span></button>` : bourseOpen(cur) && postOf(cur) !== 'none' && !rolled && t.rolls.length ? `<button class="todo" data-act="go" data-v="bourse"><span class="ic">${I.die}</span><span><b>Ton dé de la semaine t’attend</b><small>Va-t-il faire monter ta tirelire ?</small></span><span class="end">${I.chev}</span></button>` : ''}
+<div class="progrow"><div class="prog">${g ? '<b style="left:25%"></b><b style="left:50%"></b><b style="left:75%"></b>' : ''}<i style="width:${prog.toFixed(1)}%"></i></div>${growNug(prog)}</div><p class="small">${hint}</p></div>${J.svg}</section>
+${!paid && !pauseOf(cur) ? `<button class="todo" data-act="go" data-v="paie"><span class="ic">${I.coin}</span><span><b>Ta paie t’attend !</b><small>${due > 1 ? `${due} paies à ranger` : streakOf(cur) >= 2 ? `Range-la pour garder ta série de ${streakOf(cur)} semaines` : 'Range tes pièces de la semaine'}</small></span><span class="end">${I.chev}</span></button>` : bourseOpen(cur) && postOf(cur) !== 'none' && !rolled && t.rolls.length ? `<button class="todo" data-act="go" data-v="bourse"><span class="ic">${I.die}</span><span><b>Ton dé de la semaine t’attend</b><small>Va-t-il faire monter ta tirelire ?</small></span><span class="end">${I.chev}</span></button>` : ''}
 <div class="tiles"><div class="tile"><small><i style="background:var(--own)"></i>Mon argent</small><b>${f(t.own)}</b></div>
 <div class="tile"><small><i style="background:var(--gold)"></i>Bonus ${P().de}</small><b>${f(t.bonus)}</b></div>
 <div class="tile"><small><i style="background:var(--grow)"></i>Gagné tout seul</small><b class="${t.gains < 0 ? 'neg' : 'g'}">${f(t.gains)}</b></div>
@@ -370,6 +370,7 @@ ${t.out > 0 ? `<p class="soft small" style="margin:8px 4px 0">Projets réalisés
 <button class="item" data-act="go" data-v="bourse"><span class="ic" style="background:var(--glass)">${I.die}</span><span><b>La bourse</b><small>${!bourseOpen(cur) ? `S’ouvre quand ta tirelire aura ${f(BOURSE_MIN)}` : !t.rolls.length && !rolled ? 'Nouveau : la bourse est ouverte !' : postOf(cur) === 'none' ? 'Tu ne joues pas la bourse' : rolled ? `Dé ${t.bourse.face} : ${eurS(t.bourse.gain)}` : 'Lance le dé de la semaine'}</small></span><span class="end ${rolled ? 'done' : ''}">${rolled ? I.check : I.chev}</span></button>
 <button class="item" data-act="go" data-v="recu"><span class="ic" style="background:color-mix(in srgb,var(--grow) 14%,transparent);color:var(--grow)">${I.gift}</span><span><b>J’ai reçu de l’argent</b><small>${t.waiting.length ? `${t.waiting.length} en attente de validation` : 'Un cadeau, un anniversaire ?'}</small></span><span class="end">${I.chev}</span></button>
 <button class="item" data-act="go" data-v="lecons"><span class="ic" style="background:color-mix(in srgb,var(--gold) 22%,var(--card));color:#6e4400">${NUG('', '')}</span><span><b>Comprendre l’argent</b><small>6 petites leçons et des quiz</small></span><span class="end">${I.chev}</span></button>
+<button class="item" data-act="go" data-v="pepites"><span class="ic" style="background:color-mix(in srgb,var(--gold) 22%,var(--card));color:#6e4400">${I.star}</span><span><b>Mes pépites</b><small>${(() => { const n = medals(cur).filter(m => m.ok).length; return `${n} sur ${MEDALS.length} gagnée${n > 1 ? 's' : ''}`; })()}</small><span class="mrow">${medals(cur).map(m => `<i class="${m.ok ? 'on' : ''}"></i>`).join('')}</span></span><span class="end">${I.chev}</span></button>
 <button class="item" data-act="go" data-v="carnet"><span class="ic" style="background:var(--glass)">${I.book}</span><span><b>Mon carnet</b><small>Tout ce qui est entré et sorti</small></span><span class="end">${I.chev}</span></button></div>`;
 }
 
@@ -855,9 +856,10 @@ async function checkPush() {
 const b64u = s => { const p = '='.repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); };
 async function devId(endpoint) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(endpoint)); return [...new Uint8Array(h)].slice(0, 12).map(x => x.toString(16).padStart(2, '0')).join(''); }
 async function pushOn() {
-  if (pushBusy || !ready) return; pushBusy = true; render();
+  if (pushBusy || !ready) return;
+  const permP = Notification.requestPermission(); pushBusy = true; render();
   try {
-    const perm = await Notification.requestPermission();
+    const perm = await permP;
     if (perm !== 'granted') { pushState = perm === 'denied' ? 'denied' : 'off'; return; }
     const cfg = await getDoc(doc(fdb, 'config', 'push')), pub = cfg.exists() && cfg.data().publicKey;
     if (!pub) { say('Les notifications ne sont pas encore prêtes.', 'Réessayez un peu plus tard.'); return; }
@@ -924,6 +926,70 @@ async function genVapid() {
   render();
 }
 let confirmVapid = false, vapidReady = null;
+
+
+/* ---------- collection de pépites : chaque pépite récompense un réflexe d'épargnant ---------- */
+function bestStreak(id) {
+  const ws = [...paidWeeks(id)].sort((a, b) => a - b), isPaused = pausedWeeks(id); let best = 0, run = 0, prev = null;
+  for (const w of ws) {
+    if (prev === null) run = 1;
+    else { let x = normWk(prev + 7 * 864e5), gap = false; for (let i = 0; x < w && i < 260; i++) { if (!isPaused(x)) { gap = true; break; } x = normWk(x + 7 * 864e5); } run = gap ? 1 : run + 1; }
+    best = Math.max(best, run); prev = w;
+  }
+  return best;
+}
+const MEDALS = [
+  { id: 'paie1', name: 'Premier pas', how: 'Ranger ta toute première paie.', test: c => c.paid >= 1 },
+  { id: 'bonus1', name: 'Premier bonus', how: 'Mettre des pièces dans ta tirelire et recevoir le bonus de tes parents.', test: c => c.bonus > 0 },
+  { id: 's3', name: 'Régulier', how: 'Ranger ta paie 3 semaines d’affilée.', test: c => c.best >= 3, serie: 3 },
+  { id: 's5', name: 'Fidèle', how: 'Ranger ta paie 5 semaines d’affilée.', test: c => c.best >= 5, serie: 5 },
+  { id: 's10', name: 'Infatigable', how: 'Ranger ta paie 10 semaines d’affilée.', test: c => c.best >= 10, serie: 10 },
+  { id: 's26', name: 'Six mois sans faillir', how: 'Ranger ta paie 26 semaines d’affilée.', test: c => c.best >= 26, serie: 26 },
+  { id: 's52', name: 'Une année entière', how: 'Ranger ta paie 52 semaines d’affilée.', test: c => c.best >= 52, serie: 52 },
+  { id: 'cap', name: 'Premier palier', how: `Faire passer ta tirelire au-dessus de ${f(CAPS[0])}.`, test: c => c.peak >= CAPS[0] },
+  { id: 'bourse', name: 'La bourse s’ouvre', how: `Atteindre ${f(BOURSE_MIN)} dans ta tirelire.`, test: c => c.peak >= BOURSE_MIN },
+  { id: 'de1', name: 'Premier lancer', how: 'Lancer le dé de la bourse une première fois.', test: c => c.rolls >= 1 },
+  { id: 'projet', name: 'Projet réalisé', how: 'Réunir tout l’argent de ton projet.', test: c => c.goalDone },
+  { id: 'savant', name: 'Petit savant', how: 'Réussir le quiz des 6 leçons.', test: c => c.lq >= 6 },
+];
+function medals(id) {
+  const k = kidOf(id); if (!k) return [];
+  const E = evs(id), T = tot(id), g = goalOf(id);
+  const c = { paid: paidWeeks(id).size, bonus: E.reduce((a, e) => a + ((e.t === 'paie' || (e.t === 'recu' && !e.pending && !e.refused)) ? e.bonus || 0 : 0), 0), best: bestStreak(id), peak: r2(T.peak), rolls: E.filter(e => e.t === 'bourse').length, goalDone: E.some(e => e.t === 'projet') || (g && T.total >= g.budget), lq: Object.keys(k.lq || {}).length };
+  return MEDALS.map(m => ({ ...m, ok: !!m.test(c) }));
+}
+const medalSet = id => new Set(medals(id).filter(m => m.ok).map(m => m.id));
+// Après une action de l'enfant : annonce la pépite gagnée (et prévient les parents pour les séries).
+function newMedal(id, before) {
+  const got = medals(id).filter(m => m.ok && !before.has(m.id));
+  if (!got.length) return '';
+  const m = got[got.length - 1];
+  if (m.serie) queuePush('serie', { kid: id, n: m.serie });
+  return `Nouvelle pépite : « ${m.name} » !`;
+}
+function nextSerie(id) { const st = streakOf(id), m = MEDALS.find(x => x.serie && x.serie > st && x.serie > bestStreak(id)); return m ? { m, left: m.serie - st } : null; }
+function pepitesView() {
+  const L = medals(cur), n = L.filter(m => m.ok).length, st = streakOf(cur), nx = nextSerie(cur);
+  return `<button class="backlink" data-act="go" data-v="home">${I.chev}<span>Ma tirelire</span></button><h2 class="title">Mes pépites</h2>
+<p class="lead">Chaque pépite récompense un réflexe de bon épargnant. Tu en as ${n} sur ${L.length}.</p>
+${st >= 1 ? `<section class="card serie"><b>${st} semaine${st > 1 ? 's' : ''} d’affilée</b><span>${nx ? `Encore ${nx.left} paie${nx.left > 1 ? 's' : ''} rangée${nx.left > 1 ? 's' : ''} pour la pépite « ${nx.m.name} ».` : 'Tu as toutes les pépites de régularité. Respect !'}</span></section>` : ''}
+<div class="medals">${L.map(m => `<div class="medal ${m.ok ? 'on' : ''}">${NUG('mnug', '')}<b>${m.ok ? m.name : '?'}</b><small>${m.how}</small></div>`).join('')}</div>`;
+}
+
+
+// Demande des notifications : une fenêtre avec un seul bouton, sur les téléphones des parents (jamais sur un appareil d'enfant verrouillé).
+function pushAskShow() {
+  if (!ready || !F || lock || pushState !== 'off' || guide !== null || tour !== null || view !== 'home') return false;
+  let a = null; try { a = JSON.parse(localStorage.getItem('pepite-pushask') || 'null'); } catch (e) {}
+  if (!a) return true;
+  return a.later && a.n < 3 && Date.now() - a.t > 10 * 864e5;
+}
+function pushAsked(later) { let a = null; try { a = JSON.parse(localStorage.getItem('pepite-pushask') || 'null'); } catch (e) {} const v = { t: Date.now(), n: ((a && a.n) || 0) + 1, later }; try { localStorage.setItem('pepite-pushask', JSON.stringify(v)); } catch (e) {} }
+function pushAskModal() {
+  return `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="pt"><div class="sheet pushask">${NUG('pask', '')}<h2 id="pt">On vous prévient ?</h2>
+<p>Chaque lundi, un petit récap : la paie de vos enfants et ce que vous leur devez. Et une alerte quand l’un d’eux déclare de l’argent reçu.</p>
+<div class="row"><button class="btn full" data-act="pushask">Oui, me prévenir</button></div><div class="row" style="margin-top:6px"><button class="btn ghost full" data-act="pushlater">Plus tard</button></div></div></div>`;
+}
 
 const H = () => ({ jar, miniDie, growNug, f, eurS, r50, I, coinEl });
 function artList() { return articles(H()); }
@@ -1059,8 +1125,8 @@ function mainView() {
     else if (!k.bguided && view === 'bourse' && bourseOpen(cur) && !evs(cur).some(e => e.t === 'bourse')) { guideKind = 'bourse'; guide = 0; guideHold = null; guideViews = []; }
   }
   const t = tot(cur);
-  const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : view === 'lire' ? lireView() : view === 'art' ? artView() : view === 'apropos' ? aproposView() : view === 'lecons' ? leconsView() : view === 'lecon' ? leconView() : view === 'confidentialite' ? privacyView() : view === 'avis' ? (lock && !pinOk ? lockedView() : avisView()) : view === 'admin' ? (lock && !pinOk ? lockedView() : adminView()) : homeView(k, t);
-  return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view${guide !== null ? ' guided' : ''}">${content}</main>${guide !== null && (guideKind === 'bourse' ? view === 'bourse' : ['home', 'paie', 'bourse', 'projet'].includes(view)) ? guideView(k) : ''}${tabbar()}${resetFor ? resetModal() : ''}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
+  const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : view === 'lire' ? lireView() : view === 'art' ? artView() : view === 'apropos' ? aproposView() : view === 'lecons' ? leconsView() : view === 'lecon' ? leconView() : view === 'confidentialite' ? privacyView() : view === 'pepites' ? pepitesView() : view === 'avis' ? (lock && !pinOk ? lockedView() : avisView()) : view === 'admin' ? (lock && !pinOk ? lockedView() : adminView()) : homeView(k, t);
+  return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view${guide !== null ? ' guided' : ''}">${content}</main>${guide !== null && (guideKind === 'bourse' ? view === 'bourse' : ['home', 'paie', 'bourse', 'projet'].includes(view)) ? guideView(k) : ''}${tabbar()}${resetFor ? resetModal() : ''}${!resetFor && pushAskShow() ? pushAskModal() : ''}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
 }
 
 let lastKey = '';
@@ -1164,10 +1230,11 @@ function roll() {
   setTimeout(() => {
     if (spin) clearInterval(spin);
     if (el) el.style.transform = '';
-    const before = tot(cur).total, rate = facesOf(cur)[face - 1], gain = faceEur(Math.max(0, before), facesOf(cur))[face - 1];
+    const before = tot(cur).total, md0 = medalSet(cur), rate = facesOf(cur)[face - 1], gain = faceEur(Math.max(0, before), facesOf(cur))[face - 1];
     EV[cur] = [...evs(cur), { t: 'bourse', d: iso(), face, rate, gain }];
     rolling = false; saveK(cur);
     sayMs(before, rate > 0 ? `Dé ${face} : +${f(gain)} dans ta tirelire !` : rate < 0 ? `Dé ${face} : ta tirelire perd ${f(Math.abs(gain))}.` : `Dé ${face} : rien ne bouge cette semaine.`, rate < 0 ? 'Ça arrive, la semaine prochaine sera peut-être meilleure.' : '');
+    { const nm = newMedal(cur, md0); if (nm) say(nm, toast && toast.msg); }
     render();
   }, quick ? 30 : 1300);
 }
@@ -1297,11 +1364,10 @@ document.addEventListener('click', ev => {
       const inv = sumC(invC), dep = sumC(depC);
       const bonus = r2(inv * F.match / 100);
       const before = t.total;
-      const st0 = streakOf(cur), ln0 = lessonsOpen(cur);
+      const md0 = medalSet(cur), ln0 = lessonsOpen(cur);
       EV[cur] = [...evs(cur), { t: 'paie', d: iso(), w: new Date(ow[0]).toISOString(), inv, dep, bonus }];
-      const st1 = streakOf(cur), hit = STREAKS.find(n => st0 < n && st1 >= n);
-      const cel = hit ? `${hit} semaines de suite !` : lessonsOpen(cur) > ln0 && lessonsOpen(cur) <= lessonList().length ? 'Nouvelle leçon débloquée !' : '';
-      if (hit) queuePush('serie', { kid: cur, n: hit });
+      const nx = nextSerie(cur), st1 = streakOf(cur);
+      const cel = newMedal(cur, md0) || (lessonsOpen(cur) > ln0 && lessonsOpen(cur) <= lessonList().length ? 'Nouvelle leçon débloquée !' : '') || (st1 >= 2 && nx ? `${st1} semaines d’affilée ! Encore ${nx.left} pour la pépite « ${nx.m.name} ».` : '');
       if (guide !== null) guidePaid = true;
       saveK(cur);
       sayMs(before, inv ? `Bravo ! ${f(inv + bonus)} rejoignent ta tirelire.` : 'Paie rangée : tout est dans ton porte-monnaie.', dep ? `${f(dep)} pour ton porte-monnaie : ${P().label.toLowerCase()} ${F.parents === 'parents' ? 'te les donneront' : 'te les donnera'}.` : '');
@@ -1366,6 +1432,8 @@ document.addEventListener('click', ev => {
     case 'avissend': sendAvis(); return;
     case 'video': openVideo(); return;
     case 'pushon': pushOn(); return;
+    case 'pushask': pushAsked(false); pushOn(); return;
+    case 'pushlater': pushAsked(true); break;
     case 'pushoff': pushOff(); return;
     case 'pushtest': queuePush('test', {}); say('Notification de test demandée.', 'Elle arrive dans les 15 minutes environ.'); break;
     case 'install': if (installEv) { const e = installEv; installEv = null; e.prompt(); e.userChoice.finally(() => render()); } break;
@@ -1379,7 +1447,7 @@ document.addEventListener('click', ev => {
     case 'adminreload': loadAdmin(); break;
     case 'vapidgen': genVapid(); return;
     case 'lecon': { const L = lessonList(), ix = L.findIndex(x => x.id === b.dataset.n); if (ix >= lessonsOpen(cur)) break; } view = 'lecon'; lessonId = b.dataset.n; window.scrollTo(0, 0); break;
-    case 'kq': { const x = lessonList().find(l => l.id === lessonId); if (x) { kq[x.id] = +b.dataset.n; const k = kidOf(cur); if (k && ready && lessonFrom !== 'parents' && kq[x.id] === x.quiz.ok && !(k.lq && k.lq[x.id])) { k.lq = { ...(k.lq || {}), [x.id]: 1 }; saveF(); } } break; }
+    case 'kq': { const x = lessonList().find(l => l.id === lessonId); if (x) { kq[x.id] = +b.dataset.n; const k = kidOf(cur); if (k && ready && lessonFrom !== 'parents' && kq[x.id] === x.quiz.ok && !(k.lq && k.lq[x.id])) { const md0 = medalSet(cur); k.lq = { ...(k.lq || {}), [x.id]: 1 }; saveF(); const nm = newMedal(cur, md0); if (nm) say(nm); } } break; }
     case 'kread': { const el = document.querySelector('.lesson'); if (!el) return; try { if (speechSynthesis.speaking) { speechSynthesis.cancel(); return; } const txt = [...el.querySelectorAll('h2, .alead, p:not(.kicker):not(.qfb), h4')].filter(e => !e.closest('.quiz') && !e.closest('figure')).map(e => e.innerText).join('. '); const u = new SpeechSynthesisUtterance(txt); u.lang = 'fr-FR'; u.rate = 0.95; const v = speechSynthesis.getVoices().find(z => /^fr/i.test(z.lang)); if (v) u.voice = v; speechSynthesis.speak(u); } catch (e) {} return; }
     case 'mycolor': { const x = kidOf(cur); if (x && ready && PAL.includes(b.dataset.c)) { x.color = b.dataset.c; saveF(); } break; }
     case 'kcolor': { const x = kidOf(k); if (x && ready) { x.color = b.dataset.c; saveF(); } break; }
