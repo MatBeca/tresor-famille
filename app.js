@@ -6,7 +6,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
-const VERSION = '112'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '113'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -52,7 +52,8 @@ const POST = {
   aventurier: { name: 'Aventurier', short: 'Aventurier', faces: [-6, -3, -1, 1, 4, 6.8], txt: 'Les plus gros gains possibles, mais tu peux vraiment perdre de l’argent.', like: 'Comme des actions en Bourse' }
 };
 const DICE = POST;
-const CAPS = [20, 50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 20000];
+// Paliers sans projet : le bocal se remplit jusqu'au palier, puis repart sur l'échelle suivante.
+const CAPS = [20, 50, 100, 200, 500, 1000, 1500, 2000, 3500, 5000, 10000, 20000, 30000, 40000, 50000];
 const PIPS = { 1: [[50, 50]], 2: [[28, 28], [72, 72]], 3: [[28, 28], [50, 50], [72, 72]], 4: [[28, 28], [72, 28], [28, 72], [72, 72]], 5: [[28, 28], [72, 28], [50, 50], [28, 72], [72, 72]], 6: [[28, 26], [72, 26], [28, 50], [72, 50], [28, 74], [72, 74]] };
 const NUGB = `<g transform=""><path d="M14 24 30 15 28 30Z" fill="#ffe68a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M30 15 46 17 42 32 28 30Z" fill="#fff4bd" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M46 17 58 30 42 32Z" fill="#ffd24a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M6 40 14 24 28 30 30 44Z" fill="#f7b52a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M28 30 42 32 30 44Z" fill="#ffcb3a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M58 30 56 46 42 32Z" fill="#e39a10" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M42 32 56 46 42 55 30 44Z" fill="#d08a00" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M6 40 30 44 20 54Z" fill="#eba216" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M30 44 42 55 20 54Z" fill="#b87400" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/></g><path transform="" d="M6 40 14 24 30 15 46 17 58 30 56 46 42 55 20 54Z" fill="none" stroke="#6e4400" stroke-width="3" stroke-linejoin="round"/><g transform=""><path d="M20 27 26 21" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><path d="M33 17.5Q33.81 21.19 37.5 22Q33.81 22.81 33 26.5Q32.19 22.81 28.5 22Q32.19 21.19 33 17.5Z" fill="#fff8d6" stroke="#6e4400" stroke-width="1.4" stroke-linejoin="round"/></g>`;
 const NUGP = NUGB.replace('<path d="M33 17.5Q33.81 21.19 37.5 22Q33.81 22.81 33 26.5Q32.19 22.81 28.5 22Q32.19 21.19 33 17.5Z" fill="#fff8d6" stroke="#6e4400" stroke-width="1.4" stroke-linejoin="round"/>', ''); // sans l'étoile
@@ -185,7 +186,7 @@ const lessonsOpen = id => lessonFrom === 'parents' ? 99 : Math.min(99, 1 + paidW
 const weekTxt = w => w === wk(new Date()) ? 'de cette semaine' : 'de la semaine du ' + new Date(w).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
 function tot(id) {
-  const t = { peak: 0, own: 0, bonus: 0, gains: 0, out: 0, pig: 0, purse: 0, given: 0, vire: 0, fromL: 0, paie: null, bourse: null, pays: [], rolls: [], waiting: [] };
+  const t = { peak: 0, jpeak: 0, own: 0, bonus: 0, gains: 0, out: 0, pig: 0, purse: 0, given: 0, vire: 0, fromL: 0, paie: null, bourse: null, pays: [], rolls: [], waiting: [] };
   for (const e of evs(id)) {
     if (e.t === 'recu' && (e.pending || e.refused)) { if (e.pending) t.waiting.push(e); }
     else if (e.t === 'paie' || e.t === 'recu') { t.own += e.inv; t.bonus += e.bonus; t.pig += e.dep; if (e.t === 'paie') { t.purse += e.dep; t.paie = e.d; t.pays.push(e.inv); } }
@@ -193,7 +194,8 @@ function tot(id) {
     else if (e.t === 'bourse') { t.gains += e.gain; t.bourse = e; t.rolls.push(e); }
     else if (e.t === 'projet') { t.out += e.amount; t.fromL += (e.fromLivret ?? e.amount); }
     else if (e.t === 'vire') { t.vire += e.amount; }
-    t.peak = Math.max(t.peak, t.own + t.bonus + t.gains - t.out);
+    const now$ = t.own + t.bonus + t.gains - t.out;
+    t.peak = Math.max(t.peak, now$); t.jpeak = e.t === 'projet' ? now$ : Math.max(t.jpeak, now$); // jpeak : plus haut depuis le dernier achat de projet
   }
   t.total = r2(t.own + t.bonus + t.gains - t.out);
   t.purseDue = r2(Math.max(0, t.purse - t.given));
@@ -228,7 +230,7 @@ const msHow = id => ({ step: 'Ton projet est coupé en 4 étapes. À chaque éta
 const bonusKid = (m, unit = 'pièces placées', one = '1 pièce') => { const p = bonusPlan(m); if (msBand(cur) !== 'pct' && p && p.n > 1) { const gift = p.g === 1 ? one : one.replace(/^1 (\S+)/, (_, w) => `${p.g} ${w === '€' ? w : w + 's'}`); return `pour ${p.n} ${unit}, ${P().aj} ${gift}`; } return `${P().aj} ${String(m).replace('.', ',')} % de bonus`; };
 function milestone(before, after) {
   const g = goalOf(cur);
-  if (!g) { const c = CAPS.find(x => before < x && after >= x); return c ? `C’est pépite ! Ta tirelire passe les ${f(c)}.` : ''; }
+  if (!g) { const c = [...CAPS].reverse().find(x => before < x && after >= x); return c ? `C’est pépite ! Ton bocal est plein à ${eur0(c)} : il grandit !` : ''; }
   const b = before / g.budget, a = after / g.budget;
   for (const m of [1, 0.75, 0.5, 0.25]) if (b < m && a >= m) return m === 1 ? `C’est pépite ! Objectif « ${esc(g.name)} » atteint !` : ({ step: `Étape ${m * 4} sur 4 franchie pour « ${esc(g.name)} » : ta pépite grossit !`, frac: `${cap1(FRAC[m])} du chemin pour « ${esc(g.name)} » : ta pépite grossit !`, pct: `Palier ${m * 100} % atteint pour « ${esc(g.name)} » !` })[msBand(cur)];
   return '';
@@ -249,11 +251,24 @@ function project(id, perWeek, strat) {
 
 /* ---------- dessins ---------- */
 function die(n, size) { return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" role="img" aria-label="Dé : ${n}"><rect x="6" y="9" width="88" height="88" rx="22" fill="#d9d3e6"/><rect x="6" y="4" width="88" height="88" rx="22" fill="#fff" stroke="#22203a" stroke-width="5"/>${PIPS[n].map(([x, y]) => `<circle cx="${x}" cy="${y - 2}" r="9" fill="#22203a"/>`).join('')}</svg>`; }
-// Sans projet, le bocal change d'échelle dès qu'il est rempli aux trois quarts.
-const JAR = [20, 50, 100, 200, 500, 1000, 1500, 2000, 3500, 5000, 10000];
-const jarScale = v => JAR.find(S => v < 0.75 * S) || Math.ceil(v / 0.75 / 10000) * 10000;
-function jar(t, g) {
-  const cap = g ? Math.max(g.budget, t.total) : jarScale(t.total);
+const eur0 = n => `${Math.round(n).toLocaleString('fr-FR')}\u00a0€`;
+const capOf = v => CAPS.find(c => c > v) || Math.ceil((v + 1) / 10000) * 10000;
+// Passage de palier sans projet : on mémorise sur l'appareil la dernière échelle vue pour rejouer l'animation une seule fois.
+let jarAnim = null;
+function jarLevel(t, g) {
+  if (g) return null;
+  const sc = capOf(Math.max(t.jpeak, t.total)), key = 'pepite-jar-' + cur; let seen = null;
+  try { seen = JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) {}
+  if (seen && sc > seen.s && !(jarAnim && jarAnim.kid === cur && jarAnim.to === sc) && guide === null) {
+    jarAnim = { kid: cur, from: seen.s, to: sc, l0: Math.min(1, Math.max(0, seen.v) / seen.s), until: Date.now() + 3000, msgUntil: Date.now() + 15000 };
+    setTimeout(() => sfx('up'), 150); setTimeout(render, 3100);
+  }
+  if (!seen || seen.s !== sc || seen.v !== t.total) try { localStorage.setItem(key, JSON.stringify({ s: sc, v: t.total })); } catch (e) {}
+  return jarAnim && jarAnim.kid === cur && Date.now() < jarAnim.until ? jarAnim : null;
+}
+const capPill = (v, cls) => `<g class="jl ${cls}"><rect x="72" y="60" width="76" height="21" rx="10.5" style="fill:var(--card);stroke:var(--ink)" stroke-width="3"/><text x="110" y="75.5" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="13.5" style="fill:var(--ink)">${eur0(v)}</text></g>`;
+function jar(t, g, A = null) {
+  const cap = g ? Math.max(g.budget, t.total) : capOf(Math.max(t.jpeak, t.total));
   const pos = t.own + t.bonus + Math.max(0, t.gains), k = pos > 0 ? Math.max(0, t.total) / pos : 0, H = 196;
   const h = [t.own * k / cap * H, t.bonus * k / cap * H, Math.max(0, t.gains) * k / cap * H];
   const fills = ['var(--own)', 'var(--gold)', 'var(--grow)'];
@@ -262,20 +277,20 @@ function jar(t, g) {
   const yb = y + h[2]; // bas de la couche « gagné tout seul »
   const reached = !!g && t.total >= g.budget;
   const star = (x, yy, r) => `<path d="M${x} ${yy - r}l${r * 0.28} ${r * 0.72} ${r * 0.72} ${r * 0.28}-${r * 0.72} ${r * 0.28}-${r * 0.28} ${r * 0.72}-${r * 0.28}-${r * 0.72}-${r * 0.72}-${r * 0.28} ${r * 0.72}-${r * 0.28}z" fill="#fff3b0" stroke="#6e4400" stroke-width="2" stroke-linejoin="round"/>`;
-  const svg = `<svg class="jar" viewBox="0 0 220 290" role="img" aria-label="${reached ? 'Tirelire pleine : c’est pépite !' : `Tirelire remplie à ${Math.round((266 - y) / H * 100)} %`}">
+  const svg = `<svg class="jar${A ? ' jup' : ''}" viewBox="0 0 220 290" role="img" aria-label="${reached ? 'Tirelire pleine : c’est pépite !' : `Tirelire remplie à ${Math.round((266 - y) / H * 100)} %${g ? '' : ` d’un bocal de ${eur0(cap)}`}`}">
 <defs><clipPath id="jc"><rect x="22" y="56" width="176" height="214" rx="40"/></clipPath>
 <pattern id="pc" width="26" height="18" patternUnits="userSpaceOnUse"><circle cx="13" cy="9" r="7" fill="#fff" fill-opacity=".2"/></pattern>
 <pattern id="pn" width="30" height="20" patternUnits="userSpaceOnUse"><path d="M5 12 7 7 12 5 18 6 21 10 20 14 14 16 8 15z" fill="#f5b323" stroke="#6e4400" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 9 11 7" stroke="#fff6cf" stroke-width="1.4" stroke-linecap="round"/></pattern></defs>
 <ellipse cx="110" cy="278" rx="80" ry="8" fill="#000" fill-opacity=".08"/>
 <rect x="22" y="56" width="176" height="214" rx="40" style="fill:var(--glass)"/>
-<g clip-path="url(#jc)">${layers}<rect x="16" y="${gy.toFixed(1)}" width="188" height="${(266 - gy).toFixed(1)}" fill="url(#pc)"/>${h[2] > 0.5 ? `<rect x="16" y="${y.toFixed(1)}" width="188" height="${h[2].toFixed(1)}" fill="url(#pn)"/>` : ''}</g>
-<line x1="34" x2="186" y1="70" y2="70" stroke-dasharray="7 7" style="stroke:var(--soft)" stroke-width="2.5" stroke-linecap="round"/>
+<g clip-path="url(#jc)"><g class="jlv"${A ? ` style="--a:${(A.l0 * H / Math.max(1, 266 - y)).toFixed(3)};--b:${(H / Math.max(1, 266 - y)).toFixed(3)}"` : ''}>${layers}<rect x="16" y="${gy.toFixed(1)}" width="188" height="${(266 - gy).toFixed(1)}" fill="url(#pc)"/>${h[2] > 0.5 ? `<rect x="16" y="${y.toFixed(1)}" width="188" height="${h[2].toFixed(1)}" fill="url(#pn)"/>` : ''}</g>${A ? '<rect class="jflash" x="22" y="56" width="176" height="214" fill="#fff"/>' : ''}</g>
+<line x1="34" x2="186" y1="70" y2="70" stroke-dasharray="7 7" style="stroke:var(--soft)" stroke-width="2.5" stroke-linecap="round"/>${g ? '' : (A ? capPill(A.from, 'jl-old') + capPill(A.to, 'jl-new') : capPill(cap, ''))}
 <rect x="38" y="84" width="14" height="140" rx="7" fill="#fff" fill-opacity=".55"/>${g ? [0.25, 0.5, 0.75].map(m => { const yy = (266 - m * g.budget / cap * H).toFixed(1); return `<line x1="168" x2="192" y1="${yy}" y2="${yy}" style="stroke:var(--ink)" stroke-width="4" stroke-linecap="round"/>`; }).join('') : ''}
 <rect x="22" y="56" width="176" height="214" rx="40" fill="none" style="stroke:${reached ? '#c98a00' : 'var(--ink)'}" stroke-width="6"/>
 <rect x="40" y="20" width="140" height="38" rx="13" style="fill:var(--kid);stroke:var(--ink)" stroke-width="6"/>
 <rect x="74" y="29" width="72" height="11" rx="5.5" style="fill:var(--ink)"/>
 <rect x="50" y="44" width="34" height="6" rx="3" fill="#fff" fill-opacity=".4"/>
-${reached ? star(14, 120, 13) + star(206, 170, 11) + star(196, 96, 7) + star(26, 214, 8) : ''}</svg>`;
+${reached ? star(14, 120, 13) + star(206, 170, 11) + star(196, 96, 7) + star(26, 214, 8) : ''}${A ? [[14, 110, 13], [206, 150, 11], [198, 80, 8], [24, 220, 9], [110, 8, 9]].map(([x, yy, r]) => `<g class="jspark">${star(x, yy, r)}</g>`).join('') : ''}</svg>`;
   return { cap, svg };
 }
 
@@ -362,10 +377,9 @@ function pepCard() {
   return `<button class="todo pep" data-act="go" data-v="pepites"${last ? ` style="--m:${last.c}"` : ''}><span class="ic">${ic}</span><span>${last ? `<small>Ta dernière pépite</small><b>${last.name}</b>` : '<b>Mes pépites</b>'}<small>${last ? `${won.length} / ${ms.length} pépites débloquées` : 'Range ta première paie pour gagner ta première pépite'}</small></span><span class="end">${I.chev}</span></button>`;
 }
 function homeView(k, t) {
-  const g = goalOf(cur), J = jar(t, g), due = owed(cur).length, paid = due === 0, rolled = sameWeek(t.bourse && t.bourse.d);
-  const pal = Math.max(0, t.total) <= 0 ? CAPS[0] : (CAPS.find(c => c >= t.total) || Math.ceil(t.total / 10000) * 10000); // prochain palier fêté
-  const prog = Math.min(100, Math.max(0, t.total / (g ? g.budget : pal) * 100));
-  const hint = g ? (t.total >= g.budget ? `Objectif « ${esc(g.name)} » atteint !` : `Encore ${f(g.budget - t.total)} pour « ${esc(g.name)} »`) : (t.total >= pal ? `Palier de ${f(pal)} atteint !` : `Encore ${f(pal - t.total)} pour le palier de ${f(pal)}`);
+  const g = goalOf(cur), J = jar(t, g, jarLevel(t, g)), due = owed(cur).length, paid = due === 0, rolled = sameWeek(t.bourse && t.bourse.d);
+  const prog = Math.min(100, Math.max(0, t.total / (g ? g.budget : J.cap) * 100)), up = jarAnim && jarAnim.kid === cur && Date.now() < jarAnim.msgUntil;
+  const hint = g ? (t.total >= g.budget ? `Objectif « ${esc(g.name)} » atteint !` : `Encore ${f(g.budget - t.total)} pour « ${esc(g.name)} »`) : (up ? `Ton bocal a grandi : il va maintenant jusqu’à ${eur0(J.cap)}. Il paraît moins rempli, mais tu n’as rien perdu !` : `Encore ${f(J.cap - t.total)} pour le palier de ${eur0(J.cap)}`);
   return `<section class="hero"><div><p class="hi">Salut ${esc(k.name)} !</p><p class="lbl">${g && t.total >= g.budget ? 'C’est pépite ! Ta tirelire est pleine' : 'Ta tirelire'}</p><div class="amount">${f(t.total)}</div>
 <div class="progrow"><div class="prog">${g ? '<b style="left:25%"></b><b style="left:50%"></b><b style="left:75%"></b>' : ''}<i style="width:${prog.toFixed(1)}%"></i></div>${growNug(prog)}</div><p class="small">${hint}</p></div>${J.svg}</section>
 ${!paid && !pauseOf(cur) ? `<button class="todo" data-act="go" data-v="paie"><span class="ic">${I.coin}</span><span><b>Ta paie t’attend !</b><small>${due > 1 ? `${due} paies à ranger` : streakOf(cur) >= 2 ? `Range-la pour garder ta série de ${streakOf(cur)} semaines` : 'Range tes pièces de la semaine'}</small></span><span class="end">${I.chev}</span></button>` : bourseOpen(cur) && postOf(cur) !== 'none' && !rolled && t.rolls.length ? `<button class="todo" data-act="go" data-v="bourse"><span class="ic">${I.die}</span><span><b>Ton dé de la semaine t’attend</b><small>Va-t-il faire monter ta tirelire ?</small></span><span class="end">${I.chev}</span></button>` : ''}
@@ -1004,7 +1018,7 @@ const MEDALS = [
   M('tirelire', 'tout', 'Tout dans la tirelire', 'Ranger toute une paie dans ta tirelire, sans rien garder pour dépenser.', c => c.tout),
   ...[[10, 'bonus10', 'Bonus fidèle'], [25, 'bonus25', 'Joli bonus'], [50, 'bonus50', 'Gros bonus'], [100, 'bonus100', 'Méga bonus']].map(([n, id, name]) => M('tirelire', id, name, `Recevoir ${f(n)} de bonus en tout.`, c => c.bonus >= n)),
   ...[[5, 'recu5', 'Cadeaux bien gardés'], [10, 'recu10', 'Dix cadeaux rangés'], [20, 'recu20', 'Vingt cadeaux rangés']].map(([n, id, name]) => M('tirelire', id, name, `Ranger ${n} fois de l’argent reçu.`, c => c.recu >= n)),
-  ...[[0, 'cap', 'Premier palier'], [1, 'cap2', 'Deuxième palier'], [2, 'cap3', 'Trois chiffres'], [3, 'cap4', 'Deux cents euros'], [4, 'cap6', 'Trois cents euros'], [5, 'cap5', 'Cinq cents euros'], [6, 'cap7', 'Sept cent cinquante euros'], [7, 'cap8', 'Mille euros !']].map(([i, id, name]) => M('tirelire', id, name, capT(i), c => c.peak >= CAPS[i])),
+  ...[[0, 'cap', 'Premier palier'], [1, 'cap2', 'Deuxième palier'], [2, 'cap3', 'Trois chiffres'], [3, 'cap4', 'Deux cents euros'], [4, 'cap5', 'Cinq cents euros'], [5, 'cap6', 'Mille euros !'], [7, 'cap7', 'Deux mille euros'], [9, 'cap8', 'Cinq mille euros']].map(([i, id, name]) => M('tirelire', id, name, capT(i), c => c.peak >= CAPS[i])),
   M('bourse', 'bourse', 'La bourse s’ouvre', `Atteindre ${f(BOURSE_MIN)} dans ta tirelire.`, c => c.peak >= BOURSE_MIN),
   M('bourse', 'de1', 'Premier lancer', 'Lancer le dé de la bourse une première fois.', c => c.rolls >= 1),
   M('bourse', 'chance', 'Coup de chance', 'Faire gagner ta tirelire avec le dé.', c => c.won),
@@ -1065,14 +1079,14 @@ function newMedal(id, before) {
 let medalQ = [], medalSeq = 0;
 const KID_VIEWS = ['home', 'paie', 'bourse', 'projet', 'futur', 'pepites', 'lecons', 'lecon', 'recu', 'carnet'];
 function checkMedals(k) {
-  if (!ready || !F || !k || guide !== null || tour !== null || !KID_VIEWS.includes(view) || lessonFrom === 'parents') return;
+  if (!ready || !F || !k || guide !== null || tour !== null || !KID_VIEWS.includes(view) || lessonFrom === 'parents' || (jarAnim && Date.now() < jarAnim.until)) return;
   const ids = medals(k.id).filter(m => m.ok).map(m => m.id);
-  if (!Array.isArray(k.ms)) { k.ms = ids; setTimeout(saveF); return; } // première fois : pas d'avalanche pour les pépites déjà gagnées
-  const nw = ids.filter(x => !k.ms.includes(x));
+  if (!Array.isArray(k.ms)) { k.ms = ids; saveF(); return; } // première fois : pas d'avalanche pour les pépites déjà gagnées
+  const nw = ids.filter(x => !k.ms.includes(x) && !medalQ.some(q => q.kid === k.id && q.id === x));
   if (!nw.length) return;
   medalQ.push(...nw.map(id => ({ kid: k.id, id })));
   k.ms = [...k.ms, ...nw]; k.pm = nw[nw.length - 1];
-  setTimeout(saveF);
+  saveF();
   try { navigator.vibrate && navigator.vibrate([40, 60, 40]); } catch (e) {}
   setTimeout(() => sfx('pep'), 250);
 }
@@ -1100,6 +1114,7 @@ function sfx(name) {
       case 'flat': beep(660, 0, 0.12, 'sine', 0.07); break;
       case 'pep': seq([784, 988, 1175, 1568, 1976], 0.07, 0.25, 'sine', 0.09); beep(2637, 0.38, 0.4, 'sine', 0.04); break;
       case 'good': seq([660, 990], 0.08, 0.16, 'triangle', 0.1); break;
+      case 'up': beep(330, 0, 0.7, 'sine', 0.07, 990); seq([784, 1047, 1319, 1568], 0.09, 0.3, 'triangle', 0.08); break;
       case 'bad': beep(280, 0, 0.22, 'triangle', 0.08, 210); break;
     }
   } catch (e) {}
@@ -1271,9 +1286,9 @@ function mainView() {
     if (!k.guided && !evs(cur).length && !goalOf(cur) && view === 'home') { guideKind = 'pay'; guidePlan = planOf(); guide = 0; guideHold = null; guideViews = []; }
     else if (!k.bguided && view === 'bourse' && bourseOpen(cur) && !evs(cur).some(e => e.t === 'bourse')) { guideKind = 'bourse'; guide = 0; guideHold = null; guideViews = []; }
   }
-  checkMedals(k);
   const t = tot(cur);
   const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : view === 'lire' ? lireView() : view === 'art' ? artView() : view === 'apropos' ? aproposView() : view === 'lecons' ? leconsView() : view === 'lecon' ? leconView() : view === 'confidentialite' ? privacyView() : view === 'pepites' ? pepitesView() : view === 'avis' ? (lock && !pinOk ? lockedView() : avisView()) : view === 'admin' ? (lock && !pinOk ? lockedView() : adminView()) : homeView(k, t);
+  checkMedals(k); // après le rendu de l'écran : laisse passer l'animation du bocal avant celle des pépites
   return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view${guide !== null ? ' guided' : ''}">${content}</main>${guide !== null && (guideKind === 'bourse' ? view === 'bourse' : ['home', 'paie', 'bourse', 'projet'].includes(view)) ? guideView(k) : ''}${tabbar()}${resetFor ? resetModal() : ''}${!resetFor && !medalQ.length && pushAskShow() ? pushAskModal() : ''}${!resetFor && medalQ.length ? medalModal() : ''}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
 }
 

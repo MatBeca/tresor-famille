@@ -506,3 +506,17 @@ textarea{width:100%;font:inherit;font-size:16px;font-weight:600;border-radius:14
 @keyframes mrup{from{opacity:0;transform:translateY(10px)}}
 @keyframes mrfall{0%{transform:translateY(0) rotate(var(--r));opacity:1}100%{transform:translateY(110vh) rotate(calc(var(--r) + 540deg));opacity:.9}}
 @media (prefers-reduced-motion:reduce){.mrays,.mconf,.mbig{animation:none}.mbox,.mkick,.mbox h2,.mmat,.mhow,.mbox .btn{animation-duration:.01s}}
+/* Passage de palier : le bocal se remplit, gonfle, puis repart sur sa nouvelle échelle (même taille à la fin) */
+svg.jar.jup{animation:jpop 3s ease-in-out both;transform-origin:50% 90%}
+.jup .jlv{transform-box:view-box;transform-origin:110px 266px;animation:jlv 3s cubic-bezier(.45,0,.2,1) both}
+.jup .jflash{opacity:0;animation:jflash 3s both}
+.jup .jl-old{animation:jlo 3s both}
+.jup .jl-new{transform-box:fill-box;transform-origin:center;animation:jln 3s both}
+.jup .jspark{transform-box:fill-box;transform-origin:center;animation:jsp 3s both}
+@keyframes jlv{0%{transform:scaleY(var(--a))}28%,52%{transform:scaleY(var(--b))}100%{transform:scaleY(1)}}
+@keyframes jpop{0%,26%{transform:scale(1)}38%{transform:scale(1.14)}48%{transform:scale(1.1)}70%,100%{transform:scale(1)}}
+@keyframes jflash{0%,28%{opacity:0}36%{opacity:.55}60%,100%{opacity:0}}
+@keyframes jlo{0%,36%{opacity:1}44%,100%{opacity:0}}
+@keyframes jln{0%,38%{opacity:0;transform:scale(.4)}50%{opacity:1;transform:scale(1.35)}62%,100%{opacity:1;transform:scale(1)}}
+@keyframes jsp{0%,28%{opacity:0;transform:scale(0)}40%{opacity:1;transform:scale(1.35) rotate(25deg)}70%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.5)}}
+@media (prefers-reduced-motion:reduce){svg.jar.jup,.jup .jlv,.jup .jflash,.jup .jspark,.jup .jl-old,.jup .jl-new{animation:none}.jup .jl-old{opacity:0}}
