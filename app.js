@@ -6,7 +6,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
-const VERSION = '114'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '115'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -610,6 +610,27 @@ ${!last ? `<p class="soft" style="margin:0">Rien à annuler.</p>` : can ? `<p cl
 <div class="pills">${[['light', 'Clair'], ['dark', 'Sombre']].map(([v, l]) => `<button class="pill" data-act="theme" data-n="${v}" aria-pressed="${theme === v}">${l}</button>`).join('')}</div>
 <div class="pills">${[['on', 'Sons activés'], ['off', 'Sons coupés']].map(([v, l]) => `<button class="pill" data-act="sons" data-n="${v}" aria-pressed="${(v === 'on') === sndOn()}">${l}</button>`).join('')}</div></section>`;
 }
+// Petit sondage aux parents (jamais aux enfants) : après 3 semaines et 2 paies rangées. Réponses gardées dans la fiche famille.
+const SV_WTP = [['0', 'Rien, seulement si c’est gratuit'], ['1', '1 € par mois'], ['2', '2 € par mois'], ['3-5', '3 à 5 € par mois'], ['5+', 'Plus de 5 € par mois']];
+const SV_SRC = [['ami', 'Un ami ou la famille'], ['reseaux', 'Les réseaux sociaux'], ['ecole', 'L’école ou une association'], ['autre', 'Autrement']];
+function surveyShow() {
+  if (!F || F.survey || !ready || (F.svN || 0) >= 3) return false;
+  const born = new Date((F.stats && F.stats.created) || F.created || iso()).getTime();
+  if (Date.now() - born < 21 * 864e5) return false;
+  if (F.svLater && Date.now() - new Date(F.svLater).getTime() < 14 * 864e5) return false;
+  return kids().reduce((a, k) => a + paidWeeks(k.id).size, 0) >= 2;
+}
+function surveyCard() {
+  if (form.svDone) return '<section class="card survey"><h3>Merci !</h3><p class="small" style="margin:0">Vos réponses sont bien arrivées. Elles servent directement à décider de la suite de Pépite.</p></section>';
+  if (!surveyShow()) return '';
+  const pill = (act, v, l, on) => `<button class="pill" data-act="${act}" data-n="${v}" aria-pressed="${on}">${l}</button>`;
+  return `<section class="card survey"><h3>3 questions pour améliorer Pépite</h3>
+<p class="svq">Recommanderiez-vous Pépite à un autre parent ?</p><div class="nps">${Array.from({ length: 11 }, (_, i) => pill('svnps', i, i, form.svnps === i)).join('')}</div><div class="npsl"><small>Pas du tout</small><small>Sans hésiter</small></div>
+<p class="svq">Si Pépite devenait payant un jour, combien seriez-vous prêt à payer pour toute la famille ?</p><div class="pills">${SV_WTP.map(([v, l]) => pill('svwtp', v, l, form.svwtp === v)).join('')}</div>
+<p class="svq">Comment avez-vous connu Pépite ?</p><div class="pills">${SV_SRC.map(([v, l]) => pill('svsrc', v, l, form.svsrc === v)).join('')}</div>
+<label style="margin-top:10px">Un mot pour expliquer ? (facultatif)<textarea data-f="svtxt" rows="3" maxlength="600">${esc(form.svtxt || '')}</textarea></label>
+<div class="row"><button class="btn sm" data-act="svsend" ${form.svnps === undefined || !form.svwtp ? 'disabled' : ''}>Envoyer</button><button class="btn ghost sm" data-act="svlater">Plus tard</button></div></section>`;
+}
 function parentsView() {
   if (lock && !pinOk) return pinAsk ? pinView() : lockedView();
   const dis = ready ? '' : 'disabled', K = kidOf(cur), last = evs(cur)[evs(cur).length - 1];
@@ -617,7 +638,7 @@ function parentsView() {
   const pk = form.pkid && kidOf(form.pkid) ? form.pkid : cur;
   const toOk = kids().flatMap(k => tot(k.id).waiting.map(e => ({ k, e })));
   const okCard = toOk.length ? `<section class="card waitcard"><h3>À valider</h3><p class="soft small" style="margin:0">Argent reçu déclaré par les enfants. Il ne compte qu’une fois validé.</p><ul class="log">${toOk.map(({ k, e }) => `<li><span><b>${esc(k.name)}</b> · ${dateFr(e.d)}<br>${giftLine(e)}</span><span class="row" style="margin:0;gap:6px;flex-wrap:nowrap"><button class="btn gr sm" data-act="gok" data-k="${k.id}" data-d="${e.d}" ${ready ? '' : 'disabled'}>Valider</button><button class="btn ghost sm" data-act="gno" data-k="${k.id}" data-d="${e.d}" ${ready ? '' : 'disabled'}>Refuser</button></span></li>`).join('')}</ul></section>` : '';
-  return `<h2 class="title">Espace parents</h2>${okCard}
+  return `<h2 class="title">Espace parents</h2>${okCard}${surveyCard()}
 <button class="item art-item vitem" data-act="video"><span class="ic artn vic"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg></span><span><small>Le tuto vidéo · 2 min 30</small><b>Comment marche Pépite, à regarder avec votre enfant</b></span><span class="end">${I.chev}</span></button>
 <button class="item art-item parentread" data-act="go" data-v="lire"><span class="ic artn">${NUG('', '')}</span><span><small>Toi, parent · 5 lectures courtes</small><b>La méthode Pépite, pour bien accompagner votre enfant</b></span><span class="end">${I.chev}</span></button>
 <button class="item art-item parentkid" data-act="go" data-v="lecons" data-from="parents"><span class="ic artn">${I.book}</span><span><small>Côté enfant · 6 leçons et quiz</small><b>Ce que lit votre enfant, pour en parler ensemble</b></span><span class="end">${I.chev}</span></button>
@@ -704,6 +725,31 @@ ${isIOS ? '' : `<div class="row"><a class="btn full" href="${chrome}">Ouvrir dan
 }
 function privacyView() { return privacyHTML({ contact: CONTACT, I, user }); }
 // Repères d'usage : une écriture par jour au plus, rien si la famille a refusé les statistiques.
+// ---------- Mesure d'usage (désactivable par chaque famille) ----------
+// Par semaine : [ouvertures, ouvertures sur un appareil d'enfant, visites de l'Espace parents]. Appareils : système, appareil d'enfant, appli installée.
+const ymdL = ms => { const x = new Date(ms); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
+const osOf = () => /android/i.test(navigator.userAgent) ? 'android' : /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? 'ios' : 'ordinateur';
+const devLocal = () => { try { let d = localStorage.getItem('pepite-dev'); if (!d) { d = Math.random().toString(16).slice(2, 10); localStorage.setItem('pepite-dev', d); } return d; } catch (e) { return 'x'; } };
+// Ouverture depuis une notification : ?n=type, retiré de l'adresse aussitôt.
+let notifOpen = (() => { try { const q = new URLSearchParams(location.search), n = (q.get('n') || '').replace(/[^\w-]/g, '').slice(0, 20); if (n) { q.delete('n'); history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash); } return n; } catch (e) { return ''; } })();
+let hiddenAt = 0, parentSeen = false;
+function touchSession() {
+  if (!F || F.noStats || !ready || !F.stats) return;
+  const st = F.stats, w = st.wk || (st.wk = {}), key = ymdL(wk(new Date())), r = w[key] || (w[key] = [0, 0, 0]);
+  r[0]++; if (lock) r[1]++;
+  const ks = Object.keys(w).sort(); while (ks.length > 104) delete w[ks.shift()];
+  const dv = st.dv || (st.dv = {}); dv[devLocal()] = { os: osOf(), k: lock ? 1 : 0, i: standalone() ? 1 : 0, l: iso().slice(0, 10) };
+  const dk = Object.keys(dv).sort((a, b) => (dv[a].l || '').localeCompare(dv[b].l || '')); while (dk.length > 12) delete dv[dk.shift()];
+  if (notifOpen) { const nc = st.nc || (st.nc = {}); nc[notifOpen] = (nc[notifOpen] || 0) + 1; notifOpen = ''; }
+  parentSeen = false;
+  saveF();
+}
+function markParent() {
+  if (parentSeen || !F || F.noStats || !ready || !F.stats || !F.stats.wk) return;
+  const r = F.stats.wk[ymdL(wk(new Date()))]; if (!r) return;
+  r[2]++; parentSeen = true; saveF();
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') hiddenAt = Date.now(); else if (hiddenAt && Date.now() - hiddenAt > 30 * 60e3) { hiddenAt = 0; touchSession(); } });
 function touchStats(force) {
   if (!F || F.noStats) return;
   const today = iso().slice(0, 10), first = kids().flatMap(k => evs(k.id)).map(e => e.d).sort()[0];
@@ -812,6 +858,98 @@ function adminStats() {
     goal: P(K.filter(k => k.goal).length, K.length), bought: K.filter(k => k.bought).length, guided: P(K.filter(k => k.guided).length, K.length), lq: P(K.filter(k => k.lq > 0).length, K.length),
     avg: K.length ? f(K.reduce((a, k) => a + k.tot, 0) / K.length) : '–', match: n ? Math.round(rows.reduce((a, r) => a + (r.match || 0), 0) / n) + ' %' : '–', weeks, srcs, posts, optout: rows.filter(r => r.noStats).length };
 }
+// ---------- Analyse détaillée (tableau de bord et exports CSV du créateur) ----------
+const wOf = z => { const t = new Date(z.w || z.d); return isNaN(t) ? new Date(z.d) : t; };
+const pseudo = uid => { let h = 2166136261; for (const ch of uid) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return 'F' + h.toString(16).padStart(8, '0').slice(0, 6); };
+const W7 = 7 * 864e5;
+function adminDeep() {
+  const now = Date.now(), cw = wk(new Date());
+  const fams = adminData.fams.filter(x => x.id !== user.uid && Array.isArray(x.kids) && !x.noStats);
+  return fams.map(x => {
+    const kd = adminData.kd[x.id] || {}, st = x.stats || {}, evAll = Object.values(kd).flatMap(k => k.events || []);
+    const firstEv = evAll.map(e => e.d).filter(Boolean).sort()[0];
+    const created = new Date(st.created || x.created || firstEv || new Date()).getTime(), sw = wk(new Date(created));
+    const weeks = Math.max(1, Math.round((cw - sw) / W7) + 1);
+    // semaines actives : ouvertures mesurées + semaines où quelque chose s'est passé
+    const wkMap = {}; for (const [k, r] of Object.entries(st.wk || {})) wkMap[wk(new Date(k + 'T12:00:00'))] = r;
+    const evW = {}; for (const e of evAll) { if (!e.d) continue; const w = wk(new Date(e.d)); const o = evW[w] || (evW[w] = { paie: 0, de: 0, recu: 0 }); if (e.t === 'paie') o.paie++; else if (e.t === 'bourse') o.de++; else if (e.t === 'recu') o.recu++; }
+    const act = new Set([...Object.keys(wkMap), ...Object.keys(evW)].map(Number));
+    const sum = i => Object.values(st.wk || {}).reduce((a, r) => a + (r[i] || 0), 0);
+    const dv = Object.values(st.dv || {});
+    const kids = x.kids.map((k, i) => {
+      const K = kd[k.id] || {}, e = K.events || [], paid = new Set(e.filter(z => z.t === 'paie').map(z => normWk(wk(wOf(z))))).size;
+      const ks = wk(new Date(k.start || created)), kw = Math.max(1, Math.round((cw - ks) / W7) + 1);
+      let tot = 0, peak = 0, bonus = 0, gains = 0, inv = 0, dep = 0, out = 0; const pw = [];
+      for (const z of e) {
+        if (z.t === 'paie' || (z.t === 'recu' && !z.pending && !z.refused)) { tot += z.inv + z.bonus; bonus += z.bonus || 0; if (z.t === 'paie') { inv += z.inv; dep += z.dep; pw.push(normWk(wk(wOf(z)))); } }
+        else if (z.t === 'bourse') { tot += z.gain; gains += z.gain; } else if (z.t === 'projet') { tot -= z.amount; out += z.amount; }
+        peak = Math.max(peak, tot);
+      }
+      const ws = [...new Set(pw)].sort((a, b) => a - b); let run = ws.length ? 1 : 0, best = run; for (let j = 1; j < ws.length; j++) { run = ws[j] - ws[j - 1] <= 8 * 864e5 ? run + 1 : 1; best = Math.max(best, run); }
+      const fp = e.find(z => z.t === 'paie');
+      return { n: i + 1, age: validBirth(k.birth) ? ageAt(k.birth, new Date()) : '', start: k.start || '', weekly: k.weekly, paid, kw, rate: Math.min(100, Math.round(100 * paid / kw)), best, first: fp ? Math.max(0, Math.round((new Date(fp.d) - new Date(k.start || created)) / 864e5)) : '',
+        keep: inv + dep ? Math.round(100 * inv / (inv + dep)) : '', tot: r2(tot), peak: r2(peak), bonus: r2(bonus), gains: r2(gains), out: r2(out),
+        recus: e.filter(z => z.t === 'recu').length, rolls: e.filter(z => z.t === 'bourse').length, post: k.posture || x.diceName || '', goal: K.goal ? 1 : 0, budget: K.goal ? K.goal.budget : '', projets: e.filter(z => z.t === 'projet').length,
+        lq: Object.keys(k.lq || {}).length, peps: Array.isArray(k.ms) ? k.ms.length : '', guided: k.guided ? 1 : 0 };
+    });
+    return { id: pseudo(x.id), created, sw, weeks, act, wkMap, evW, last: st.seen || '', days: st.days || 0, opens: sum(0), kidOpens: sum(1), parentVisits: sum(2),
+      devs: dv.length, os: [...new Set(dv.map(d => d.os))].join('+'), kidDev: dv.some(d => d.k) ? 1 : 0, inst: st.inst ? 1 : 0, push: x.push ? 1 : 0, nc: st.nc || {}, src: st.src || '',
+      sv: x.survey || null, match: x.match, gmatch: x.giftMatch, kids };
+  });
+}
+function adminDeepStats(R) {
+  const P = (a, b) => b ? Math.round(100 * a / b) + ' %' : '–', med = a => { const v = a.filter(x => x !== '' && x != null).sort((p, q) => p - q); return v.length ? v[Math.floor(v.length / 2)] : '–'; };
+  const coh = [1, 2, 4, 8, 12].map(i => { const el = R.filter(r => r.weeks > i); return [i, P(el.filter(r => r.act.has(normWk(r.sw + i * W7))).length, el.length), el.length]; });
+  const K = R.flatMap(r => r.kids), sv = R.map(r => r.sv).filter(Boolean);
+  const nps = sv.length ? Math.round(100 * (sv.filter(v => v.nps >= 9).length - sv.filter(v => v.nps <= 6).length) / sv.length) : '–';
+  const dist = (arr, keys) => keys.map(([k, l]) => [l, arr.filter(v => v === k).length]);
+  const nc = R.reduce((m, r) => { for (const [k, v] of Object.entries(r.nc)) m[k] = (m[k] || 0) + v; return m; }, {});
+  const os = R.reduce((m, r) => { for (const o of (r.os || '').split('+').filter(Boolean)) m[o] = (m[o] || 0) + 1; return m; }, {});
+  return { coh, actRatio: R.length ? Math.round(100 * R.reduce((a, r) => a + Math.min(1, r.act.size / r.weeks), 0) / R.length) + ' %' : '–',
+    rate: K.length ? Math.round(K.reduce((a, k) => a + k.rate, 0) / K.length) + ' %' : '–', firstPay: med(K.map(k => k.first)), keep: K.filter(k => k.keep !== '').length ? Math.round(K.filter(k => k.keep !== '').reduce((a, k) => a + k.keep, 0) / K.filter(k => k.keep !== '').length) + ' %' : '–',
+    kidDev: P(R.filter(r => r.kidDev).length, R.length), push: P(R.filter(r => r.push).length, R.length), nc, os, parentPerWeek: R.length ? (R.reduce((a, r) => a + r.parentVisits / Math.max(1, r.act.size), 0) / R.length).toFixed(1).replace('.', ',') : '–',
+    peps: K.filter(k => k.peps !== '').length ? (K.filter(k => k.peps !== '').reduce((a, k) => a + k.peps, 0) / K.filter(k => k.peps !== '').length).toFixed(1).replace('.', ',') : '–',
+    saved: f(K.reduce((a, k) => a + k.tot, 0)), bonus: f(K.reduce((a, k) => a + k.bonus, 0)), spent: f(K.reduce((a, k) => a + k.out, 0)),
+    nSv: sv.length, nps, wtp: dist(sv.map(v => v.wtp), SV_WTP), svSrc: dist(sv.map(v => v.src), SV_SRC) };
+}
+function csvDownload(name, rows) {
+  const cell = v => { const t = typeof v === 'number' ? String(v).replace('.', ',') : String(v ?? ''); return /[;"\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿' + rows.map(r => r.map(cell).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+  a.download = `pepite-${name}-${iso().slice(0, 10)}.csv`; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function adminCsv(kind) {
+  const R = adminDeep(), day = ms => ms ? ymdL(ms) : '';
+  if (kind === 'enfants') {
+    const head = ['famille', 'enfant', 'age', 'inscription_famille', 'semaines_depuis_inscription', 'semaines_actives', 'part_semaines_actives_pct', 'derniere_visite', 'jours_ouverture', 'ouvertures', 'ouvertures_appareil_enfant', 'visites_espace_parents', 'appareils', 'systemes', 'appareil_enfant', 'appli_installee', 'notifications', 'clics_notifications', 'source_lien', 'source_sondage', 'recommandation_0_10', 'prix_accepte', 'commentaire_sondage', 'bonus_paie_pct', 'bonus_cadeaux_pct',
+      'debut_enfant', 'argent_de_poche_hebdo', 'semaines_enfant', 'paies_rangees', 'taux_paie_rangee_pct', 'meilleure_serie', 'jours_avant_premiere_paie', 'part_paie_mise_de_cote_pct', 'tirelire', 'plus_haut', 'bonus_recus', 'gains_bourse', 'depense_projets', 'argent_recu_declare', 'lancers_de', 'style_bourse', 'projet_en_cours', 'budget_projet', 'projets_realises', 'lecons_reussies', 'pepites', 'guide_termine'];
+    const rows = [head];
+    for (const r of R) for (const k of r.kids) rows.push([r.id, k.n, k.age, day(r.created), r.weeks, r.act.size, Math.round(100 * Math.min(1, r.act.size / r.weeks)), r.last, r.days, r.opens, r.kidOpens, r.parentVisits, r.devs, r.os, r.kidDev, r.inst, r.push, Object.entries(r.nc).map(([a, b]) => a + ':' + b).join(' '), r.src, r.sv ? r.sv.src : '', r.sv ? r.sv.nps : '', r.sv ? r.sv.wtp : '', r.sv ? r.sv.txt : '', r.match, r.gmatch,
+      (k.start || '').slice(0, 10), k.weekly, k.kw, k.paid, k.rate, k.best, k.first, k.keep, k.tot, k.peak, k.bonus, k.gains, k.out, k.recus, k.rolls, k.post, k.goal, k.budget, k.projets, k.lq, k.peps, k.guided]);
+    return csvDownload('enfants', rows);
+  }
+  if (kind === 'semaines') {
+    const rows = [['famille', 'semaine_du', 'semaine_n', 'ouvertures', 'ouvertures_appareil_enfant', 'visites_espace_parents', 'paies_rangees', 'lancers_de', 'argent_recu_declare', 'active']];
+    const cw = wk(new Date());
+    for (const r of R) for (let w = r.sw, i = 0; w <= cw; w = normWk(w + W7), i++) { const o = r.wkMap[w] || [], e = r.evW[w] || {}; rows.push([r.id, day(w), i, o[0] || 0, o[1] || 0, o[2] || 0, e.paie || 0, e.de || 0, e.recu || 0, r.act.has(w) ? 1 : 0]); }
+    return csvDownload('semaines', rows);
+  }
+  const rows = [['date', 'type', 'famille', 'humeur', 'recommandation_0_10', 'prix_accepte', 'source', 'texte', 'version', 'enfants']];
+  for (const a of adminData.avis) rows.push([(a.d || '').slice(0, 10), 'avis', a.uid ? pseudo(a.uid) : '', a.mood || '', '', '', '', a.text || '', a.v || '', a.kids || '']);
+  for (const x of adminData.fams) if (x.survey && x.id !== user.uid) rows.push([(x.survey.d || '').slice(0, 10), 'sondage', pseudo(x.id), '', x.survey.nps, x.survey.wtp, x.survey.src || '', x.survey.txt || '', x.survey.v || '', (x.kids || []).length]);
+  csvDownload('avis', rows);
+}
+function adminDeepView() {
+  const R = adminDeep(), d = adminDeepStats(R), line = (l, v) => `<li><span>${l}</span><b>${v}</b></li>`;
+  const lab = { cadeau: 'Argent reçu à valider', palier: 'Palier', objectif: 'Projet atteint', serie: 'Série', bourse: 'Bourse ouverte', lundi: 'Récap du lundi', mercredi: 'Rappel du mercredi', test: 'Test' };
+  return `<section class="card"><h3>Rétention par semaine</h3><p class="soft small" style="margin:0 0 6px">Part des familles revenues pendant la Ne semaine après leur inscription (parmi celles assez anciennes).</p><ul class="kv">${d.coh.map(([i, v, n]) => line(`Semaine ${i}`, `${v} <small class="soft">(${n})</small>`)).join('')}${line('Semaines actives sur semaines écoulées', d.actRatio)}</ul></section>
+<section class="card"><h3>Habitude et usage</h3><ul class="kv">${line('Paies rangées sur semaines écoulées', d.rate)}${line('Délai médian avant la première paie', d.firstPay === '–' ? '–' : d.firstPay + ' j')}${line('Part de la paie mise de côté', d.keep)}${line('Familles où l’enfant a son propre appareil', d.kidDev)}${line('Visites de l’Espace parents par semaine active', d.parentPerWeek)}${line('Pépites par enfant', d.peps)}</ul></section>
+<section class="card"><h3>Notifications</h3><ul class="kv">${line('Familles abonnées', d.push)}${Object.entries(d.nc).map(([k, v]) => line('Ouvertures · ' + esc(lab[k] || k), v)).join('') || line('Ouvertures depuis une notification', 0)}</ul></section>
+<section class="card"><h3>Valeur</h3><ul class="kv">${line('Argent dans les tirelires', d.saved)}${line('Bonus versés par les parents', d.bonus)}${line('Dépensé pour des projets', d.spent)}${line('Score de recommandation (NPS)', d.nSv ? `${d.nps} <small class="soft">(${d.nSv} réponses)</small>` : '–')}${d.wtp.map(([l, v]) => line('Prix · ' + l, v)).join('')}${d.svSrc.map(([l, v]) => line('Connu par · ' + l, v)).join('')}</ul></section>
+<section class="card"><h3>Appareils</h3><ul class="kv">${Object.entries(d.os).map(([k, v]) => line(esc(k), v)).join('') || line('Aucune donnée', '')}</ul></section>
+<section class="card"><h3>Télécharger les données</h3><p class="soft small" style="margin:0">Fichiers pour Excel ou Google Sheets, sans nom ni e-mail : chaque famille a un code (F…). Les familles qui ont désactivé les statistiques sont exclues.</p>
+<div class="row"><button class="btn sm" data-act="admcsv" data-n="enfants">Une ligne par enfant</button><button class="btn sm ghost" data-act="admcsv" data-n="semaines">Activité semaine par semaine</button><button class="btn sm ghost" data-act="admcsv" data-n="avis">Avis et sondages</button></div></section>`;
+}
 function adminView() {
   if (!isAdmin()) return '<p>Accès réservé.</p>';
   const head = `<button class="backlink" data-act="go" data-v="parents">${I.chev}<span>Espace parents</span></button><p class="kicker">Réservé au créateur</p><h2 class="title">Tableau de bord d’usage</h2>`;
@@ -823,12 +961,13 @@ function adminView() {
   return head + `<p class="lead">Toutes les familles, hors la tienne. Mis à jour le ${new Date(adminData.at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}. <button class="link" data-act="adminreload">Actualiser</button></p>
 <div class="kpis">${kpi(s.n, 'familles inscrites', `+${s.new7} en 7 j · +${s.new30} en 30 j`)}${kpi(s.act7, 'actives cette semaine', `${s.act30} sur 30 jours`)}${kpi(s.ret4, 'encore là après 4 semaines', `sur ${s.old28} familles assez anciennes`)}${kpi(s.inst, 'ont installé l’appli', '')}</div>
 <section class="card"><h3>Familles actives par semaine</h3><div class="wbars">${s.weeks.map(w => `<div><i style="height:${Math.round(100 * w.v / max)}%"></i><b>${w.v}</b><small>${w.label}</small></div>`).join('')}</div></section>
+${adminDeepView()}
 <section class="card"><h3>Rétention</h3><ul class="kv">${line('Encore actives après 1 semaine', `${s.ret1} <small class="soft">(${s.old7} familles)</small>`)}${line('Encore actives après 4 semaines', `${s.ret4} <small class="soft">(${s.old28} familles)</small>`)}${line('Enfants qui ont rangé leur paie 3 semaines de suite', s.habit)}</ul></section>
 <section class="card"><h3>Ce qui est utilisé</h3><ul class="kv">${line('Enfants inscrits', `${s.kids} <small class="soft">(${s.perFam} par famille)</small>`)}${s.ages.map(([l, v]) => line('· ' + l, v)).join('')}${line('Guide terminé', s.guided)}${line('Au moins un quiz réussi', s.lq)}${line('Un projet en cours', s.goal)}${line('Projets achetés', s.bought)}${line('Bourse ouverte (15 € atteints)', s.open)}${line('Dé lancé, parmi les bourses ouvertes', s.rolled)}${s.posts.map(([p, v]) => line('· ' + (POST[p] ? POST[p].name : p), v)).join('')}${line('Tirelire moyenne', s.avg)}${line('Bonus moyen des parents', s.match)}</ul></section>
 <section class="card"><h3>D’où viennent les familles</h3><ul class="kv">${s.srcs.map(([k, v]) => line(esc(k), v)).join('') || '<li><span class="soft">Aucune donnée</span></li>'}</ul><p class="soft small" style="margin:8px 0 0">Ajoute <b>?src=nom</b> à tes liens (ex. ?src=whatsapp, ?src=instagram) pour savoir lesquels marchent.</p></section>
 <section class="card"><h3>Avis des familles (${adminData.avis.length})</h3>${adminData.avis.length ? `<ul class="avislist">${adminData.avis.slice(0, 40).map(a => `<li><small class="soft">${dateFr(a.d)} · v${esc(a.v)} · ${a.kids} enfant(s)${a.mood ? ' · ' + esc((MOODS.find(m => m[0] === a.mood) || [, a.mood])[1]) : ''}</small><p>${esc(a.text || '(sans message)')}</p></li>`).join('')}</ul>` : '<p class="soft" style="margin:0">Aucun avis pour l’instant.</p>'}</section>
 <section class="card"><h3>Notifications</h3><p class="small" style="margin:0">${vapidReady ? 'Les clés des notifications sont en place.' : 'Avant que les familles puissent activer les notifications, créez une fois les clés (elles restent dans votre compte).'}</p><div class="row"><button class="btn sm ${vapidReady ? 'ghost' : ''}" data-act="vapidgen">${vapidReady ? 'Recréer les clés' : 'Créer les clés des notifications'}</button></div></section>
-<section class="card"><h3>Comment lire ces chiffres</h3><p class="small" style="margin:0">Repères indicatifs, à ajuster avec l’expérience. Le chiffre qui compte le plus est la rétention à 4 semaines : au-delà de 40 %, l’habitude est installée et tu peux tester une offre payante. Si l’installation reste sous 50 %, travaille l’écran d’installation avant tout. Si beaucoup de familles s’inscrivent mais peu d’enfants rangent leur paie trois semaines de suite, c’est la promesse ou l’accompagnement des parents qui coince, pas l’acquisition.</p>${s.optout ? `<p class="soft small" style="margin:8px 0 0">${s.optout} famille(s) ont désactivé les statistiques : leurs repères d’usage manquent.</p>` : ''}</section>`;
+<section class="card"><h3>Comment lire ces chiffres</h3><p class="small" style="margin:0">Repères indicatifs, à ajuster avec l’expérience. Le chiffre qui compte le plus est la rétention à 4 semaines : au-delà de 40 %, l’habitude est installée et tu peux tester une offre payante. Si l’installation reste sous 50 %, travaille l’écran d’installation avant tout. Si beaucoup de familles s’inscrivent mais peu d’enfants rangent leur paie trois semaines de suite, c’est la promesse ou l’accompagnement des parents qui coince, pas l’acquisition. Le score de recommandation (NPS) va de −100 à +100 : c’est la part de parents qui donnent 9 ou 10, moins celle qui donne 6 ou moins ; au-dessus de +30, le bouche-à-oreille travaille pour toi. La question du prix mesure une intention, pas un achat : en pratique, seule une partie de ceux qui disent oui paiera vraiment. Pour le détail famille par famille, télécharge le fichier « Une ligne par enfant ».</p>${s.optout ? `<p class="soft small" style="margin:8px 0 0">${s.optout} famille(s) ont désactivé les statistiques : leurs repères d’usage manquent.</p>` : ''}</section>`;
 }
 
 
@@ -1329,7 +1468,7 @@ function applyRaises() {
 }
 function updateReady() {
   const r = !!(F && famServer && kids().every(k => KL[k.id]));
-  if (r !== ready) { ready = r; if (r) { status = ''; clearTimeout(offlineTimer); applyRaises(); touchStats(); markBourse(); resetCoins(); checkPush(); } return true; }
+  if (r !== ready) { ready = r; if (r) { status = ''; clearTimeout(offlineTimer); applyRaises(); touchStats(); touchSession(); markBourse(); resetCoins(); checkPush(); } return true; }
   return false;
 }
 function syncKids() {
@@ -1521,7 +1660,7 @@ document.addEventListener('click', ev => {
     case 'obnext': if (obValidate()) { ob.step++; window.scrollTo(0, 0); } break;
     case 'obprev': ob.step--; ob.err = ''; window.scrollTo(0, 0); break;
     case 'obfinish': obFinish(); return;
-    case 'go': pinFor = null; view = b.dataset.v; if (view === 'admin') loadAdmin(); if (view !== 'parents') { delAcct = false; delErr = ''; } if (view === 'avis') { avisSent = false; } if (b.dataset.from) lessonFrom = b.dataset.from; else if (!['lecons', 'lecon'].includes(view)) lessonFrom = null; if (!['parents', 'lire', 'art', 'apropos', 'confidentialite', 'admin', 'avis'].includes(view) && !(lessonFrom === 'parents' && ['lecons', 'lecon'].includes(view))) { pinOk = false; } pinAsk = false; pinBuf = ''; pinBad = false; window.scrollTo(0, 0); break;
+    case 'go': pinFor = null; view = b.dataset.v; if (view === 'parents') markParent(); if (view === 'admin') loadAdmin(); if (view !== 'parents') { delAcct = false; delErr = ''; } if (view === 'avis') { avisSent = false; } if (b.dataset.from) lessonFrom = b.dataset.from; else if (!['lecons', 'lecon'].includes(view)) lessonFrom = null; if (!['parents', 'lire', 'art', 'apropos', 'confidentialite', 'admin', 'avis'].includes(view) && !(lessonFrom === 'parents' && ['lecons', 'lecon'].includes(view))) { pinOk = false; } pinAsk = false; pinBuf = ''; pinBad = false; window.scrollTo(0, 0); break;
     case 'kid': cur = k; goalEdit = false; resetCoins(); try { localStorage.setItem('pepite-cur', cur); } catch (e) {} break;
     case 'toPig': if (tray.length) depC.push(tray.shift()), sfx('coin'); break;
     case 'toGrow': if (tray.length) invC.push(tray.shift()), sfx('coin'); break;
@@ -1605,6 +1744,12 @@ document.addEventListener('click', ev => {
     case 'pushon': pushOn(); return;
     case 'pushask': pushAsked(false); pushOn(); return;
     case 'pushlater': pushAsked(true); break;
+    case 'admcsv': if (adminData) adminCsv(b.dataset.n); return;
+    case 'svnps': form.svnps = +b.dataset.n; break;
+    case 'svwtp': form.svwtp = b.dataset.n; break;
+    case 'svsrc': form.svsrc = b.dataset.n; break;
+    case 'svsend': if (ready && form.svnps !== undefined && form.svwtp) { F.survey = { d: iso(), nps: form.svnps, wtp: form.svwtp, src: form.svsrc || '', txt: (form.svtxt || '').trim().slice(0, 600), v: VERSION }; form.svDone = true; saveF(); } break;
+    case 'svlater': if (ready) { F.svLater = iso(); F.svN = (F.svN || 0) + 1; saveF(); } break;
     case 'sons': try { localStorage.setItem('pepite-sons', b.dataset.n === 'on' ? '1' : '0'); } catch (e) {} sfx('good'); break;
     case 'mednext': medalQ.shift(); medalSeq++; if (medalQ.length) setTimeout(() => sfx('pep'), 250); break;
     case 'pushoff': pushOff(); return;

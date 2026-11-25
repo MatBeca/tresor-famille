@@ -1,5 +1,5 @@
 // Politique de confidentialité de Pépite, affichée dans l'appli et accessible sans compte (lien #confidentialite).
-export const PRIVACY_VERSION = '2026-11-22';
+export const PRIVACY_VERSION = '2026-11-25';
 
 export function privacyHTML({ contact, I, user }) {
   const N = ' ';
@@ -15,7 +15,7 @@ export function privacyHTML({ contact, I, user }) {
 <p><b>Le compte du parent</b>${N}: une adresse e-mail et un mot de passe. Le mot de passe est conservé chiffré par Google, personne ne peut le lire, pas même nous.</p>
 <p><b>La famille</b>${N}: le prénom, la date de naissance et la couleur de chaque enfant, sa paie, vos règles de bonus et le code parents. Jamais de nom de famille, de photo, d’adresse ou de localisation.</p>
 <p><b>L’historique de la tirelire</b>${N}: paies rangées, bonus, lancers de dé, projets, argent reçu et corrections.</p>
-<p><b>Des repères d’usage</b>${N}: la date de création du compte, le nombre de jours d’utilisation, si l’appli est installée sur l’écran d’accueil, le lien par lequel vous êtes arrivé et les quiz réussis. Ils servent uniquement à des statistiques d’ensemble pour améliorer Pépite.</p>
+<p><b>Des repères d’usage</b>${N}: la date de création du compte, le nombre de jours et de semaines d’utilisation, le nombre d’ouvertures par semaine (et parmi elles, celles faites sur l’appareil d’un enfant ou dans l’Espace parents), le type d’appareil (Android, iPhone ou ordinateur) avec un identifiant aléatoire propre à l’appareil, si l’appli est installée sur l’écran d’accueil, le lien par lequel vous êtes arrivé, les notifications ouvertes et les quiz réussis. Si vous répondez au petit sondage proposé dans l’Espace parents (recommandation, prix envisageable, façon dont vous avez connu Pépite), vos réponses sont aussi conservées. Ces repères servent uniquement à des statistiques pour améliorer Pépite et décider de son évolution ; ils ne sont jamais vendus ni utilisés pour de la publicité, et les analyses se font sans nom ni adresse e-mail.</p>
 <p><b>Vos avis</b>${N}: les messages envoyés depuis «${N}Donner mon avis${N}», avec la date, la version de l’appli et le nombre d’enfants. Seul le créateur de Pépite les lit.</p>
 <p><b>Les notifications</b>${N}: si vous les activez, l’adresse technique d’abonnement fournie par le navigateur de votre téléphone, pour vous envoyer le récap du lundi, le rappel du mercredi, les argents reçus à valider et les grands moments de vos enfants. Le message passe par le service de notification du navigateur (Google pour Android, Apple pour iPhone). Vous pouvez les désactiver à tout moment dans l’Espace parents.</p>
 <p><b>Sur votre téléphone seulement</b>${N}: le thème clair ou sombre, le verrouillage de l’appareil et le tutoriel déjà vu. Ces réglages restent sur l’appareil et ne nous sont jamais envoyés.</p>

@@ -520,3 +520,8 @@ svg.jar.jup{animation:jpop 3s ease-in-out both;transform-origin:50% 90%}
 @keyframes jln{0%,38%{opacity:0;transform:scale(.4)}50%{opacity:1;transform:scale(1.35)}62%,100%{opacity:1;transform:scale(1)}}
 @keyframes jsp{0%,28%{opacity:0;transform:scale(0)}40%{opacity:1;transform:scale(1.35) rotate(25deg)}70%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.5)}}
 @media (prefers-reduced-motion:reduce){svg.jar.jup,.jup .jlv,.jup .jflash,.jup .jspark,.jup .jl-old,.jup .jl-new{animation:none}.jup .jl-old{opacity:0}}
+/* Sondage des parents */
+.survey .svq{margin:14px 0 6px;font-weight:800}
+.survey .nps{display:grid;grid-template-columns:repeat(11,1fr);gap:4px}
+.survey .nps .pill{padding:8px 0;min-width:0;text-align:center;justify-content:center}
+.survey .npsl{display:flex;justify-content:space-between;margin-top:4px;color:var(--soft)}

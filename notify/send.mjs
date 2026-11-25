@@ -19,7 +19,9 @@ webpush.setVapidDetails('mailto:' + (process.env.CONTACT || 'contact@pepite.app'
 const eur = v => (Math.round(v * 100) / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 const names = list => list.length < 2 ? list.join('') : list.slice(0, -1).join(', ') + ' et ' + list[list.length - 1];
 
-async function sendFamily(uid, msg) {
+// type : ajouté à l'adresse (?n=type) pour compter, côté appli, les ouvertures depuis chaque sorte de notification.
+async function sendFamily(uid, msg, type) {
+  if (type) msg = { ...msg, url: (msg.url || './') + ((msg.url || './').includes('?') ? '&' : '?') + 'n=' + type };
   const subs = await db.collection(`familles/${uid}/push`).get();
   let sent = 0;
   for (const s of subs.docs) {
@@ -51,7 +53,7 @@ async function drainQueue() {
   let n = 0;
   for (const d of q.docs) {
     const item = d.data(), msg = message(item);
-    if (msg && item.uid) n += await sendFamily(item.uid, msg);
+    if (msg && item.uid) n += await sendFamily(item.uid, msg, item.type);
     await d.ref.delete();
   }
   console.log(`File : ${q.size} événement(s), ${n} notification(s) envoyée(s).`);
@@ -70,7 +72,7 @@ async function weekly() {
     const extra = [give > 0 ? `${eur(give)} de porte-monnaie à leur donner` : '', keep > 0 ? `${eur(keep)} à mettre de côté` : ''].filter(Boolean).join(', ');
     const who = names(kids.map(k => k.name));
     const body = `${who} ${kids.length > 1 ? 'ont leur paie' : 'a sa paie'} de la semaine à ranger.${extra ? ' En attente de vous : ' + extra + '.' : ''}`;
-    n += await sendFamily(uid, { title: 'C’est jour de paie !', body, url: './?go=parents', tag: 'lundi' });
+    n += await sendFamily(uid, { title: 'C’est jour de paie !', body, url: './?go=parents', tag: 'lundi' }, 'lundi');
   }
   console.log(`Récap du lundi : ${uids.length} famille(s), ${n} notification(s).`);
 }
@@ -100,7 +102,7 @@ async function streakReminders() {
     const F = f.data(), live = new Set((F.kids || []).filter(x => !x.archived).map(x => x.id));
     for (const [id, x] of Object.entries(F.due || {})) {
       if (!live.has(id) || x.pz || !x.lw || x.lw >= mon) continue; // en pause, jamais payé, ou déjà rangée cette semaine
-      k++; n += await sendFamily(uid, streakMsg(x));
+      k++; n += await sendFamily(uid, streakMsg(x), 'mercredi');
     }
   }
   console.log(`Rappel du mercredi : ${k} enfant(s), ${n} notification(s).`);
