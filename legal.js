@@ -17,7 +17,7 @@ export function privacyHTML({ contact, I, user }) {
 <p><b>L’historique de la tirelire</b>${N}: paies rangées, bonus, lancers de dé, projets, argent reçu et corrections.</p>
 <p><b>Des repères d’usage</b>${N}: la date de création du compte, le nombre de jours d’utilisation, si l’appli est installée sur l’écran d’accueil, le lien par lequel vous êtes arrivé et les quiz réussis. Ils servent uniquement à des statistiques d’ensemble pour améliorer Pépite.</p>
 <p><b>Vos avis</b>${N}: les messages envoyés depuis «${N}Donner mon avis${N}», avec la date, la version de l’appli et le nombre d’enfants. Seul le créateur de Pépite les lit.</p>
-<p><b>Les notifications</b>${N}: si vous les activez, l’adresse technique d’abonnement fournie par le navigateur de votre téléphone, pour vous envoyer le récap du lundi, les argents reçus à valider et les grands moments de vos enfants. Le message passe par le service de notification du navigateur (Google pour Android, Apple pour iPhone). Vous pouvez les désactiver à tout moment dans l’Espace parents.</p>
+<p><b>Les notifications</b>${N}: si vous les activez, l’adresse technique d’abonnement fournie par le navigateur de votre téléphone, pour vous envoyer le récap du lundi, le rappel du mercredi, les argents reçus à valider et les grands moments de vos enfants. Le message passe par le service de notification du navigateur (Google pour Android, Apple pour iPhone). Vous pouvez les désactiver à tout moment dans l’Espace parents.</p>
 <p><b>Sur votre téléphone seulement</b>${N}: le thème clair ou sombre, le verrouillage de l’appareil et le tutoriel déjà vu. Ces réglages restent sur l’appareil et ne nous sont jamais envoyés.</p>
 
 <h3>Pourquoi</h3>

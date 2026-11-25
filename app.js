@@ -6,7 +6,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
-const VERSION = '105'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '106'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -893,7 +893,12 @@ function queuePush(type, data) {
 // Ce que les parents doivent encore, gardé dans la fiche famille pour le récap du lundi.
 function syncDue() {
   if (!ready || !F || !F.push) return;
-  const d = Object.fromEntries(kids().map(k => { const T = tot(k.id); return [k.id, { name: k.name, give: T.purseDue, keep: r2(Math.max(0, T.due)) }]; }));
+  const ymd = ms => { const x = new Date(ms); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
+  const d = Object.fromEntries(kids().map(k => {
+    const T = tot(k.id), pw = [...paidWeeks(k.id)], nx = nextSerie(k.id);
+    // Pour le rappel du mercredi : dernière semaine rangée, série en cours, paies restantes avant la prochaine pépite de série.
+    return [k.id, { name: k.name, give: T.purseDue, keep: r2(Math.max(0, T.due)), lw: pw.length ? ymd(Math.max(...pw)) : '', st: streakOf(k.id), left: nx ? nx.left : 0, pz: !!pauseOf(k.id) }];
+  }));
   if (JSON.stringify(d) !== JSON.stringify(F.due || {})) { F.due = d; saveF(); }
 }
 // La bourse vient de s'ouvrir (15 € atteints) : prévenir les parents une seule fois.
@@ -903,7 +908,7 @@ function markBourse(notify) {
   if (ch) saveF();
 }
 function pushCard() {
-  const what = '<p class="soft small" style="margin:0">Le lundi, un récap de ce que vous devez à vos enfants. Une alerte quand un enfant déclare de l’argent reçu. Et les grands moments : palier atteint, objectif, bourse ouverte, séries de semaines.</p>';
+  const what = '<p class="soft small" style="margin:0">Le lundi, un récap de ce que vous devez à vos enfants. Le mercredi, un rappel si une paie n’est pas encore rangée. Une alerte quand un enfant déclare de l’argent reçu. Et les grands moments : palier atteint, objectif, bourse ouverte, séries de semaines.</p>';
   let body;
   if (pushState === 'on') body = `<p style="margin:0 0 6px"><b>Activées sur ce téléphone.</b></p>${what}<div class="row"><button class="btn ghost sm" data-act="pushtest" ${ready ? '' : 'disabled'}>Envoyer un test</button><button class="btn ghost sm" data-act="pushoff" ${pushBusy ? 'disabled' : ''}>Désactiver</button></div>`;
   else if (pushState === 'off') body = `${what}<div class="row"><button class="btn sm" data-act="pushon" ${pushBusy || !ready ? 'disabled' : ''}>Activer sur ce téléphone</button></div>`;
@@ -1015,7 +1020,7 @@ function pepitesView() {
   return `<button class="backlink" data-act="go" data-v="home">${I.chev}<span>Ma tirelire</span></button><h2 class="title">Mes pépites</h2>
 <p class="lead">Chaque pépite récompense un réflexe de bon épargnant. Tu en as ${n} sur ${L.length}.</p>
 ${st >= 1 ? `<section class="card serie"><b>${st} semaine${st > 1 ? 's' : ''} d’affilée</b><span>${nx ? `Encore ${nx.left} paie${nx.left > 1 ? 's' : ''} rangée${nx.left > 1 ? 's' : ''} pour gagner une nouvelle pépite.` : 'Tu as toutes les pépites de régularité. Respect !'}</span></section>` : ''}
-<div class="medals">${L.map(m => `<div class="medal ${m.ok ? 'on' : ''}" style="--m:${m.c}">${m.ok ? matNug(m) : `<svg class="mnug" viewBox="2 8 60 52" aria-hidden="true">${mystSVG()}</svg>`}<b>${m.ok ? m.name : '?'}</b><em>${m.ok ? `Pépite ${m.mat}` : 'Pépite mystère'}</em><small>${m.how}</small></div>`).join('')}</div>`;
+<div class="medals">${L.map(m => `<div class="medal ${m.ok ? 'on' : ''}" style="--m:${m.c}">${m.ok ? matNug(m) : `<svg class="mnug" viewBox="2 8 60 52" aria-hidden="true">${mystSVG()}</svg>`}${m.ok ? `<b>${m.name}</b>` : ''}<em>${m.ok ? `Pépite ${m.mat}` : 'Pépite mystère'}</em><small>${m.how}</small></div>`).join('')}</div>`;
 }
 
 
@@ -1029,7 +1034,7 @@ function pushAskShow() {
 function pushAsked(later) { let a = null; try { a = JSON.parse(localStorage.getItem('pepite-pushask') || 'null'); } catch (e) {} const v = { t: Date.now(), n: ((a && a.n) || 0) + 1, later }; try { localStorage.setItem('pepite-pushask', JSON.stringify(v)); } catch (e) {} }
 function pushAskModal() {
   return `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="pt"><div class="sheet pushask">${NUG('pask', '')}<h2 id="pt">On vous prévient ?</h2>
-<p>Chaque lundi, un petit récap : la paie de vos enfants et ce que vous leur devez. Et une alerte quand l’un d’eux déclare de l’argent reçu.</p>
+<p>Le lundi, un petit récap de la paie et de ce que vous devez. Le mercredi, un rappel si la paie n’est pas rangée, avec la série et la pépite en jeu. Et une alerte quand l’un d’eux déclare de l’argent reçu.</p>
 <div class="row"><button class="btn full" data-act="pushask">Oui, me prévenir</button></div><div class="row" style="margin-top:6px"><button class="btn ghost full" data-act="pushlater">Plus tard</button></div></div></div>`;
 }
 
