@@ -6,7 +6,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
-const VERSION = '107'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '109'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -588,8 +588,9 @@ ${!last ? `<p class="soft" style="margin:0">Rien à annuler.</p>` : can ? `<p cl
 <section class="card"><h3>Le guide de Pépite</h3><p class="soft small" style="margin:0">Pépite te remontre tout, pas à pas.</p><div class="row"><button class="btn ghost sm" data-act="gstart">Revoir le guide</button></div></section>
 <section class="card"><h3>Ma couleur</h3><p class="soft small" style="margin:0">Choisis la couleur de ta tirelire et de ton appli.</p>
 <div class="swatches">${PAL.map((c, ci) => `<button class="sw" style="--c:${c}" title="${PALN[ci]}" data-act="mycolor" data-c="${c}" aria-pressed="${K.color === c}" aria-label="${PALN[ci]}" ${dis}></button>`).join('')}</div></section>
-<section class="card"><h3>Apparence</h3><p class="soft small" style="margin:0">Réglage propre à cet appareil.</p>
-<div class="pills">${[['light', 'Clair'], ['dark', 'Sombre']].map(([v, l]) => `<button class="pill" data-act="theme" data-n="${v}" aria-pressed="${theme === v}">${l}</button>`).join('')}</div></section>`;
+<section class="card"><h3>Apparence et sons</h3><p class="soft small" style="margin:0">Réglages propres à cet appareil.</p>
+<div class="pills">${[['light', 'Clair'], ['dark', 'Sombre']].map(([v, l]) => `<button class="pill" data-act="theme" data-n="${v}" aria-pressed="${theme === v}">${l}</button>`).join('')}</div>
+<div class="pills">${[['on', 'Sons activés'], ['off', 'Sons coupés']].map(([v, l]) => `<button class="pill" data-act="sons" data-n="${v}" aria-pressed="${(v === 'on') === sndOn()}">${l}</button>`).join('')}</div></section>`;
 }
 function parentsView() {
   if (lock && !pinOk) return pinAsk ? pinView() : lockedView();
@@ -647,8 +648,9 @@ ${kids().map(k => `<label>${esc(k.name)}<select data-set="kpost:${k.id}">${Objec
 ${last ? `<div class="row" style="margin-top:4px"><button class="btn ghost sm" data-act="undo" ${dis}>${undoArm ? 'Confirmer : annuler ' + lastTxt : 'Annuler la dernière opération ' + de(K.name)}</button></div>
 <div class="row"><button class="btn danger sm" data-act="resetopen" ${dis}>Vider la tirelire et tout remettre à zéro pour ${esc(K.name)}</button></div>` : `<p class="soft">Rien à annuler pour ${esc(K.name)}.</p>`}</section>
 ${standalone() ? '' : `<section class="card"><h3>Installer Pépite sur ce téléphone</h3>${installEv ? `<p class="soft small" style="margin:0">Une icône sur l’écran d’accueil, et l’appli s’ouvre en plein écran comme les autres.</p><div class="row"><button class="btn sm" data-act="install">Installer l’appli</button></div>` : `<p class="soft small" style="margin:0">Dans Chrome, touchez le menu ⋮ en haut à droite, puis « Ajouter à l’écran d’accueil » ou « Installer l’application ». Sur iPhone, dans Safari : bouton Partager, puis « Sur l’écran d’accueil ».</p>`}</section>`}
-<section class="card"><h3>Apparence</h3><p class="soft small" style="margin:0">Réglage propre à cet appareil.</p>
-<div class="pills">${[['light', 'Clair'], ['dark', 'Sombre']].map(([v, l]) => `<button class="pill" data-act="theme" data-n="${v}" aria-pressed="${theme === v}">${l}</button>`).join('')}</div></section>
+<section class="card"><h3>Apparence et sons</h3><p class="soft small" style="margin:0">Réglages propres à cet appareil.</p>
+<div class="pills">${[['light', 'Clair'], ['dark', 'Sombre']].map(([v, l]) => `<button class="pill" data-act="theme" data-n="${v}" aria-pressed="${theme === v}">${l}</button>`).join('')}</div>
+<div class="pills">${[['on', 'Sons activés'], ['off', 'Sons coupés']].map(([v, l]) => `<button class="pill" data-act="sons" data-n="${v}" aria-pressed="${(v === 'on') === sndOn()}">${l}</button>`).join('')}</div></section>
 <button class="item art-item" data-act="go" data-v="apropos"><span class="ic artn aboutic"><img src="img/matthieu.jpg" alt="" width="40" height="40"></span><span><small>À propos</small><b>Qui a créé Pépite\u00a0?</b></span><span class="end">${I.chev}</span></button>
 ${pushCard()}
 <section class="card" id="compte"><h3>Compte</h3><p class="soft small" style="margin:0">Connecté avec ${esc(user.email || '')}. Version de l’appli : ${VERSION}.</p><div class="row"><button class="btn ghost sm" data-act="logout">Déconnecter cet appareil</button></div>
@@ -1049,13 +1051,61 @@ const medalSet = id => new Set(medals(id).filter(m => m.ok).map(m => m.id));
 // Après une action de l'enfant : annonce la pépite gagnée (et prévient les parents pour les séries).
 function newMedal(id, before) {
   const got = medals(id).filter(m => m.ok && !before.has(m.id));
-  if (!got.length) return '';
-  const m = got[got.length - 1], kk = kidOf(id);
-  if (kk) { kk.pm = m.id; saveF(); }
   const sm = got.filter(x => x.serie).pop();
   if (sm) queuePush('serie', { kid: id, n: sm.serie });
-  if (got.length > 1) return `${got.length} nouvelles pépites\u00a0: ${got.map(x => `«\u00a0${x.name}\u00a0»`).reduce((a, x, i, l) => a + (i === 0 ? '' : i === l.length - 1 ? ' et ' : ', ') + x, '')}\u00a0!`;
-  return `Nouvelle ${pepOf(m)}\u00a0: «\u00a0${m.name}\u00a0»\u00a0!`;
+  return ''; // l'annonce se fait par l'animation (checkMedals)
+}
+// Pépites gagnées depuis la dernière fois : on les met en file pour l'animation, une par une.
+let medalQ = [], medalSeq = 0;
+const KID_VIEWS = ['home', 'paie', 'bourse', 'projet', 'futur', 'pepites', 'lecons', 'lecon', 'recu', 'carnet'];
+function checkMedals(k) {
+  if (!ready || !F || !k || guide !== null || tour !== null || !KID_VIEWS.includes(view) || lessonFrom === 'parents') return;
+  const ids = medals(k.id).filter(m => m.ok).map(m => m.id);
+  if (!Array.isArray(k.ms)) { k.ms = ids; setTimeout(saveF); return; } // première fois : pas d'avalanche pour les pépites déjà gagnées
+  const nw = ids.filter(x => !k.ms.includes(x));
+  if (!nw.length) return;
+  medalQ.push(...nw.map(id => ({ kid: k.id, id })));
+  k.ms = [...k.ms, ...nw]; k.pm = nw[nw.length - 1];
+  setTimeout(saveF);
+  try { navigator.vibrate && navigator.vibrate([40, 60, 40]); } catch (e) {}
+  setTimeout(() => sfx('pep'), 250);
+}
+// Petits sons synthétisés (aucun fichier à télécharger). Coupables dans l'Espace parents, réglage propre à l'appareil.
+let AC = null;
+const sndOn = () => { try { return localStorage.getItem('pepite-sons') !== '0'; } catch (e) { return true; } };
+function beep(freq, at, dur, type = 'sine', vol = 0.12, to = null) {
+  const t = AC.currentTime + at, o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t); if (to) o.frequency.exponentialRampToValueAtTime(to, t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(AC.destination); o.start(t); o.stop(t + dur + 0.02);
+}
+function sfx(name) {
+  if (!sndOn()) return;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume();
+    const seq = (notes, step, dur, type, vol) => notes.forEach((n, i) => beep(n, i * step, dur, type, vol));
+    switch (name) {
+      case 'coin': beep(1500, 0, 0.09, 'triangle', 0.1, 2100); beep(2400, 0.035, 0.08, 'sine', 0.05); break;
+      case 'back': beep(900, 0, 0.07, 'triangle', 0.07, 600); break;
+      case 'pay': seq([523, 659, 784, 1047], 0.085, 0.2, 'triangle', 0.1); break;
+      case 'dice': for (let i = 0; i < 7; i++) beep(180 + Math.random() * 260, i * 0.16 + Math.random() * 0.05, 0.035, 'square', 0.035); break;
+      case 'win': seq([784, 1175], 0.09, 0.22, 'triangle', 0.11); break;
+      case 'lose': beep(392, 0, 0.28, 'sine', 0.1, 247); break;
+      case 'flat': beep(660, 0, 0.12, 'sine', 0.07); break;
+      case 'pep': seq([784, 988, 1175, 1568, 1976], 0.07, 0.25, 'sine', 0.09); beep(2637, 0.38, 0.4, 'sine', 0.04); break;
+      case 'good': seq([660, 990], 0.08, 0.16, 'triangle', 0.1); break;
+      case 'bad': beep(280, 0, 0.22, 'triangle', 0.08, 210); break;
+    }
+  } catch (e) {}
+}
+function medalModal() {
+  const q = medalQ[0], m = MEDALS.find(x => x.id === q.id), kk = kidOf(q.kid), n = medalQ.length;
+  if (!m) { medalQ.shift(); return ''; }
+  const cols = [m.c, '#ffd24a', '#ff6b8b', '#4d96ff', '#6bcb77', '#ffffff'];
+  const conf = Array.from({ length: 22 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--c:${cols[i % cols.length]};--d:${(2.2 + (i % 5) * 0.35).toFixed(2)}s;--dl:${((i * 0.13) % 0.9).toFixed(2)}s;--r:${(i * 47) % 360}deg"></i>`).join('');
+  return `<div class="mreveal" id="mr-${medalSeq}" role="dialog" aria-modal="true" aria-labelledby="mrt" style="--m:${m.c}"><div class="mrays" aria-hidden="true"></div><div class="mconf" aria-hidden="true">${conf}</div>
+<div class="mbox"><p class="mkick">${kids().length > 1 && kk ? `Bravo ${esc(kk.name)} !` : 'Bravo !'} Nouvelle pépite</p>${matNug(m, 'mbig')}<h2 id="mrt">${m.name}</h2><p class="mmat">Pépite ${m.mat}</p><p class="mhow">${m.how}</p>
+<button class="btn full" data-act="mednext">${n > 1 ? `Pépite suivante (${n - 1})` : 'Super !'}</button></div></div>`;
 }
 function nextSerie(id) { const st = streakOf(id), m = MEDALS.find(x => x.serie && x.serie > st && x.serie > bestStreak(id)); return m ? { m, left: m.serie - st } : null; }
 function pepitesView() {
@@ -1215,9 +1265,10 @@ function mainView() {
     if (!k.guided && !evs(cur).length && !goalOf(cur) && view === 'home') { guideKind = 'pay'; guidePlan = planOf(); guide = 0; guideHold = null; guideViews = []; }
     else if (!k.bguided && view === 'bourse' && bourseOpen(cur) && !evs(cur).some(e => e.t === 'bourse')) { guideKind = 'bourse'; guide = 0; guideHold = null; guideViews = []; }
   }
+  checkMedals(k);
   const t = tot(cur);
   const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : view === 'lire' ? lireView() : view === 'art' ? artView() : view === 'apropos' ? aproposView() : view === 'lecons' ? leconsView() : view === 'lecon' ? leconView() : view === 'confidentialite' ? privacyView() : view === 'pepites' ? pepitesView() : view === 'avis' ? (lock && !pinOk ? lockedView() : avisView()) : view === 'admin' ? (lock && !pinOk ? lockedView() : adminView()) : homeView(k, t);
-  return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view${guide !== null ? ' guided' : ''}">${content}</main>${guide !== null && (guideKind === 'bourse' ? view === 'bourse' : ['home', 'paie', 'bourse', 'projet'].includes(view)) ? guideView(k) : ''}${tabbar()}${resetFor ? resetModal() : ''}${!resetFor && pushAskShow() ? pushAskModal() : ''}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
+  return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view${guide !== null ? ' guided' : ''}">${content}</main>${guide !== null && (guideKind === 'bourse' ? view === 'bourse' : ['home', 'paie', 'bourse', 'projet'].includes(view)) ? guideView(k) : ''}${tabbar()}${resetFor ? resetModal() : ''}${!resetFor && !medalQ.length && pushAskShow() ? pushAskModal() : ''}${!resetFor && medalQ.length ? medalModal() : ''}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
 }
 
 let lastKey = '';
@@ -1314,7 +1365,7 @@ async function tryLegacy() {
 function roll() {
   const t0 = tot(cur);
   if (!ready || rolling || postOf(cur) === 'none' || !bourseOpen(cur) || sameWeek(t0.bourse && t0.bourse.d)) return;
-  rolling = true;
+  rolling = true; sfx('dice');
   const el = document.getElementById('die'), face = 1 + Math.floor(Math.random() * 6), quick = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let i = 0;
   const spin = quick || !el ? null : setInterval(() => { el.innerHTML = die(1 + Math.floor(Math.random() * 6), 132); el.style.transform = `rotate(${(i++ % 2 ? -1 : 1) * 16}deg) scale(1.08)`; }, 85);
@@ -1323,7 +1374,7 @@ function roll() {
     if (el) el.style.transform = '';
     const before = tot(cur).total, md0 = medalSet(cur), rate = facesOf(cur)[face - 1], gain = faceEur(Math.max(0, before), facesOf(cur))[face - 1];
     EV[cur] = [...evs(cur), { t: 'bourse', d: iso(), face, rate, gain }];
-    rolling = false; saveK(cur);
+    rolling = false; saveK(cur); sfx(rate > 0 ? 'win' : rate < 0 ? 'lose' : 'flat');
     sayMs(before, rate > 0 ? `Dé ${face} : +${f(gain)} dans ta tirelire !` : rate < 0 ? `Dé ${face} : ta tirelire perd ${f(Math.abs(gain))}.` : `Dé ${face} : rien ne bouge cette semaine.`, rate < 0 ? 'Ça arrive, la semaine prochaine sera peut-être meilleure.' : '');
     { const nm = newMedal(cur, md0); if (nm) say(nm, toast && toast.msg); }
     render();
@@ -1338,6 +1389,7 @@ function doGift(ratio) {
   const before = tot(cur).total;
   const need = giftCheck();
   EV[cur] = [...evs(cur), { t: 'recu', d: iso(), from, inv: inv2, dep: dep2, bonus, ...(need ? { pending: true } : {}) }];
+  sfx('coin');
   saveK(cur);
   if (need) queuePush('cadeau', { kid: cur, amount: amt, from: from.slice(0, 40) });
   if (need) { say(`C’est noté ! ${P().label} doi${['parents', 'papamaman'].includes(F.parents) ? 'vent' : 't'} valider avant que l’argent compte.`); form.gamount = ''; form.gfrom = ''; return; }
@@ -1444,10 +1496,10 @@ document.addEventListener('click', ev => {
     case 'obfinish': obFinish(); return;
     case 'go': pinFor = null; view = b.dataset.v; if (view === 'admin') loadAdmin(); if (view !== 'parents') { delAcct = false; delErr = ''; } if (view === 'avis') { avisSent = false; } if (b.dataset.from) lessonFrom = b.dataset.from; else if (!['lecons', 'lecon'].includes(view)) lessonFrom = null; if (!['parents', 'lire', 'art', 'apropos', 'confidentialite', 'admin', 'avis'].includes(view) && !(lessonFrom === 'parents' && ['lecons', 'lecon'].includes(view))) { pinOk = false; } pinAsk = false; pinBuf = ''; pinBad = false; window.scrollTo(0, 0); break;
     case 'kid': cur = k; goalEdit = false; resetCoins(); try { localStorage.setItem('pepite-cur', cur); } catch (e) {} break;
-    case 'toPig': if (tray.length) depC.push(tray.shift()); break;
-    case 'toGrow': if (tray.length) invC.push(tray.shift()); break;
-    case 'backPig': if (depC.length) { tray.push(depC.pop()); tray.sort((x, y) => y - x); } break;
-    case 'backGrow': if (invC.length) { tray.push(invC.pop()); tray.sort((x, y) => y - x); } break;
+    case 'toPig': if (tray.length) depC.push(tray.shift()), sfx('coin'); break;
+    case 'toGrow': if (tray.length) invC.push(tray.shift()), sfx('coin'); break;
+    case 'backPig': if (depC.length) { sfx('back'); tray.push(depC.pop()); tray.sort((x, y) => y - x); } break;
+    case 'backGrow': if (invC.length) { sfx('back'); tray.push(invC.pop()); tray.sort((x, y) => y - x); } break;
     case 'pay': {
       const t = tot(cur);
       const ow = owed(cur);
@@ -1457,6 +1509,7 @@ document.addEventListener('click', ev => {
       const before = t.total;
       const md0 = medalSet(cur), ln0 = lessonsOpen(cur);
       EV[cur] = [...evs(cur), { t: 'paie', d: iso(), w: new Date(ow[0]).toISOString(), inv, dep, bonus }];
+      sfx('pay');
       const nx = nextSerie(cur), st1 = streakOf(cur);
       const cel = newMedal(cur, md0) || (lessonsOpen(cur) > ln0 && lessonsOpen(cur) <= lessonList().length ? 'Nouvelle leçon débloquée !' : '') || (st1 >= 2 && nx ? `${st1} semaines d’affilée ! Encore ${nx.left} pour une nouvelle pépite.` : '');
       if (guide !== null) guidePaid = true;
@@ -1525,6 +1578,8 @@ document.addEventListener('click', ev => {
     case 'pushon': pushOn(); return;
     case 'pushask': pushAsked(false); pushOn(); return;
     case 'pushlater': pushAsked(true); break;
+    case 'sons': try { localStorage.setItem('pepite-sons', b.dataset.n === 'on' ? '1' : '0'); } catch (e) {} sfx('good'); break;
+    case 'mednext': medalQ.shift(); medalSeq++; if (medalQ.length) setTimeout(() => sfx('pep'), 250); break;
     case 'pushoff': pushOff(); return;
     case 'pushtest': queuePush('test', {}); say('Notification de test demandée.', 'Elle arrive dans les 15 minutes environ.'); break;
     case 'install': if (installEv) { const e = installEv; installEv = null; e.prompt(); e.userChoice.finally(() => render()); } break;
@@ -1538,7 +1593,7 @@ document.addEventListener('click', ev => {
     case 'adminreload': loadAdmin(); break;
     case 'vapidgen': genVapid(); return;
     case 'lecon': { const L = lessonList(), ix = L.findIndex(x => x.id === b.dataset.n); if (ix >= lessonsOpen(cur)) break; } view = 'lecon'; lessonId = b.dataset.n; window.scrollTo(0, 0); break;
-    case 'kq': { const x = lessonList().find(l => l.id === lessonId); if (x) { kq[x.id] = +b.dataset.n; const k = kidOf(cur); if (k && ready && lessonFrom !== 'parents' && kq[x.id] === x.quiz.ok && !(k.lq && k.lq[x.id])) { const md0 = medalSet(cur); k.lq = { ...(k.lq || {}), [x.id]: 1 }; saveF(); const nm = newMedal(cur, md0); if (nm) say(nm); } } break; }
+    case 'kq': { const x = lessonList().find(l => l.id === lessonId); if (x) { kq[x.id] = +b.dataset.n; sfx(kq[x.id] === x.quiz.ok ? 'good' : 'bad'); const k = kidOf(cur); if (k && ready && lessonFrom !== 'parents' && kq[x.id] === x.quiz.ok && !(k.lq && k.lq[x.id])) { const md0 = medalSet(cur); k.lq = { ...(k.lq || {}), [x.id]: 1 }; saveF(); const nm = newMedal(cur, md0); if (nm) say(nm); } } break; }
     case 'kread': { const el = document.querySelector('.lesson'); if (!el) return; try { if (speechSynthesis.speaking) { speechSynthesis.cancel(); return; } const txt = [...el.querySelectorAll('h2, .alead, p:not(.kicker):not(.qfb), h4')].filter(e => !e.closest('.quiz') && !e.closest('figure')).map(e => e.innerText).join('. '); const u = new SpeechSynthesisUtterance(txt); u.lang = 'fr-FR'; u.rate = 0.95; const v = speechSynthesis.getVoices().find(z => /^fr/i.test(z.lang)); if (v) u.voice = v; speechSynthesis.speak(u); } catch (e) {} return; }
     case 'mycolor': { const x = kidOf(cur); if (x && ready && PAL.includes(b.dataset.c)) { x.color = b.dataset.c; saveF(); } break; }
     case 'kcolor': { const x = kidOf(k); if (x && ready) { x.color = b.dataset.c; saveF(); } break; }
