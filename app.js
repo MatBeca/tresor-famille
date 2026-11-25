@@ -6,7 +6,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
-const VERSION = '110'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '111'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -405,7 +405,7 @@ ${help ? `<ol class="howto"><li><b>Chaque semaine, tu reçois ta paie</b>${coins
 function giftView(k) {
   const dis = ready ? '' : 'disabled', W = tot(cur).waiting;
   if (pinFor) return pinView();
-  const wait = W.length ? `<section class="card waitcard"><h3>En attente de validation</h3><p class="soft small" style="margin:0">L’argent compte dans ta tirelire quand ${P().label.toLowerCase()} l’${['parents', 'papamaman'].includes(F.parents) ? 'ont' : 'a'} validé.</p>
+  const wait = W.length ? `<section class="card waitcard"><h3>En attente de validation</h3><p class="soft small" style="margin:0">${askParent(false)}</p>
 <ul class="log">${W.map(e => `<li><span>${giftLine(e)}</span><button class="btn sm" data-act="gval" data-d="${e.d}" ${dis}>Un parent valide</button></li>`).join('')}</ul></section>` : '';
   return `${wait}<h2 class="title">J’ai reçu de l’argent</h2><p class="lead">Range-le comme ta paie : dans ton porte-monnaie pour le dépenser, ou dans ta tirelire pour le placer${gm() > 0 ? ` (${bonusKid(gm(), '€ placés', '1 €')})` : ''}.</p>
 <section class="card"><div class="grid2"><label>Combien (€)<input id="g-amount" type="text" inputmode="decimal" autocomplete="off" data-f="gamount" value="${esc(form.gamount)}" placeholder="Ex. : 10"></label>
@@ -1383,6 +1383,12 @@ function roll() {
   }, quick ? 30 : 1300);
 }
 const giftCheck = () => F.giftCheck !== false; // l'argent reçu doit être validé par un parent (oui par défaut)
+// Message à l'enfant quand un parent doit valider : prévenu par notification si elles sont activées, sinon on l'invite à aller le dire.
+function askParent(fresh) {
+  const pl = ['parents', 'papamaman'].includes(F.parents), qui = pl ? 'ils' : F.parents === 'maman' ? 'elle' : 'il';
+  if (F.push) return `${fresh ? 'C’est noté ! ' : ''}${P().label} ${pl ? 'vont' : 'va'} recevoir une notification pour valider. Tu peux aussi ${pl ? 'leur' : 'lui'} en parler, ça ira plus vite !`;
+  return `${fresh ? 'C’est noté ! ' : ''}Va vite le dire ${P().a} pour qu’${qui} valide${pl ? 'nt' : ''}. L’argent comptera ensuite dans ta tirelire.`;
+}
 function doGift(ratio) {
   const amt = r2(num(form.gamount));
   if (!(amt > 0)) { say('Écris d’abord combien tu as reçu.'); return; }
@@ -1394,7 +1400,7 @@ function doGift(ratio) {
   sfx('coin');
   saveK(cur);
   if (need) queuePush('cadeau', { kid: cur, amount: amt, from: from.slice(0, 40) });
-  if (need) { say(`C’est noté ! ${P().label} doi${['parents', 'papamaman'].includes(F.parents) ? 'vent' : 't'} valider avant que l’argent compte.`); form.gamount = ''; form.gfrom = ''; return; }
+  if (need) { say(askParent(true)); form.gamount = ''; form.gfrom = ''; return; }
   sayMs(before, inv2 ? `Super ! ${f(inv2 + bonus)} rejoignent ta tirelire.` : `${f(dep2)} dans ton porte-monnaie.`, inv2 ? `${dep2 ? `Garde ${f(dep2)} dans ton porte-monnaie et donne` : 'Donne'} ${f(inv2)} ${P().a} pour qu’ils soient mis en lieu sûr.` : '');
   form.gamount = ''; form.gfrom = ''; view = 'home';
 }
