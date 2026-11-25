@@ -1,0 +1,10 @@
+{
+  "name": "pepite-notify",
+  "private": true,
+  "type": "module",
+  "description": "Envoi des notifications de Pépite (tâche planifiée GitHub Actions)",
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "web-push": "^3.6.7"
+  }
+}

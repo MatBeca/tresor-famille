@@ -5,7 +5,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc, collection, collectionGroup, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
-const VERSION = '99'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '100'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -60,6 +60,7 @@ const LOGO = NUG('logo');
 const LOGOBIG = `<svg class="logo big" viewBox="0 14 124 50" aria-hidden="true"><g transform="translate(0 38) scale(.4)"><path d="M14 24 30 15 28 30Z" fill="#ffe68a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M30 15 46 17 42 32 28 30Z" fill="#fff4bd" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M46 17 58 30 42 32Z" fill="#ffd24a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M6 40 14 24 28 30 30 44Z" fill="#f7b52a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M28 30 42 32 30 44Z" fill="#ffcb3a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M58 30 56 46 42 32Z" fill="#e39a10" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M42 32 56 46 42 55 30 44Z" fill="#d08a00" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M6 40 30 44 20 54Z" fill="#eba216" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M30 44 42 55 20 54Z" fill="#b87400" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/></g><path transform="translate(0 38) scale(.4)" d="M6 40 14 24 30 15 46 17 58 30 56 46 42 55 20 54Z" fill="none" stroke="#6e4400" stroke-width="3" stroke-linejoin="round"/><g transform="translate(24 24.25) scale(.65)"><path d="M14 24 30 15 28 30Z" fill="#ffe68a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M30 15 46 17 42 32 28 30Z" fill="#fff4bd" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M46 17 58 30 42 32Z" fill="#ffd24a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M6 40 14 24 28 30 30 44Z" fill="#f7b52a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M28 30 42 32 30 44Z" fill="#ffcb3a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M58 30 56 46 42 32Z" fill="#e39a10" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M42 32 56 46 42 55 30 44Z" fill="#d08a00" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M6 40 30 44 20 54Z" fill="#eba216" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M30 44 42 55 20 54Z" fill="#b87400" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/></g><path transform="translate(24 24.25) scale(.65)" d="M6 40 14 24 30 15 46 17 58 30 56 46 42 55 20 54Z" fill="none" stroke="#6e4400" stroke-width="3" stroke-linejoin="round"/><g transform="translate(62 5) scale(1)"><path d="M14 24 30 15 28 30Z" fill="#ffe68a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M30 15 46 17 42 32 28 30Z" fill="#fff4bd" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M46 17 58 30 42 32Z" fill="#ffd24a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M6 40 14 24 28 30 30 44Z" fill="#f7b52a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M28 30 42 32 30 44Z" fill="#ffcb3a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M58 30 56 46 42 32Z" fill="#e39a10" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M42 32 56 46 42 55 30 44Z" fill="#d08a00" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M6 40 30 44 20 54Z" fill="#eba216" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M30 44 42 55 20 54Z" fill="#b87400" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/></g><path transform="translate(62 5) scale(1)" d="M6 40 14 24 30 15 46 17 58 30 56 46 42 55 20 54Z" fill="none" stroke="#6e4400" stroke-width="3" stroke-linejoin="round"/><g transform="translate(62 5) scale(1)"><path d="M20 27 26 21" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><path d="M33 17.5Q33.81 21.19 37.5 22Q33.81 22.81 33 26.5Q32.19 22.81 28.5 22Q32.19 21.19 33 17.5Z" fill="#fff8d6" stroke="#6e4400" stroke-width="1.4" stroke-linejoin="round"/></g></svg>`;
 const WM = `<svg class="wm" role="img" aria-label="Pépite" viewBox="-10 -1010 2892 1260"><path d="M126 8Q81 8 62.0 -5.5Q43 -19 39.0 -40.5Q35 -62 35 -84V-600Q35 -622 39.0 -643.0Q43 -664 62.0 -677.5Q81 -691 127 -691H326Q364 -691 408.0 -675.5Q452 -660 491.5 -628.0Q531 -596 556.0 -548.0Q581 -500 581 -434Q581 -369 556.0 -321.0Q531 -273 491.5 -241.5Q452 -210 408.0 -194.5Q364 -179 325 -179H218V-83Q218 -61 214.0 -40.0Q210 -19 191.0 -5.5Q172 8 126 8ZM218 -362H326Q339 -362 356.0 -368.5Q373 -375 386.0 -391.0Q399 -407 399 -435Q399 -456 389.0 -472.5Q379 -489 362.5 -498.5Q346 -508 325 -508H218Z M883 20Q808 20 756.0 -4.5Q704 -29 672.0 -68.5Q640 -108 625.0 -154.0Q610 -200 610 -243Q610 -322 645.0 -382.0Q680 -442 742.0 -476.0Q804 -510 884 -510Q946 -510 990.0 -490.0Q1034 -470 1061.5 -439.0Q1089 -408 1102.0 -373.0Q1115 -338 1115 -308Q1115 -251 1087.0 -221.0Q1059 -191 1015 -191H802Q806 -175 818.5 -163.5Q831 -152 850.0 -145.5Q869 -139 891 -139Q913 -139 930.0 -141.5Q947 -144 959.5 -148.0Q972 -152 982.5 -156.0Q993 -160 1001.5 -162.5Q1010 -165 1018 -165Q1036 -165 1051.0 -153.0Q1066 -141 1078 -117Q1085 -104 1088.0 -92.5Q1091 -81 1091 -71Q1091 -41 1066.5 -21.0Q1042 -1 996.0 9.5Q950 20 883 20ZM802 -285H914Q928 -285 934.5 -291.0Q941 -297 941 -309Q941 -322 933.5 -331.0Q926 -340 913.0 -344.5Q900 -349 882 -349Q858 -349 840.0 -339.5Q822 -330 812.5 -315.5Q803 -301 802 -285Z M1430 -3Q1381 -3 1345 -23Q1340 -26 1335 -29V132Q1337 154 1332.5 174.5Q1328 195 1309.0 208.0Q1290 221 1245 221Q1201 221 1182.0 208.0Q1163 195 1159.5 175.0Q1156 155 1156 133V-410Q1156 -432 1159.5 -452.0Q1163 -472 1181.5 -485.5Q1200 -499 1244 -499Q1279 -499 1302 -490Q1321 -482 1331 -467Q1339 -473 1347 -478Q1382 -498 1430 -498Q1474 -498 1515.5 -477.0Q1557 -456 1590.0 -420.5Q1623 -385 1642.0 -340.0Q1661 -295 1661 -247Q1661 -197 1642.0 -152.5Q1623 -108 1590.5 -74.5Q1558 -41 1516.5 -22.0Q1475 -3 1430 -3ZM1406 -173Q1426 -173 1442.5 -183.0Q1459 -193 1469.0 -209.5Q1479 -226 1479 -245Q1479 -265 1469.5 -281.5Q1460 -298 1443.5 -307.5Q1427 -317 1407.0 -317.0Q1387 -317 1370.5 -307.0Q1354 -297 1344.5 -281.0Q1335 -265 1335 -245Q1335 -226 1345.0 -209.5Q1355 -193 1371.0 -183.0Q1387 -173 1406 -173Z M1789 9Q1744 9 1725.0 -4.5Q1706 -18 1702.5 -39.0Q1699 -60 1699 -82V-408Q1699 -430 1703.0 -450.5Q1707 -471 1726.0 -484.5Q1745 -498 1790 -498Q1835 -498 1853.5 -484.5Q1872 -471 1876.0 -450.0Q1880 -429 1880 -406V-81Q1880 -59 1876.0 -38.0Q1872 -17 1853.5 -4.0Q1835 9 1789 9Z M2210 9Q2157 9 2118.0 -3.0Q2079 -15 2053.5 -40.0Q2028 -65 2015.5 -103.0Q2003 -141 2003 -192V-319H1978Q1944 -321 1931.0 -341.0Q1918 -361 1918 -407Q1918 -450 1934.0 -471.5Q1950 -493 1982 -493H2003V-580Q2003 -603 2007.0 -622.5Q2011 -642 2030.0 -654.5Q2049 -667 2094 -667Q2138 -667 2157.0 -653.5Q2176 -640 2180.0 -619.0Q2184 -598 2184 -576V-496L2237 -498Q2259 -498 2279.5 -494.0Q2300 -490 2313.5 -471.0Q2327 -452 2327 -406Q2327 -364 2313.5 -345.0Q2300 -326 2279.5 -321.0Q2259 -316 2236 -316L2184 -317V-201Q2184 -190 2185.5 -182.5Q2187 -175 2190.0 -171.0Q2193 -167 2198.0 -165.0Q2203 -163 2211 -163Q2237 -163 2257.5 -159.0Q2278 -155 2289.5 -138.0Q2301 -121 2301 -81Q2301 -36 2287.0 -17.0Q2273 2 2252.0 5.5Q2231 9 2210 9Z M2625 20Q2550 20 2498.0 -4.5Q2446 -29 2414.0 -68.5Q2382 -108 2367.0 -154.0Q2352 -200 2352 -243Q2352 -322 2387.0 -382.0Q2422 -442 2484.0 -476.0Q2546 -510 2626 -510Q2688 -510 2732.0 -490.0Q2776 -470 2803.5 -439.0Q2831 -408 2844.0 -373.0Q2857 -338 2857 -308Q2857 -251 2829.0 -221.0Q2801 -191 2757 -191H2544Q2548 -175 2560.5 -163.5Q2573 -152 2592.0 -145.5Q2611 -139 2633 -139Q2655 -139 2672.0 -141.5Q2689 -144 2701.5 -148.0Q2714 -152 2724.5 -156.0Q2735 -160 2743.5 -162.5Q2752 -165 2760 -165Q2778 -165 2793.0 -153.0Q2808 -141 2820 -117Q2827 -104 2830.0 -92.5Q2833 -81 2833 -71Q2833 -41 2808.5 -21.0Q2784 -1 2738.0 9.5Q2692 20 2625 20ZM2544 -285H2656Q2670 -285 2676.5 -291.0Q2683 -297 2683 -309Q2683 -322 2675.5 -331.0Q2668 -340 2655.0 -344.5Q2642 -349 2624 -349Q2600 -349 2582.0 -339.5Q2564 -330 2554.5 -315.5Q2545 -301 2544 -285Z" fill="currentColor"/><path d="M816 -520Q798 -520 785.0 -535.0Q772 -550 762 -581Q749 -623 757.0 -643.5Q765 -664 801 -675L985 -729Q1003 -729 1016.0 -714.0Q1029 -699 1038 -668Q1052 -628 1043.0 -607.0Q1034 -586 1000 -575Z" fill="currentColor"/><g transform="translate(1623.1 -846.0) scale(5.2)"><g transform=""><path d="M14 24 30 15 28 30Z" fill="#ffe68a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M30 15 46 17 42 32 28 30Z" fill="#fff4bd" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M46 17 58 30 42 32Z" fill="#ffd24a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M6 40 14 24 28 30 30 44Z" fill="#f7b52a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M28 30 42 32 30 44Z" fill="#ffcb3a" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M58 30 56 46 42 32Z" fill="#e39a10" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M42 32 56 46 42 55 30 44Z" fill="#d08a00" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M6 40 30 44 20 54Z" fill="#eba216" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/><path d="M30 44 42 55 20 54Z" fill="#b87400" stroke="#6e4400" stroke-width="1.1" stroke-linejoin="round"/></g><path transform="" d="M6 40 14 24 30 15 46 17 58 30 56 46 42 55 20 54Z" fill="none" stroke="#6e4400" stroke-width="3" stroke-linejoin="round"/><path d="M20 27 26 21" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></g></svg>`;
 const WMFULL = `<span class="wmfull" role="img" aria-label="C’est Pépite"><span class="cest" aria-hidden="true">c’est</span>${WM.replace('role="img" aria-label="Pépite"', 'aria-hidden="true"')}</span>`;
+const LOCK = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 const I = {
   speak: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
   jar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2.5" width="8" height="3" rx="1"/><path d="M6.5 7.5c0-1.1.9-2 2-2h7c1.1 0 2 .9 2 2V19a2.5 2.5 0 0 1-2.5 2.5h-6A2.5 2.5 0 0 1 6.5 19z"/><path d="M6.5 13.5h11"/></svg>',
@@ -167,6 +168,19 @@ function owed(id) {
   for (let i = BACKLOG - 1; i >= 0; i--) { const w = normWk(cw - i * 7 * 864e5); if (w >= st && !paid.has(w) && !isPaused(w)) out.push(w); }
   return out;
 }
+// Série : semaines de paie consécutives jusqu'à cette semaine (ou la précédente si celle-ci n'est pas encore rangée). Les semaines en pause ne cassent pas la série.
+function paidWeeks(id) { return new Set(evs(id).filter(e => e.t === 'paie').map(e => normWk(e.w ? wk(e.w) : wk(e.d)))); }
+function streakOf(id) {
+  const set = paidWeeks(id); if (!set.size) return 0;
+  const isPaused = pausedWeeks(id), back = w => normWk(w - 7 * 864e5);
+  let w = wk(new Date()); if (!set.has(w)) w = back(w);
+  let n = 0;
+  for (let i = 0; i < 260; i++) { if (set.has(w)) n++; else if (!isPaused(w)) break; w = back(w); }
+  return n;
+}
+const STREAKS = [3, 5, 10, 15, 20, 26, 39, 52];
+// Leçons : une de plus à chaque semaine de paie rangée (toutes visibles côté parent).
+const lessonsOpen = id => lessonFrom === 'parents' ? 99 : Math.min(99, 1 + paidWeeks(id).size);
 const weekTxt = w => w === wk(new Date()) ? 'de cette semaine' : 'de la semaine du ' + new Date(w).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
 function tot(id) {
@@ -218,7 +232,7 @@ function milestone(before, after) {
   for (const m of [1, 0.75, 0.5, 0.25]) if (b < m && a >= m) return m === 1 ? `C’est pépite ! Objectif « ${esc(g.name)} » atteint !` : ({ step: `Étape ${m * 4} sur 4 franchie pour « ${esc(g.name)} » : ta pépite grossit !`, frac: `${cap1(FRAC[m])} du chemin pour « ${esc(g.name)} » : ta pépite grossit !`, pct: `Palier ${m * 100} % atteint pour « ${esc(g.name)} » !` })[msBand(cur)];
   return '';
 }
-function sayMs(before, msg, sub) { const ms = milestone(before, tot(cur).total); if (ms) say(ms, msg); else say(msg, sub); }
+function sayMs(before, msg, sub) { markBourse(true); const after = tot(cur).total, ms = milestone(before, after); if (ms) { say(ms, msg); const g = goalOf(cur), c = CAPS.find(x => before < x && after >= x); if (g ? before < g.budget && after >= g.budget : c) queuePush(g ? 'objectif' : 'palier', { kid: cur, amount: g ? r2(g.budget) : c, goal: g ? g.name : null }); } else say(msg, sub); }
 function project(id, perWeek, strat) {
   const k = kidOf(id), t = tot(id), m = strat ? POST[strat].faces.reduce((x, y) => x + y, 0) / 6 / 100 : projMean(id), match = F.match / 100, now = new Date(), birth = new Date(k.birth + 'T12:00:00'), share = k.weekly ? Math.min(1, perWeek / k.weekly) : 1;
   let own = t.own, bonus = t.bonus, gains = t.gains, w = 0, pw = perWeek; const pts = [];
@@ -343,7 +357,8 @@ function homeView(k, t) {
   const prog = Math.min(100, Math.max(0, t.total / (g ? g.budget : J.cap) * 100));
   const hint = g ? (t.total >= g.budget ? `Objectif « ${esc(g.name)} » atteint !` : `Encore ${f(g.budget - t.total)} pour « ${esc(g.name)} »`) : (t.total >= J.cap ? `Palier de ${f(J.cap)} atteint !` : `Encore ${f(J.cap - t.total)} pour le palier de ${f(J.cap)}`);
   return `<section class="hero"><div><p class="hi">Salut ${esc(k.name)} !</p><p class="lbl">${g && t.total >= g.budget ? 'C’est pépite ! Ta tirelire est pleine' : 'Ta tirelire'}</p><div class="amount">${f(t.total)}</div>
-<div class="progrow"><div class="prog">${g ? '<b style="left:25%"></b><b style="left:50%"></b><b style="left:75%"></b>' : ''}<i style="width:${prog.toFixed(1)}%"></i></div>${growNug(prog)}</div><p class="small">${hint}</p></div>${J.svg}</section>
+<div class="progrow"><div class="prog">${g ? '<b style="left:25%"></b><b style="left:50%"></b><b style="left:75%"></b>' : ''}<i style="width:${prog.toFixed(1)}%"></i></div>${growNug(prog)}</div><p class="small">${hint}</p>${streakOf(cur) >= 2 ? `<p class="streak">${NUG('', '')}<b>${streakOf(cur)} semaines de suite</b></p>` : ''}</div>${J.svg}</section>
+${!paid && !pauseOf(cur) ? `<button class="todo" data-act="go" data-v="paie"><span class="ic">${I.coin}</span><span><b>Ta paie t’attend !</b><small>${due > 1 ? `${due} paies à ranger` : 'Range tes pièces de la semaine'}</small></span><span class="end">${I.chev}</span></button>` : bourseOpen(cur) && postOf(cur) !== 'none' && !rolled && t.rolls.length ? `<button class="todo" data-act="go" data-v="bourse"><span class="ic">${I.die}</span><span><b>Ton dé de la semaine t’attend</b><small>Va-t-il faire monter ta tirelire ?</small></span><span class="end">${I.chev}</span></button>` : ''}
 <div class="tiles"><div class="tile"><small><i style="background:var(--own)"></i>Mon argent</small><b>${f(t.own)}</b></div>
 <div class="tile"><small><i style="background:var(--gold)"></i>Bonus ${P().de}</small><b>${f(t.bonus)}</b></div>
 <div class="tile"><small><i style="background:var(--grow)"></i>Gagné tout seul</small><b class="${t.gains < 0 ? 'neg' : 'g'}">${f(t.gains)}</b></div>
@@ -540,7 +555,7 @@ function leconsView() {
   const L = lessonList();
   const par = lessonFrom === 'parents';
   return `${par ? `<button class="backlink" data-act="go" data-v="parents">${I.chev}<span>Espace parents</span></button><p class="kicker">Côté enfant</p>` : ''}<h2 class="title">Comprendre l’argent</h2><p class="lead">${par ? `Les ${L.length} leçons que lit votre enfant, avec leur quiz. Les mêmes notions que vos articles, à hauteur d’enfant : de quoi en reparler ensemble à table.` : `${L.length} petites leçons pour devenir un as de l’argent. Chacune se lit, ou s’écoute, en deux minutes.`}</p><button class="item art-item vitem" data-act="video" style="margin-bottom:12px"><span class="ic artn vic"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg></span><span><small>La vidéo · 2 min 30</small><b>Comment marche Pépite</b></span><span class="end">${I.chev}</span></button>
-<div class="list">${L.map(x => { const done = kq[x.id] === x.quiz.ok || !!(kidOf(cur) && kidOf(cur).lq && kidOf(cur).lq[x.id]); return `<button class="item art-item" data-act="lecon" data-n="${x.id}"><span class="ic artn">${done ? I.check : x.n}</span><span><small>${x.term}</small><b>${x.title}</b></span><span class="end">${I.chev}</span></button>`; }).join('')}</div>`;
+<div class="list">${L.map((x, i) => { const done = kq[x.id] === x.quiz.ok || !!(kidOf(cur) && kidOf(cur).lq && kidOf(cur).lq[x.id]); if (i >= lessonsOpen(cur)) return `<div class="item art-item locked"><span class="ic artn">${LOCK}</span><span><small>${x.term}</small><b>${i === lessonsOpen(cur) ? 'Se débloque à ta prochaine paie' : 'Bientôt débloquée'}</b></span></div>`; return `<button class="item art-item" data-act="lecon" data-n="${x.id}"><span class="ic artn">${done ? I.check : x.n}</span><span><small>${x.term}</small><b>${x.title}</b></span><span class="end">${I.chev}</span></button>`; }).join('')}</div>${lessonFrom !== 'parents' && lessonsOpen(cur) < L.length ? '<p class="soft small" style="margin:10px 4px 0">Une nouvelle leçon se débloque chaque fois que tu ranges ta paie de la semaine.</p>' : ''}`;
 }
 function leconView() {
   const L = lessonList(), i = Math.max(0, L.findIndex(x => x.id === lessonId)), x = L[i], next = L[i + 1], ans = kq[x.id];
@@ -552,7 +567,7 @@ function leconView() {
 <section class="quiz"><h4>Petit quiz</h4><p>${x.quiz.q}</p><div class="list">${x.quiz.a.map((t, j) => `<button class="btn ${ans === j ? (j === x.quiz.ok ? 'gr' : 'danger') : 'ghost'} full" data-act="kq" data-n="${j}">${t}</button>`).join('')}</div>
 ${ans !== undefined ? `<p class="qfb ${ans === x.quiz.ok ? 'g' : 'neg'}">${ans === x.quiz.ok ? x.quiz.yes : x.quiz.no + ' Essaie encore !'}</p>` : ''}</section>
 </article>
-${next ? `<button class="item art-item nextart" data-act="lecon" data-n="${next.id}"><span class="ic artn">${next.n}</span><span><small>Leçon suivante</small><b>${next.title}</b></span><span class="end">${I.chev}</span></button>` : `<div class="row"><button class="btn full" data-act="go" data-v="lecons">${lessonFrom === 'parents' ? 'Toutes les leçons' : 'Toutes mes leçons'}</button></div>`}`;
+${next && i + 1 < lessonsOpen(cur) ? `<button class="item art-item nextart" data-act="lecon" data-n="${next.id}"><span class="ic artn">${next.n}</span><span><small>Leçon suivante</small><b>${next.title}</b></span><span class="end">${I.chev}</span></button>` : `${next ? '<p class="soft small" style="margin:14px 4px 0;text-align:center">La leçon suivante se débloque à ta prochaine paie.</p>' : ''}<div class="row"><button class="btn full" data-act="go" data-v="lecons">${lessonFrom === 'parents' ? 'Toutes les leçons' : 'Toutes mes leçons'}</button></div>`}`;
 }
 function lockedView() {
   const dis = ready ? '' : 'disabled', K = kidOf(cur), last = evs(cur)[evs(cur).length - 1], can = last && KID_UNDO.includes(last.t);
@@ -628,6 +643,7 @@ ${standalone() ? '' : `<section class="card"><h3>Installer Pépite sur ce télé
 <section class="card"><h3>Apparence</h3><p class="soft small" style="margin:0">Réglage propre à cet appareil.</p>
 <div class="pills">${[['light', 'Clair'], ['dark', 'Sombre']].map(([v, l]) => `<button class="pill" data-act="theme" data-n="${v}" aria-pressed="${theme === v}">${l}</button>`).join('')}</div></section>
 <button class="item art-item" data-act="go" data-v="apropos"><span class="ic artn aboutic"><img src="img/matthieu.jpg" alt="" width="40" height="40"></span><span><small>À propos</small><b>Qui a créé Pépite\u00a0?</b></span><span class="end">${I.chev}</span></button>
+${pushCard()}
 <section class="card" id="compte"><h3>Compte</h3><p class="soft small" style="margin:0">Connecté avec ${esc(user.email || '')}. Version de l’appli : ${VERSION}.</p><div class="row"><button class="btn ghost sm" data-act="logout">Déconnecter cet appareil</button></div>
 <h4 style="margin:16px 0 4px">Vos données</h4><p class="soft small" style="margin:0">Statistiques d’usage, pour améliorer Pépite (jamais de publicité).</p>
 <div class="pills">${[['on', 'Activées'], ['off', 'Désactivées']].map(([v, l]) => `<button class="pill" data-act="stats" data-n="${v}" aria-pressed="${(v === 'off') === !!F.noStats}" ${dis}>${l}</button>`).join('')}</div>
@@ -734,6 +750,7 @@ async function loadAdmin() {
     ks.forEach(d => { const fid = d.ref.parent.parent.id; (kd[fid] = kd[fid] || {})[d.id] = d.data(); });
     const avis = []; if (av) av.forEach(d => avis.push(d.data())); avis.sort((a, b) => (b.d || '').localeCompare(a.d || ''));
     adminData = { at: Date.now(), fams, kd, avis };
+    getDoc(doc(fdb, 'config', 'push')).then(c => { vapidReady = c.exists() && !!c.data().publicKey; render(); }).catch(() => {});
   } catch (e) { adminErr = 'Lecture impossible : publiez d’abord les nouvelles règles Firestore (accès du tableau de bord).'; }
   render();
 }
@@ -783,6 +800,7 @@ function adminView() {
 <section class="card"><h3>Ce qui est utilisé</h3><ul class="kv">${line('Enfants inscrits', `${s.kids} <small class="soft">(${s.perFam} par famille)</small>`)}${s.ages.map(([l, v]) => line('· ' + l, v)).join('')}${line('Guide terminé', s.guided)}${line('Au moins un quiz réussi', s.lq)}${line('Un projet en cours', s.goal)}${line('Projets achetés', s.bought)}${line('Bourse ouverte (15 € atteints)', s.open)}${line('Dé lancé, parmi les bourses ouvertes', s.rolled)}${s.posts.map(([p, v]) => line('· ' + (POST[p] ? POST[p].name : p), v)).join('')}${line('Tirelire moyenne', s.avg)}${line('Bonus moyen des parents', s.match)}</ul></section>
 <section class="card"><h3>D’où viennent les familles</h3><ul class="kv">${s.srcs.map(([k, v]) => line(esc(k), v)).join('') || '<li><span class="soft">Aucune donnée</span></li>'}</ul><p class="soft small" style="margin:8px 0 0">Ajoute <b>?src=nom</b> à tes liens (ex. ?src=whatsapp, ?src=instagram) pour savoir lesquels marchent.</p></section>
 <section class="card"><h3>Avis des familles (${adminData.avis.length})</h3>${adminData.avis.length ? `<ul class="avislist">${adminData.avis.slice(0, 40).map(a => `<li><small class="soft">${dateFr(a.d)} · v${esc(a.v)} · ${a.kids} enfant(s)${a.mood ? ' · ' + esc((MOODS.find(m => m[0] === a.mood) || [, a.mood])[1]) : ''}</small><p>${esc(a.text || '(sans message)')}</p></li>`).join('')}</ul>` : '<p class="soft" style="margin:0">Aucun avis pour l’instant.</p>'}</section>
+<section class="card"><h3>Notifications</h3><p class="small" style="margin:0">${vapidReady ? 'Les clés des notifications sont en place.' : 'Avant que les familles puissent activer les notifications, créez une fois les clés (elles restent dans votre compte).'}</p><div class="row"><button class="btn sm ${vapidReady ? 'ghost' : ''}" data-act="vapidgen">${vapidReady ? 'Recréer les clés' : 'Créer les clés des notifications'}</button></div></section>
 <section class="card"><h3>Comment lire ces chiffres</h3><p class="small" style="margin:0">Repères indicatifs, à ajuster avec l’expérience. Le chiffre qui compte le plus est la rétention à 4 semaines : au-delà de 40 %, l’habitude est installée et tu peux tester une offre payante. Si l’installation reste sous 50 %, travaille l’écran d’installation avant tout. Si beaucoup de familles s’inscrivent mais peu d’enfants rangent leur paie trois semaines de suite, c’est la promesse ou l’accompagnement des parents qui coince, pas l’acquisition.</p>${s.optout ? `<p class="soft small" style="margin:8px 0 0">${s.optout} famille(s) ont désactivé les statistiques : leurs repères d’usage manquent.</p>` : ''}</section>`;
 }
 
@@ -823,6 +841,89 @@ function openVideo() {
   document.addEventListener('keydown', esc);
   document.body.append(m);
 }
+
+
+/* ---------- notifications (Web Push) : seuls les téléphones des parents s'abonnent ---------- */
+let pushState = 'unknown', pushBusy = false; // unknown | unsupported | ios-install | denied | off | on
+const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+async function checkPush() {
+  if (!pushSupported()) { pushState = isIOS && !standalone() ? 'ios-install' : 'unsupported'; return render(); }
+  if (Notification.permission === 'denied') { pushState = 'denied'; return render(); }
+  try { const r = await navigator.serviceWorker.ready, sub = await r.pushManager.getSubscription(); pushState = sub ? 'on' : 'off'; } catch (e) { pushState = 'unsupported'; }
+  render();
+}
+const b64u = s => { const p = '='.repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+async function devId(endpoint) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(endpoint)); return [...new Uint8Array(h)].slice(0, 12).map(x => x.toString(16).padStart(2, '0')).join(''); }
+async function pushOn() {
+  if (pushBusy || !ready) return; pushBusy = true; render();
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { pushState = perm === 'denied' ? 'denied' : 'off'; return; }
+    const cfg = await getDoc(doc(fdb, 'config', 'push')), pub = cfg.exists() && cfg.data().publicKey;
+    if (!pub) { say('Les notifications ne sont pas encore prêtes.', 'Réessayez un peu plus tard.'); return; }
+    const r = await navigator.serviceWorker.ready;
+    const sub = await r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(pub) });
+    const j = sub.toJSON();
+    await setDoc(doc(fdb, 'familles', user.uid, 'push', await devId(j.endpoint)), { endpoint: j.endpoint, keys: j.keys, d: iso(), ua: /Android/i.test(UA) ? 'Android' : isIOS ? 'iPhone' : 'Ordinateur' });
+    if (!F.push) { F.push = true; saveF(); }
+    syncDue(); pushState = 'on'; say('Notifications activées sur ce téléphone.');
+  } catch (e) { say('Activation impossible pour le moment.', 'Vérifiez la connexion, puis réessayez.'); }
+  finally { pushBusy = false; render(); }
+}
+async function pushOff() {
+  if (pushBusy) return; pushBusy = true; render();
+  try { const r = await navigator.serviceWorker.ready, sub = await r.pushManager.getSubscription(); if (sub) { await deleteDoc(doc(fdb, 'familles', user.uid, 'push', await devId(sub.endpoint))).catch(() => {}); await sub.unsubscribe(); } pushState = 'off'; say('Notifications désactivées sur ce téléphone.'); }
+  catch (e) { say('Désactivation impossible pour le moment.'); }
+  finally { pushBusy = false; render(); }
+}
+// File d'envoi : une ligne par événement, lue et vidée par la tâche planifiée (GitHub Actions).
+function queuePush(type, data) {
+  if (!ready || !F || !F.push || !user) return;
+  const k = data.kid ? kidOf(data.kid) : null;
+  setDoc(doc(fdb, 'push_queue', `${user.uid.slice(0, 10)}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`), { uid: user.uid, type, d: iso(), ...data, ...(k ? { kidName: k.name } : {}) }).catch(() => {});
+}
+// Ce que les parents doivent encore, gardé dans la fiche famille pour le récap du lundi.
+function syncDue() {
+  if (!ready || !F || !F.push) return;
+  const d = Object.fromEntries(kids().map(k => { const T = tot(k.id); return [k.id, { name: k.name, give: T.purseDue, keep: r2(Math.max(0, T.due)) }]; }));
+  if (JSON.stringify(d) !== JSON.stringify(F.due || {})) { F.due = d; saveF(); }
+}
+// La bourse vient de s'ouvrir (15 € atteints) : prévenir les parents une seule fois.
+function markBourse(notify) {
+  if (!ready || !F) return; let ch = false;
+  for (const k of kids()) if (bourseOpen(k.id) && !k.bopen) { k.bopen = iso(); ch = true; if (notify && k.id === cur) queuePush('bourse', { kid: k.id }); }
+  if (ch) saveF();
+}
+function pushCard() {
+  const what = '<p class="soft small" style="margin:0">Le lundi, un récap de ce que vous devez à vos enfants. Une alerte quand un enfant déclare de l’argent reçu. Et les grands moments : palier atteint, objectif, bourse ouverte, séries de semaines.</p>';
+  let body;
+  if (pushState === 'on') body = `<p style="margin:0 0 6px"><b>Activées sur ce téléphone.</b></p>${what}<div class="row"><button class="btn ghost sm" data-act="pushtest" ${ready ? '' : 'disabled'}>Envoyer un test</button><button class="btn ghost sm" data-act="pushoff" ${pushBusy ? 'disabled' : ''}>Désactiver</button></div>`;
+  else if (pushState === 'off') body = `${what}<div class="row"><button class="btn sm" data-act="pushon" ${pushBusy || !ready ? 'disabled' : ''}>Activer sur ce téléphone</button></div>`;
+  else if (pushState === 'denied') body = `${what}<p class="small" style="margin:8px 0 0">Les notifications sont bloquées pour Pépite sur ce téléphone. Autorisez-les dans les réglages du navigateur (cadenas à gauche de l’adresse, puis Notifications), puis revenez ici.</p>`;
+  else if (pushState === 'ios-install') body = `${what}<p class="small" style="margin:8px 0 0">Sur iPhone, installez d’abord Pépite sur l’écran d’accueil (Partager, puis « Sur l’écran d’accueil ») et ouvrez-la depuis l’icône.</p>`;
+  else if (pushState === 'unsupported') body = `${what}<p class="small" style="margin:8px 0 0">Ce navigateur ne permet pas les notifications. Sur Android, ouvrez Pépite dans Chrome.</p>`;
+  else return '';
+  return `<section class="card" id="notifs"><h3>Notifications</h3>${body}</section>`;
+}
+
+
+// Clés des notifications, créées dans le navigateur du créateur : la clé privée ne quitte jamais son compte
+// (document lisible uniquement par lui et par la tâche planifiée, qui y accède avec la clé de service Firebase).
+const b64e = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+async function genVapid() {
+  if (!isAdmin()) return;
+  try {
+    const old = await getDoc(doc(fdb, 'config', 'push'));
+    if (old.exists() && old.data().publicKey && !confirmVapid) { confirmVapid = true; say('Des clés existent déjà.', 'Touchez encore une fois pour les remplacer (les téléphones abonnés devront réactiver).'); return render(); }
+    const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+    const jwk = await crypto.subtle.exportKey('jwk', kp.privateKey), raw = await crypto.subtle.exportKey('raw', kp.publicKey);
+    await setDoc(doc(fdb, 'config', 'pushPrivate'), { privateKey: jwk.d, publicKey: b64e(raw), d: iso() });
+    await setDoc(doc(fdb, 'config', 'push'), { publicKey: b64e(raw), d: iso() });
+    confirmVapid = false; vapidReady = true; say('Clés des notifications créées.');
+  } catch (e) { say('Création impossible : publiez d’abord les nouvelles règles Firestore.'); }
+  render();
+}
+let confirmVapid = false, vapidReady = null;
 
 const H = () => ({ jar, miniDie, growNug, f, eurS, r50, I, coinEl });
 function artList() { return articles(H()); }
@@ -985,7 +1086,7 @@ function render() {
 const chains = {};
 function queue(key, fn) { chains[key] = (chains[key] || Promise.resolve()).then(fn).catch(() => { status = 'Enregistrement impossible : vérifie ta connexion.'; render(); }); return chains[key]; }
 function saveF() { const body = clone(F); lastF = JSON.stringify(body); return queue('F', () => setDoc(doc(fdb, 'familles', user.uid), body)); }
-function saveK(id) { const body = { events: clone(evs(id)), goal: goalOf(id) ? clone(goalOf(id)) : null, pause: PAUSE[id] ? clone(PAUSE[id]) : null }; lastK[id] = JSON.stringify(body); return queue(id, () => setDoc(doc(fdb, 'familles', user.uid, 'enfants', id), body)); }
+function saveK(id) { setTimeout(syncDue, 0); const body = { events: clone(evs(id)), goal: goalOf(id) ? clone(goalOf(id)) : null, pause: PAUSE[id] ? clone(PAUSE[id]) : null }; lastK[id] = JSON.stringify(body); return queue(id, () => setDoc(doc(fdb, 'familles', user.uid, 'enfants', id), body)); }
 // Hausse automatique de la paie aux anniversaires (si la famille l'a activée).
 function applyRaises() {
   let ch = false; const now = new Date(), msgs = [];
@@ -999,7 +1100,7 @@ function applyRaises() {
 }
 function updateReady() {
   const r = !!(F && famServer && kids().every(k => KL[k.id]));
-  if (r !== ready) { ready = r; if (r) { status = ''; clearTimeout(offlineTimer); applyRaises(); touchStats(); resetCoins(); } return true; }
+  if (r !== ready) { ready = r; if (r) { status = ''; clearTimeout(offlineTimer); applyRaises(); touchStats(); markBourse(); resetCoins(); checkPush(); } return true; }
   return false;
 }
 function syncKids() {
@@ -1080,6 +1181,7 @@ function doGift(ratio) {
   const need = giftCheck();
   EV[cur] = [...evs(cur), { t: 'recu', d: iso(), from, inv: inv2, dep: dep2, bonus, ...(need ? { pending: true } : {}) }];
   saveK(cur);
+  if (need) queuePush('cadeau', { kid: cur, amount: amt, from: from.slice(0, 40) });
   if (need) { say(`C’est noté ! ${P().label} doi${['parents', 'papamaman'].includes(F.parents) ? 'vent' : 't'} valider avant que l’argent compte.`); form.gamount = ''; form.gfrom = ''; return; }
   sayMs(before, inv2 ? `Super ! ${f(inv2 + bonus)} rejoignent ta tirelire.` : `${f(dep2)} dans ton porte-monnaie.`, inv2 ? `${dep2 ? `Garde ${f(dep2)} dans ton porte-monnaie et donne` : 'Donne'} ${f(inv2)} ${P().a} pour qu’ils soient mis en lieu sûr.` : '');
   form.gamount = ''; form.gfrom = ''; view = 'home';
@@ -1195,10 +1297,15 @@ document.addEventListener('click', ev => {
       const inv = sumC(invC), dep = sumC(depC);
       const bonus = r2(inv * F.match / 100);
       const before = t.total;
+      const st0 = streakOf(cur), ln0 = lessonsOpen(cur);
       EV[cur] = [...evs(cur), { t: 'paie', d: iso(), w: new Date(ow[0]).toISOString(), inv, dep, bonus }];
+      const st1 = streakOf(cur), hit = STREAKS.find(n => st0 < n && st1 >= n);
+      const cel = hit ? `${hit} semaines de suite !` : lessonsOpen(cur) > ln0 && lessonsOpen(cur) <= lessonList().length ? 'Nouvelle leçon débloquée !' : '';
+      if (hit) queuePush('serie', { kid: cur, n: hit });
       if (guide !== null) guidePaid = true;
       saveK(cur);
       sayMs(before, inv ? `Bravo ! ${f(inv + bonus)} rejoignent ta tirelire.` : 'Paie rangée : tout est dans ton porte-monnaie.', dep ? `${f(dep)} pour ton porte-monnaie : ${P().label.toLowerCase()} ${F.parents === 'parents' ? 'te les donneront' : 'te les donnera'}.` : '');
+      if (cel) say(cel, toast && toast.msg);
       resetCoins(); if (ow.length <= 1) { view = 'home'; window.scrollTo(0, 0); } break;
     }
     case 'gift': if (ready) doGift(parseFloat(b.dataset.r)); break;
@@ -1258,6 +1365,9 @@ document.addEventListener('click', ev => {
     case 'amood': avisMood = b.dataset.n; break;
     case 'avissend': sendAvis(); return;
     case 'video': openVideo(); return;
+    case 'pushon': pushOn(); return;
+    case 'pushoff': pushOff(); return;
+    case 'pushtest': queuePush('test', {}); say('Notification de test demandée.', 'Elle arrive dans les 15 minutes environ.'); break;
     case 'install': if (installEv) { const e = installEv; installEv = null; e.prompt(); e.userChoice.finally(() => render()); } break;
     case 'stats': if (ready) { if (b.dataset.n === 'off') { F.noStats = true; delete F.stats; } else { delete F.noStats; touchStats(true); } saveF(); } break;
     case 'export': exportData(); break;
@@ -1267,7 +1377,8 @@ document.addEventListener('click', ev => {
     case 'gateskip': gateOff = true; try { sessionStorage.setItem('pepite-gate', '1'); } catch (e) {} break;
     case 'gatecopy': try { navigator.clipboard.writeText(location.href.split('#')[0]); say('Lien copié : colle-le dans Chrome.'); } catch (e) {} break;
     case 'adminreload': loadAdmin(); break;
-    case 'lecon': view = 'lecon'; lessonId = b.dataset.n; window.scrollTo(0, 0); break;
+    case 'vapidgen': genVapid(); return;
+    case 'lecon': { const L = lessonList(), ix = L.findIndex(x => x.id === b.dataset.n); if (ix >= lessonsOpen(cur)) break; } view = 'lecon'; lessonId = b.dataset.n; window.scrollTo(0, 0); break;
     case 'kq': { const x = lessonList().find(l => l.id === lessonId); if (x) { kq[x.id] = +b.dataset.n; const k = kidOf(cur); if (k && ready && lessonFrom !== 'parents' && kq[x.id] === x.quiz.ok && !(k.lq && k.lq[x.id])) { k.lq = { ...(k.lq || {}), [x.id]: 1 }; saveF(); } } break; }
     case 'kread': { const el = document.querySelector('.lesson'); if (!el) return; try { if (speechSynthesis.speaking) { speechSynthesis.cancel(); return; } const txt = [...el.querySelectorAll('h2, .alead, p:not(.kicker):not(.qfb), h4')].filter(e => !e.closest('.quiz') && !e.closest('figure')).map(e => e.innerText).join('. '); const u = new SpeechSynthesisUtterance(txt); u.lang = 'fr-FR'; u.rate = 0.95; const v = speechSynthesis.getVoices().find(z => /^fr/i.test(z.lang)); if (v) u.voice = v; speechSynthesis.speak(u); } catch (e) {} return; }
     case 'mycolor': { const x = kidOf(cur); if (x && ready && PAL.includes(b.dataset.c)) { x.color = b.dataset.c; saveF(); } break; }
@@ -1335,5 +1446,7 @@ addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEv = e
 addEventListener('appinstalled', () => { installEv = null; installed = true; render(); });
 // Appli déjà installée sur ce téléphone ? (Chrome Android, grâce à related_applications du manifeste)
 if (navigator.getInstalledRelatedApps) navigator.getInstalledRelatedApps().then(a => { if (a && a.length) { relatedApp = true; render(); } }).catch(() => {});
+// Ouverture depuis une notification : ?go=parents mène à l'Espace parents (le code est demandé si l'appareil est verrouillé).
+try { if (new URLSearchParams(location.search).get('go') === 'parents') { view = 'parents'; history.replaceState(null, '', location.pathname); } } catch (e) {}
 // Lien direct vers la politique de confidentialité (exigé par le Play Store)
 if (/^#(confidentialite|suppression)/.test(location.hash)) { view = 'confidentialite'; gateOff = true; render(); }

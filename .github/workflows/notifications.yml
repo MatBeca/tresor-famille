@@ -1,0 +1,43 @@
+# Notifications de Pépite : file d'envoi toutes les 15 minutes, récap de jour de paie le lundi matin.
+name: Notifications
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # file d'envoi
+    - cron: '0 7 * * 1'      # lundi 8 h (heure d'hiver) / 9 h (heure d'été) à Paris
+  workflow_dispatch:
+    inputs:
+      weekly:
+        description: 'Envoyer aussi le récap du lundi'
+        type: boolean
+        default: false
+concurrency:
+  group: notifications
+  cancel-in-progress: false
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HAS_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+    defaults:
+      run:
+        working-directory: notify
+    steps:
+      - uses: actions/checkout@v4
+        if: env.HAS_KEY == 'true'
+        with:
+          sparse-checkout: notify
+      - uses: actions/setup-node@v4
+        if: env.HAS_KEY == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: notify/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        if: env.HAS_KEY == 'true'
+      - name: Envoyer
+        if: env.HAS_KEY == 'true'
+        run: node send.mjs
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          MODE: ${{ (github.event.schedule == '0 7 * * 1' || inputs.weekly) && 'weekly' || 'queue' }}
