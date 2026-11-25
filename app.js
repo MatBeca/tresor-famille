@@ -6,7 +6,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
-const VERSION = '106'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '107'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -356,7 +356,7 @@ function growNug(prog) {
 function pepCard() {
   const ms = medals(cur), won = ms.filter(m => m.ok), k = kidOf(cur), last = won.find(m => m.id === (k && k.pm)) || won[won.length - 1];
   const ic = last ? matNug(last, 'pnug') : `<svg class="pnug" viewBox="2 8 60 52" aria-hidden="true">${mystSVG()}</svg>`;
-  return `<button class="todo pep" data-act="go" data-v="pepites"${last ? ` style="--m:${last.c}"` : ''}><span class="ic">${ic}</span><span>${last ? `<small>Ta dernière pépite</small><b>${last.name}</b>` : '<b>Mes pépites</b>'}<small>${last ? `Découvre tes ${won.length} pépites et celles qui te manquent` : 'Range ta première paie pour gagner ta première pépite'}</small><span class="mrow">${ms.map(m => `<i class="${m.ok ? 'on' : ''}" style="--m:${m.c}"></i>`).join('')}</span></span><span class="end">${I.chev}</span></button>`;
+  return `<button class="todo pep" data-act="go" data-v="pepites"${last ? ` style="--m:${last.c}"` : ''}><span class="ic">${ic}</span><span>${last ? `<small>Ta dernière pépite</small><b>${last.name}</b>` : '<b>Mes pépites</b>'}<small>${last ? `${won.length} / ${ms.length} pépites débloquées` : 'Range ta première paie pour gagner ta première pépite'}</small></span><span class="end">${I.chev}</span></button>`;
 }
 function homeView(k, t) {
   const g = goalOf(cur), J = jar(t, g), due = owed(cur).length, paid = due === 0, rolled = sameWeek(t.bourse && t.bourse.d);
@@ -949,47 +949,77 @@ function bestStreak(id) {
   }
   return best;
 }
+// Les 100 pépites, rangées par familles. Chaque test lit le résumé `c` calculé par medals().
+const M = (g, id, name, how, test, x = {}) => ({ g, id, name, how, test, ...x });
+const capT = i => `Faire passer ta tirelire au-dessus de ${f(CAPS[i])}.`;
+const sem = n => `Ranger ta paie ${n} semaines d’affilée.`;
+// Fêtes et saisons : la paie de la semaine où tombe ce jour (elle compte même rangée en retard).
+const easter = y => { const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, g = Math.floor((b - Math.floor((b + 8) / 25) + 1) / 3), h = (19 * a + b - d - g + 15) % 30, l = (32 + 2 * e + 2 * Math.floor(c / 4) - h - c % 4) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451); return new Date(y, Math.floor((h + l - 7 * m + 114) / 31) - 1, (h + l - 7 * m + 114) % 31 + 1); };
+const addD = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const nthSun = (y, m, n) => { const d = new Date(y, m, 1); return addD(d, (7 - d.getDay()) % 7 + 7 * (n - 1)); };
+const lastSun = (y, m) => { const d = new Date(y, m + 1, 0); return addD(d, -d.getDay()); };
+const meresDay = y => { const d = lastSun(y, 4), p = addD(easter(y), 49); return d.getTime() === p.getTime() ? nthSun(y, 5, 1) : d; };
+const blackFriday = y => { const d = new Date(y, 10, 1); return addD(d, (4 - d.getDay() + 7) % 7 + 22); };
+const SEASONS = [
+  ['nouvelan', 'Bonne année !', 'la semaine du Nouvel An', y => new Date(y, 0, 1)],
+  ['galette', 'Galette des rois', 'la semaine de l’Épiphanie (6 janvier)', y => new Date(y, 0, 6)],
+  ['chandeleur', 'Chandeleur', 'la semaine de la Chandeleur (2 février)', y => new Date(y, 1, 2)],
+  ['neige', 'Vacances de neige', 'la semaine du 15 février', y => new Date(y, 1, 15)],
+  ['mardigras', 'Mardi gras', 'la semaine de Mardi gras', y => addD(easter(y), -47)],
+  ['grandmeres', 'Fête des grands-mères', 'la semaine de la fête des grands-mères', y => nthSun(y, 2, 1)],
+  ['printemps', 'Premier jour du printemps', 'la semaine du 20 mars', y => new Date(y, 2, 20)],
+  ['poisson', 'Poisson d’avril', 'la semaine du 1er avril', y => new Date(y, 3, 1)],
+  ['paques', 'Joyeuses Pâques', 'la semaine de Pâques', y => easter(y)],
+  ['muguet', 'Brin de muguet', 'la semaine du 1er mai', y => new Date(y, 4, 1)],
+  ['meres', 'Fête des mères', 'la semaine de la fête des mères', meresDay],
+  ['peres', 'Fête des pères', 'la semaine de la fête des pères', y => nthSun(y, 5, 3)],
+  ['musique', 'Fête de la musique', 'la semaine du 21 juin', y => new Date(y, 5, 21)],
+  ['quatorze', '14 Juillet', 'la semaine du 14 juillet', y => new Date(y, 6, 14)],
+  ['aout', 'Plein été', 'la semaine du 15 août', y => new Date(y, 7, 15)],
+  ['rentree', 'Rentrée des classes', 'la semaine de la rentrée (début septembre)', y => new Date(y, 8, 2)],
+  ['automne', 'Premier jour de l’automne', 'la semaine du 23 septembre', y => new Date(y, 8, 23)],
+  ['halloween', 'Halloween', 'la semaine d’Halloween (31 octobre)', y => new Date(y, 9, 31)],
+  ['blackfriday', 'Résiste au Black Friday', 'la semaine du Black Friday', blackFriday, 1],
+  ['avent', 'Calendrier de l’Avent', 'la semaine du 1er décembre', y => new Date(y, 11, 1)],
+  ['noel', 'Joyeux Noël', 'la semaine de Noël', y => new Date(y, 11, 25)],
+];
+const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const COLLEC = ['collec', 'collec40', 'collec60', 'collec80', 'legende'];
+const MEDAL_GROUPS = [['debut', 'Tes débuts'], ['regul', 'Régularité'], ['tirelire', 'Ta tirelire'], ['bourse', 'La bourse'], ['savoir', 'Savoir et projets'], ['saison', 'Fêtes et saisons'], ['mois', 'Mois complets'], ['collec', 'Collection']];
 const MEDALS = [
-  { id: 'paie1', name: 'Premier pas', how: 'Ranger ta toute première paie.', test: c => c.paid >= 1 },
-  { id: 'projet0', name: 'Un rêve en tête', how: 'Choisir le projet pour lequel tu mets de côté.', test: c => c.goal },
-  { id: 'bonus1', name: 'Premier bonus', how: 'Mettre des pièces dans ta tirelire et recevoir le bonus de tes parents.', test: c => c.bonus > 0 },
-  { id: 'recu1', name: 'Cadeau bien rangé', how: 'Ranger dans ta tirelire de l’argent que tu as reçu.', test: c => c.recu >= 1 },
-  { id: 'lecon1', name: 'Curieux', how: 'Réussir le quiz d’une première leçon.', test: c => c.lq >= 1 },
-  { id: 'style', name: 'Mon style', how: 'Choisir ta façon de jouer à la bourse.', test: c => c.style },
-  { id: 's2', name: 'Bien parti', how: 'Ranger ta paie 2 semaines d’affilée.', test: c => c.best >= 2, serie: 2 },
-  { id: 's3', name: 'Régulier', how: 'Ranger ta paie 3 semaines d’affilée.', test: c => c.best >= 3, serie: 3 },
-  { id: 's5', name: 'Fidèle', how: 'Ranger ta paie 5 semaines d’affilée.', test: c => c.best >= 5, serie: 5 },
-  { id: 's10', name: 'Infatigable', how: 'Ranger ta paie 10 semaines d’affilée.', test: c => c.best >= 10, serie: 10 },
-  { id: 's15', name: 'Persévérant', how: 'Ranger ta paie 15 semaines d’affilée.', test: c => c.best >= 15, serie: 15 },
-  { id: 's26', name: 'Six mois sans faillir', how: 'Ranger ta paie 26 semaines d’affilée.', test: c => c.best >= 26, serie: 26 },
-  { id: 's52', name: 'Une année entière', how: 'Ranger ta paie 52 semaines d’affilée.', test: c => c.best >= 52, serie: 52 },
-  { id: 's78', name: 'Un an et demi', how: 'Ranger ta paie 78 semaines d’affilée.', test: c => c.best >= 78, serie: 78 },
-  { id: 's104', name: 'Deux ans sans faillir', how: 'Ranger ta paie 104 semaines d’affilée.', test: c => c.best >= 104, serie: 104 },
-  { id: 'p10', name: 'Dix paies rangées', how: 'Ranger 10 paies en tout.', test: c => c.paid >= 10 },
-  { id: 'p25', name: 'Vingt-cinq paies', how: 'Ranger 25 paies en tout.', test: c => c.paid >= 25 },
-  { id: 'p50', name: 'Cinquante paies', how: 'Ranger 50 paies en tout.', test: c => c.paid >= 50 },
-  { id: 'tout', name: 'Tout dans la tirelire', how: 'Ranger toute une paie dans ta tirelire, sans rien garder pour dépenser.', test: c => c.tout },
-  { id: 'bonus10', name: 'Bonus fidèle', how: `Recevoir ${f(10)} de bonus en tout.`, test: c => c.bonus >= 10 },
-  { id: 'recu5', name: 'Cadeaux bien gardés', how: 'Ranger 5 fois de l’argent reçu.', test: c => c.recu >= 5 },
-  { id: 'cap', name: 'Premier palier', how: `Faire passer ta tirelire au-dessus de ${f(CAPS[0])}.`, test: c => c.peak >= CAPS[0] },
-  { id: 'cap2', name: 'Deuxième palier', how: `Faire passer ta tirelire au-dessus de ${f(CAPS[1])}.`, test: c => c.peak >= CAPS[1] },
-  { id: 'cap3', name: 'Trois chiffres', how: `Faire passer ta tirelire au-dessus de ${f(CAPS[2])}.`, test: c => c.peak >= CAPS[2] },
-  { id: 'cap4', name: 'Deux cents euros', how: `Faire passer ta tirelire au-dessus de ${f(CAPS[3])}.`, test: c => c.peak >= CAPS[3] },
-  { id: 'cap5', name: 'Cinq cents euros', how: `Faire passer ta tirelire au-dessus de ${f(CAPS[5])}.`, test: c => c.peak >= CAPS[5] },
-  { id: 'bourse', name: 'La bourse s’ouvre', how: `Atteindre ${f(BOURSE_MIN)} dans ta tirelire.`, test: c => c.peak >= BOURSE_MIN },
-  { id: 'de1', name: 'Premier lancer', how: 'Lancer le dé de la bourse une première fois.', test: c => c.rolls >= 1 },
-  { id: 'chance', name: 'Coup de chance', how: 'Faire gagner ta tirelire avec le dé.', test: c => c.won },
-  { id: 'six', name: 'Le six !', how: 'Faire sortir le 6 au dé de la bourse.', test: c => c.six },
-  { id: 'calme', name: 'Garder son calme', how: 'Continuer la bourse après une semaine où le dé t’a fait perdre.', test: c => c.calm },
-  { id: 'trois', name: 'Trois de suite', how: 'Faire gagner ta tirelire 3 semaines de suite avec le dé.', test: c => c.trois },
-  { id: 'de10', name: 'Investisseur patient', how: 'Lancer le dé de la bourse 10 semaines.', test: c => c.rolls >= 10 },
-  { id: 'de25', name: 'Marathonien', how: 'Lancer le dé de la bourse 25 semaines.', test: c => c.rolls >= 25 },
-  { id: 'gain1', name: 'Ton argent travaille', how: `Gagner ${f(1)} grâce à la bourse, sans rien ajouter.`, test: c => c.gains >= 1 },
-  { id: 'gain10', name: 'Argent qui bosse', how: `Gagner ${f(10)} grâce à la bourse.`, test: c => c.gains >= 10 },
-  { id: 'lecon3', name: 'Apprenti', how: 'Réussir le quiz de 3 leçons.', test: c => c.lq >= 3 },
-  { id: 'savant', name: 'Petit savant', how: 'Réussir le quiz des 6 leçons.', test: c => c.lq >= 6 },
-  { id: 'projet', name: 'Projet réalisé', how: 'Réunir tout l’argent de ton projet.', test: c => c.goalDone },
-  { id: 'collec', name: 'Collectionneur', how: 'Gagner 20 autres pépites.', test: c => c.n >= 20 },
+  M('debut', 'paie1', 'Premier pas', 'Ranger ta toute première paie.', c => c.paid >= 1),
+  M('debut', 'projet0', 'Un rêve en tête', 'Choisir le projet pour lequel tu mets de côté.', c => c.goal),
+  M('debut', 'bonus1', 'Premier bonus', 'Mettre des pièces dans ta tirelire et recevoir le bonus de tes parents.', c => c.bonus > 0),
+  M('debut', 'recu1', 'Cadeau bien rangé', 'Ranger dans ta tirelire de l’argent que tu as reçu.', c => c.recu >= 1),
+  M('debut', 'lecon1', 'Curieux', 'Réussir le quiz d’une première leçon.', c => c.lq >= 1),
+  M('debut', 'style', 'Mon style', 'Choisir ta façon de jouer à la bourse.', c => c.style),
+  ...[[2, 's2', 'Bien parti'], [3, 's3', 'Régulier'], [5, 's5', 'Fidèle'], [10, 's10', 'Infatigable'], [15, 's15', 'Persévérant'], [26, 's26', 'Six mois sans faillir'], [39, 's39', 'Trois saisons'], [52, 's52', 'Une année entière'], [78, 's78', 'Un an et demi'], [104, 's104', 'Deux ans sans faillir']].map(([n, id, name]) => M('regul', id, name, sem(n), c => c.best >= n, { serie: n })),
+  ...[[10, 'p10', 'Dix paies rangées'], [25, 'p25', 'Vingt-cinq paies'], [50, 'p50', 'Cinquante paies'], [75, 'p75', 'Soixante-quinze paies'], [100, 'p100', 'Cent paies !'], [150, 'p150', 'Cent cinquante paies'], [200, 'p200', 'Deux cents paies']].map(([n, id, name]) => M('regul', id, name, `Ranger ${n} paies en tout.`, c => c.paid >= n)),
+  M('tirelire', 'tout', 'Tout dans la tirelire', 'Ranger toute une paie dans ta tirelire, sans rien garder pour dépenser.', c => c.tout),
+  ...[[10, 'bonus10', 'Bonus fidèle'], [25, 'bonus25', 'Joli bonus'], [50, 'bonus50', 'Gros bonus'], [100, 'bonus100', 'Méga bonus']].map(([n, id, name]) => M('tirelire', id, name, `Recevoir ${f(n)} de bonus en tout.`, c => c.bonus >= n)),
+  ...[[5, 'recu5', 'Cadeaux bien gardés'], [10, 'recu10', 'Dix cadeaux rangés'], [20, 'recu20', 'Vingt cadeaux rangés']].map(([n, id, name]) => M('tirelire', id, name, `Ranger ${n} fois de l’argent reçu.`, c => c.recu >= n)),
+  ...[[0, 'cap', 'Premier palier'], [1, 'cap2', 'Deuxième palier'], [2, 'cap3', 'Trois chiffres'], [3, 'cap4', 'Deux cents euros'], [4, 'cap6', 'Trois cents euros'], [5, 'cap5', 'Cinq cents euros'], [6, 'cap7', 'Sept cent cinquante euros'], [7, 'cap8', 'Mille euros !']].map(([i, id, name]) => M('tirelire', id, name, capT(i), c => c.peak >= CAPS[i])),
+  M('bourse', 'bourse', 'La bourse s’ouvre', `Atteindre ${f(BOURSE_MIN)} dans ta tirelire.`, c => c.peak >= BOURSE_MIN),
+  M('bourse', 'de1', 'Premier lancer', 'Lancer le dé de la bourse une première fois.', c => c.rolls >= 1),
+  M('bourse', 'chance', 'Coup de chance', 'Faire gagner ta tirelire avec le dé.', c => c.won),
+  M('bourse', 'six', 'Le six !', 'Faire sortir le 6 au dé de la bourse.', c => c.six),
+  M('bourse', 'calme', 'Garder son calme', 'Continuer la bourse après une semaine où le dé t’a fait perdre.', c => c.calm),
+  M('bourse', 'trois', 'Trois de suite', 'Faire gagner ta tirelire 3 semaines de suite avec le dé.', c => c.run >= 3),
+  M('bourse', 'cinq', 'Cinq de suite', 'Faire gagner ta tirelire 5 semaines de suite avec le dé.', c => c.run >= 5),
+  ...[[10, 'de10', 'Investisseur patient'], [25, 'de25', 'Marathonien'], [50, 'de50', 'Cinquante lancers'], [100, 'de100', 'Cent lancers']].map(([n, id, name]) => M('bourse', id, name, `Lancer le dé de la bourse ${n} semaines.`, c => c.rolls >= n)),
+  ...[[1, 'gain1', 'Ton argent travaille'], [10, 'gain10', 'Argent qui bosse'], [25, 'gain25', 'Ça pousse'], [50, 'gain50', 'Petit chêne'], [100, 'gain100', 'Grand arbre']].map(([n, id, name]) => M('bourse', id, name, `Gagner ${f(n)} grâce à la bourse.`, c => c.gains >= n)),
+  M('savoir', 'lecon3', 'Apprenti', 'Réussir le quiz de 3 leçons.', c => c.lq >= 3),
+  M('savoir', 'savant', 'Petit savant', 'Réussir le quiz des 6 leçons.', c => c.lq >= 6),
+  M('savoir', 'projet', 'Projet réalisé', 'Réunir tout l’argent de ton projet.', c => c.goalDone),
+  ...[[2, 'proj2', 'Deux projets réalisés'], [3, 'proj3', 'Trois projets réalisés'], [5, 'proj5', 'Cinq projets réalisés']].map(([n, id, name]) => M('savoir', id, name, `Réaliser ${n} projets.`, c => c.proj >= n)),
+  ...SEASONS.map(([id, name, when, , tout]) => M('saison', id, name, tout ? `Ranger toute ta paie dans ta tirelire ${when}, sans rien garder pour dépenser.` : `Ranger ta paie de ${when}.`, c => c.sea.has(id))),
+  M('saison', 'unan', 'Un an avec Pépite', 'Ranger ta paie de la semaine où tu fêtes un an avec Pépite.', c => c.sea.has('unan')),
+  ...MOIS.map((mo, i) => M('mois', 'm' + i, `${mo[0].toUpperCase() + mo.slice(1)} au complet`, `Ranger toutes tes paies du mois de ${mo}.`, c => c.months.has(i))),
+  M('collec', 'collec', 'Collectionneur', 'Gagner 20 autres pépites.', c => c.n >= 20),
+  M('collec', 'collec40', 'Grand collectionneur', 'Gagner 40 autres pépites.', c => c.n >= 40),
+  M('collec', 'collec60', 'Chasseur de pépites', 'Gagner 60 autres pépites.', c => c.n >= 60),
+  M('collec', 'collec80', 'Maître des pépites', 'Gagner 80 autres pépites.', c => c.n >= 80),
+  M('collec', 'legende', 'Légende de Pépite', 'Gagner toutes les autres pépites.', c => c.n >= 95),
 ];
 
 MEDALS.forEach(m => Object.assign(m, MATS[m.id]));
@@ -999,7 +1029,20 @@ function medals(id) {
   const k = kidOf(id); if (!k) return [];
   const E = evs(id), T = tot(id), g = goalOf(id), B = E.filter(e => e.t === 'bourse').sort((a, b) => (a.d < b.d ? -1 : 1));
   const c = { paid: paidWeeks(id).size, bonus: E.reduce((a, e) => a + ((e.t === 'paie' || (e.t === 'recu' && !e.pending && !e.refused)) ? e.bonus || 0 : 0), 0), best: bestStreak(id), peak: r2(T.peak), rolls: E.filter(e => e.t === 'bourse').length, goalDone: E.some(e => e.t === 'projet') || (g && T.total >= g.budget), lq: Object.keys(k.lq || {}).length, goal: !!g || E.some(e => e.t === 'projet'), recu: E.filter(e => e.t === 'recu' && !e.pending && !e.refused).length, won: B.some(e => e.gain > 0), calm: B.some((e, i) => e.gain < 0 && i < B.length - 1), gains: r2(T.gains || 0), style: E.some(e => e.t === 'posture' && e.p !== 'none'), six: B.some(e => e.face === 6), trois: B.some((e, i) => i >= 2 && e.gain > 0 && B[i - 1].gain > 0 && B[i - 2].gain > 0), tout: E.some(e => e.t === 'paie' && e.inv > 0 && !e.dep) };
-  c.n = MEDALS.filter(m => m.id !== 'collec' && m.test(c)).length;
+  const PW = paidWeeks(id), sw = startWeek(id), cw = wk(new Date()), isP = pausedWeeks(id), sea = new Set(), months = new Set();
+  const toutW = new Set(E.filter(e => e.t === 'paie' && e.inv > 0 && !e.dep).map(e => normWk(wk(e.w || e.d))));
+  for (const w of PW) {
+    const y0 = new Date(w).getFullYear();
+    for (const y of [y0, y0 + 1]) for (const [sid, , , at, tout] of SEASONS) if (normWk(wk(at(y))) === w && (!tout || toutW.has(w))) sea.add(sid);
+  }
+  if (PW.has(normWk(sw + 364 * 864e5))) sea.add('unan');
+  for (let y = new Date(sw).getFullYear(); y <= new Date().getFullYear(); y++) for (let m = 0; m < 12; m++) {
+    const mons = []; for (let d = 1; d <= 31; d++) { const x = new Date(y, m, d); if (x.getMonth() !== m) break; if (x.getDay() === 1) mons.push(normWk(x.getTime())); }
+    if (mons[0] >= sw && mons[mons.length - 1] <= cw && mons.every(w => PW.has(w) || isP(w)) && mons.some(w => PW.has(w))) months.add(m);
+  }
+  let run = 0, best = 0; for (const e of B) { run = e.gain > 0 ? run + 1 : 0; best = Math.max(best, run); }
+  Object.assign(c, { sea, months, run: best, proj: E.filter(e => e.t === 'projet').length });
+  c.n = MEDALS.filter(m => !COLLEC.includes(m.id) && m.test(c)).length;
   return MEDALS.map(m => ({ ...m, ok: !!m.test(c) }));
 }
 const medalSet = id => new Set(medals(id).filter(m => m.ok).map(m => m.id));
@@ -1011,16 +1054,17 @@ function newMedal(id, before) {
   if (kk) { kk.pm = m.id; saveF(); }
   const sm = got.filter(x => x.serie).pop();
   if (sm) queuePush('serie', { kid: id, n: sm.serie });
-  if (got.length > 1) return `${got.length} nouvelles pépites\u00a0: ${got.map(x => `«\u00a0${x.name}\u00a0»`).join(' et ')}\u00a0!`;
+  if (got.length > 1) return `${got.length} nouvelles pépites\u00a0: ${got.map(x => `«\u00a0${x.name}\u00a0»`).reduce((a, x, i, l) => a + (i === 0 ? '' : i === l.length - 1 ? ' et ' : ', ') + x, '')}\u00a0!`;
   return `Nouvelle ${pepOf(m)}\u00a0: «\u00a0${m.name}\u00a0»\u00a0!`;
 }
 function nextSerie(id) { const st = streakOf(id), m = MEDALS.find(x => x.serie && x.serie > st && x.serie > bestStreak(id)); return m ? { m, left: m.serie - st } : null; }
 function pepitesView() {
   const L = medals(cur), n = L.filter(m => m.ok).length, st = streakOf(cur), nx = nextSerie(cur);
+  const card = m => `<div class="medal ${m.ok ? 'on' : ''}" style="--m:${m.c}">${m.ok ? matNug(m) : `<svg class="mnug" viewBox="2 8 60 52" aria-hidden="true">${mystSVG()}</svg>`}${m.ok ? `<b>${m.name}</b>` : ''}<em>${m.ok ? `Pépite ${m.mat}` : 'Pépite mystère'}</em><small>${m.how}</small></div>`;
   return `<button class="backlink" data-act="go" data-v="home">${I.chev}<span>Ma tirelire</span></button><h2 class="title">Mes pépites</h2>
 <p class="lead">Chaque pépite récompense un réflexe de bon épargnant. Tu en as ${n} sur ${L.length}.</p>
 ${st >= 1 ? `<section class="card serie"><b>${st} semaine${st > 1 ? 's' : ''} d’affilée</b><span>${nx ? `Encore ${nx.left} paie${nx.left > 1 ? 's' : ''} rangée${nx.left > 1 ? 's' : ''} pour gagner une nouvelle pépite.` : 'Tu as toutes les pépites de régularité. Respect !'}</span></section>` : ''}
-<div class="medals">${L.map(m => `<div class="medal ${m.ok ? 'on' : ''}" style="--m:${m.c}">${m.ok ? matNug(m) : `<svg class="mnug" viewBox="2 8 60 52" aria-hidden="true">${mystSVG()}</svg>`}${m.ok ? `<b>${m.name}</b>` : ''}<em>${m.ok ? `Pépite ${m.mat}` : 'Pépite mystère'}</em><small>${m.how}</small></div>`).join('')}</div>`;
+${MEDAL_GROUPS.map(([g, t]) => { const G = L.filter(m => m.g === g); return `<h3 class="sec mgroup">${t}<span>${G.filter(m => m.ok).length}/${G.length}</span></h3><div class="medals">${G.map(card).join('')}</div>`; }).join('')}`;
 }
 
 

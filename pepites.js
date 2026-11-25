@@ -237,6 +237,304 @@ export const MATS = {
   lecon3: { mat: 'de glace', c: '#bfe9ff', line: '#2f7fb0', draw: 'glace' },
   collec: { mat: 'arc-en-ciel', c: '#9b6bff', line: '#3a2a5a', draw: 'arcenciel' },
 };
+// ——— Pépites 41 à 100 : saisons, mois complets et grands paliers ———
+const blob = (circles, fill, line, w = 3) => circles.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${line}" stroke-width="${w * 2}"/>`).join('') + circles.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}"/>`).join('');
+const thick = (d, c, line, w = 6) => `<path d="${d}" stroke="${line}" stroke-width="${w + 4.5}" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" stroke="${c}" stroke-width="${w}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+const star = (cx, cy, R, r, n = 5, a0 = -Math.PI / 2) => Array.from({ length: n * 2 }, (_, i) => { const a = a0 + i * Math.PI / n, k = i % 2 ? r : R; return [+(cx + k * Math.cos(a)).toFixed(2), +(cy + k * Math.sin(a)).toFixed(2)]; });
+const cubeAt = (x, y, s, c, L) => { const h = s * 0.5; return poly([[x, y - h], [x + s, y], [x, y + h], [x - s, y]], tone(c, 0.3), L) + poly([[x - s, y], [x, y + h], [x, y + h + s], [x - s, y + s]], tone(c, -0.05), L) + poly([[x, y + h], [x + s, y], [x + s, y + s], [x, y + h + s]], tone(c, -0.22), L); };
+
+const D2 = {
+  // Saisons
+  disco(c, L) { // boule à facettes du Nouvel An
+    const rows = [16, 22, 28, 34, 40, 46, 52], tiles = [];
+    rows.forEach((y, j) => { const half = Math.sqrt(Math.max(0, 21 * 21 - (y + 3 - 34) ** 2)); for (let x = 32 - half; x < 32 + half - 5; x += 6) tiles.push(`<rect x="${(x + 0.6).toFixed(1)}" y="${y + 0.6}" width="4.8" height="4.8" rx="1" fill="${tone(c, ((x * 7 + j * 13) % 5) / 5 - 0.35)}"/>`); });
+    return `<path d="M32 6V12" stroke="${L}" stroke-width="2"/><circle cx="32" cy="34" r="21" fill="${tone(c, -0.3)}"/>${tiles.join('')}<circle cx="32" cy="34" r="21" fill="none" stroke="${L}" stroke-width="3"/>` + spark(24, 25, 4, '#fff', L) + spark(53, 14, 3.4, '#ffd93b', L) + spark(10, 50, 3, '#ff8fc7', L);
+  },
+  galette(c, L) { // galette des rois avec sa couronne
+    const grid = [-10, 0, 10].map(o => `M${24 + o} 33L${34 + o} 45M${40 - o} 33L${30 - o} 45`).join('');
+    return `<ellipse cx="32" cy="44" rx="25" ry="12" fill="${tone(c, -0.3)}" stroke="${L}" stroke-width="3"/><ellipse cx="32" cy="39" rx="25" ry="12" fill="${c}" stroke="${L}" stroke-width="3"/><path d="${grid}" stroke="${tone(c, -0.25)}" stroke-width="1.4" opacity=".8"/>` + poly([[22, 28], [21, 14], [27, 20], [32, 11], [37, 20], [43, 14], [42, 28]], '#ffd24a', '#6e4400', 2) + `<circle cx="32" cy="22" r="2" fill="#e0294f"/>` + shine('M14 36Q18 31 26 29', 2.2);
+  },
+  crepe(c, L) { // crêpe pliée en quatre et sucrée
+    const d = 'M12 54V14A40 40 0 0 1 52 54Z';
+    return `<path d="${d}" fill="${c}"/><path d="M12 54L46 22" stroke="${tone(c, -0.18)}" stroke-width="2" fill="none"/>${[[22, 26, 2.4], [36, 32, 3], [24, 42, 2], [40, 46, 2.6], [30, 20, 1.6], [18, 36, 1.8]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${tone(c, -0.25)}"/>`).join('')}${[[28, 30], [33, 40], [20, 47], [42, 40], [26, 24], [37, 50]].map(([x, y]) => `<rect x="${x}" y="${y}" width="2" height="2" fill="#fff" transform="rotate(30 ${x} ${y})"/>`).join('')}<path d="${d}" fill="none" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>` + shine('M16 20Q22 18 28 19.5', 2.2);
+  },
+  neige(c, L) { // boule de neige
+    const b = [[32, 35, 19], [20, 30, 7], [44, 28, 7], [26, 48, 7], [42, 47, 7], [32, 18, 6], [14, 40, 5], [50, 38, 6]];
+    return blob(b, c, L, 1.6) + `<path d="M46 40A16 16 0 0 1 24 50" stroke="${tone(c, -0.18)}" stroke-width="5" fill="none" stroke-linecap="round" opacity=".7"/>` + shine('M22 27Q25 23 30 22') + spark(55, 15, 3.6, '#fff', L);
+  },
+  beignet(c, L) { // beignet glacé de Mardi gras
+    const ice = 'M32 15C40 14 50 19 51 28C54 33 50 38 51 44C47 51 38 53 32 52C25 54 17 50 14 44C11 38 14 33 13 28C15 20 24 15 32 15ZM32 28A6.5 6.5 0 1 0 32.1 28Z';
+    const spr = [[24, 22, 20], [40, 21, -30], [46, 34, 60], [20, 38, -50], [27, 46, 10], [40, 46, 80], [17, 28, 40]].map(([x, y, r], i) => `<rect x="${x}" y="${y}" width="5" height="1.8" rx=".9" fill="${['#ffd93b', '#4d96ff', '#6bcb77', '#fff', '#ff6b6b', '#9b6bff', '#ffd93b'][i]}" transform="rotate(${r} ${x} ${y})"/>`).join('');
+    return `<path d="M32 13A22 22 0 1 1 31.9 13ZM32 28A6.5 6.5 0 1 0 32.1 28Z" fill="#e2a35a" fill-rule="evenodd" stroke="${L}" stroke-width="3"/><path d="${ice}" fill="${c}" fill-rule="evenodd" stroke="${L}" stroke-width="1.6"/>${spr}` + shine('M19 25Q22 20 27 18');
+  },
+  miel(c, L) { // alvéoles de miel avec une goutte
+    const hex = (x, y) => ell(x, y, 10, 10, 6, 0);
+    return [[22, 26], [41, 26], [31.5, 42.5]].map(([x, y], i) => poly(hex(x, y), tone(c, [0.1, -0.05, -0.15][i]), L, 2.4) + poly(ell(x, y, 6, 6, 6, 0), tone(c, 0.35), tone(c, -0.3), 1)).join('') + `<path d="M43 35Q46 42 46 47A3.4 3.4 0 0 1 39.2 47Q39.5 42 43 35Z" fill="${c}" stroke="${L}" stroke-width="2"/>` + shine('M17 23 19 20', 2.2);
+  },
+  fleur(c, L) { // fleur de printemps
+    const pet = [0, 1, 2, 3, 4].map(i => { const a = i * 72 - 90; return `<ellipse cx="32" cy="22" rx="8" ry="12" transform="rotate(${a + 90} 32 34)" fill="${tone(c, i % 2 ? 0.15 : 0)}" stroke="${L}" stroke-width="2.4"/>`; }).join('');
+    return pet + `<circle cx="32" cy="34" r="7.5" fill="#ffd24a" stroke="${L}" stroke-width="2.4"/><circle cx="30" cy="32" r="1.3" fill="#c98a00"/><circle cx="34" cy="35" r="1.3" fill="#c98a00"/>` + shine('M27 16Q29 13 32 13', 2);
+  },
+  poisson(c, L) { // poisson d'avril
+    const d = 'M8 34Q20 16 38 20Q48 23 54 34Q48 45 38 48Q20 52 8 34Z';
+    return poly([[50, 34], [60, 22], [58, 34], [60, 46]], tone(c, -0.15), L, 2.4) + `<path d="${d}" fill="${c}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>${[[26, 30], [32, 36], [26, 42], [38, 30], [38, 42], [44, 36]].map(([x, y]) => `<path d="M${x - 3} ${y - 3}Q${x + 2} ${y} ${x - 3} ${y + 3}" stroke="${tone(c, -0.25)}" stroke-width="1.4" fill="none"/>`).join('')}<circle cx="17" cy="31" r="3.2" fill="#fff" stroke="${L}" stroke-width="1.4"/><circle cx="17.6" cy="31" r="1.5" fill="${L}"/><path d="M28 21Q32 14 40 16" stroke="${L}" stroke-width="2" fill="${tone(c, -0.1)}"/>` + shine('M20 25Q24 22 29 21.5', 2.2);
+  },
+  cloche(c, L) { // cloche de Pâques en chocolat
+    const d = 'M18 46Q18 22 32 18Q46 22 46 46L52 50L12 50Z';
+    return `<circle cx="32" cy="53" r="4" fill="${tone(c, -0.2)}" stroke="${L}" stroke-width="2.4"/><path d="${d}" fill="${c}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><path d="M16 44H48" stroke="${tone(c, -0.25)}" stroke-width="2"/><path d="M19 38H45" stroke="#ff8fb8" stroke-width="4"/><path d="M32 18Q24 8 21 14Q22 19 32 18Q42 19 43 14Q40 8 32 18Z" fill="#ff6b8b" stroke="${L}" stroke-width="2"/>` + shine('M23 40Q22 30 26 25', 2.4);
+  },
+  muguet(c, L) { // brin de muguet
+    const bell = (x, y) => `<path d="M${x - 5} ${y}Q${x - 5} ${y - 7} ${x} ${y - 7}Q${x + 5} ${y - 7} ${x + 5} ${y}Q${x + 3} ${y + 2} ${x + 2} ${y}Q${x} ${y + 2.5} ${x - 2} ${y}Q${x - 3} ${y + 2} ${x - 5} ${y}Z" fill="#fff" stroke="${L}" stroke-width="2"/>`;
+    return `<path d="M44 58Q50 30 30 16Q46 26 44 58Z" fill="${tone(c, 0.15)}" stroke="${L}" stroke-width="2.4" stroke-linejoin="round"/>` + thick('M24 56Q24 30 36 14', c, L, 2.6) + [[30, 24], [21, 30], [32, 36], [20, 42], [30, 47]].map(([x, y]) => `<path d="M${x} ${y - 7}Q${x + 3} ${y - 10} ${(x < 26 ? 25 : 28)} ${y - 9}" stroke="${L}" stroke-width="1.6" fill="none"/>` + bell(x, y)).join('');
+  },
+  rose(c, L) { // rose de la fête des mères
+    return `<path d="M32 50Q18 54 12 46Q20 44 26 48Z" fill="#4caf50" stroke="${L}" stroke-width="2"/><path d="M32 50Q46 54 52 46Q44 44 38 48Z" fill="#4caf50" stroke="${L}" stroke-width="2"/><path d="M14 30Q12 14 32 14Q52 14 50 30Q48 48 32 50Q16 48 14 30Z" fill="${c}" stroke="${L}" stroke-width="3"/><path d="M32 22Q42 22 41 31Q39 39 31 39Q24 38 24 31Q25 26 31 27Q36 28 35 32" stroke="${tone(c, -0.3)}" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M18 26Q22 18 30 18M46 28Q46 38 38 44" stroke="${tone(c, -0.25)}" stroke-width="1.8" fill="none"/>` + shine('M19 24Q21 20 25 18.5', 2.2);
+  },
+  cravate(c, L) { // cravate de la fête des pères
+    const body = [[27, 22], [37, 22], [44, 48], [32, 58], [20, 48]];
+    return `<path d="M${pts(body)}Z" fill="${c}"/><path d="M24 30L40 38M22 40L42 50M30 23L38 27" stroke="${tone(c, 0.35)}" stroke-width="3" opacity=".8"/>` + edge(body, L) + poly([[25, 11], [39, 11], [37, 22], [27, 22]], tone(c, -0.15), L, 2.4) + shine('M29 14 33 14', 2);
+  },
+  notes(c, L) { // notes de musique
+    return `<path d="M24 46V18L48 12V40" stroke="${L}" stroke-width="5.4" fill="none" stroke-linejoin="round"/><path d="M24 18L48 12V19L24 25Z" fill="${c}" stroke="${L}" stroke-width="2.4" stroke-linejoin="round"/><path d="M24 46V22M48 40V16" stroke="${c}" stroke-width="2"/><ellipse cx="18" cy="47" rx="8" ry="6" transform="rotate(-20 18 47)" fill="${c}" stroke="${L}" stroke-width="2.6"/><ellipse cx="42" cy="41" rx="8" ry="6" transform="rotate(-20 42 41)" fill="${c}" stroke="${L}" stroke-width="2.6"/>` + shine('M14 45Q16 42 20 42', 2) + shine('M38 39Q40 36 44 36', 2) + spark(10, 20, 3.4, '#ffd93b', L) + spark(56, 52, 3, '#ff8fc7', L);
+  },
+  feuartifice(c, L) { // feu d'artifice bleu, blanc, rouge
+    const col = ['#3b6fe0', '#ffffff', '#e0294f'];
+    return Array.from({ length: 12 }, (_, i) => { const a = i * Math.PI / 6, x1 = 32 + 8 * Math.cos(a), y1 = 34 + 8 * Math.sin(a), x2 = 32 + 21 * Math.cos(a), y2 = 34 + 21 * Math.sin(a); return `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}" stroke="${L}" stroke-width="5.5" stroke-linecap="round"/><path d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}" stroke="${col[i % 3]}" stroke-width="2.6" stroke-linecap="round"/><circle cx="${(32 + 25 * Math.cos(a)).toFixed(1)}" cy="${(34 + 25 * Math.sin(a)).toFixed(1)}" r="1.8" fill="${col[(i + 1) % 3]}" stroke="${L}" stroke-width=".8"/>`; }).join('') + poly(star(32, 34, 7, 3), '#ffd93b', L, 1.6);
+  },
+  coquillage(c, L) { // coquille Saint-Jacques
+    const d = 'M32 52L11 31Q11 13 32 12Q53 13 53 31Z';
+    const ribs = [-16, -9, -3, 3, 9, 16].map(o => `M32 52L${32 + o * 1.2} 14`).join('');
+    return poly([[24, 50], [32, 52], [40, 50], [38, 57], [26, 57]], tone(c, -0.15), L, 2.4) + `<path d="${d}" fill="${c}"/><path d="${ribs}" stroke="${tone(c, -0.25)}" stroke-width="1.6"/><path d="${d}" fill="none" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>` + shine('M15 28Q17 19 24 16', 2.2);
+  },
+  crayon(c, L) { // crayon de la rentrée
+    return `<g transform="rotate(-38 32 34)">${poly([[14, 28], [44, 28], [44, 40], [14, 40]], c, L, 2.4)}<path d="M14 32H44" stroke="${tone(c, 0.35)}" stroke-width="2.4"/><path d="M14 37H44" stroke="${tone(c, -0.2)}" stroke-width="2"/>${poly([[44, 28], [56, 34], [44, 40]], '#f2c99a', L, 2.4)}${poly([[52, 32], [56, 34], [52, 36]], '#3a3036', L, 1.4)}${poly([[8, 28], [14, 28], [14, 40], [8, 40]], '#b8bcc4', L, 2.4)}<path d="M4 30Q4 28 6 28H8V40H6Q4 40 4 38Z" fill="#ff8fb8" stroke="${L}" stroke-width="2.4"/>${edge([[4, 28], [44, 28], [56, 34], [44, 40], [4, 40]], L)}</g>`;
+  },
+  erable(c, L) { // feuille d'automne
+    const R = [[32, 8], [36, 19], [42, 15], [41, 26], [51, 22], [47, 31], [57, 33], [47, 39], [49, 46], [38, 43], [34, 50]];
+    const o = [...R, ...R.slice(1).reverse().map(([x, y]) => [64 - x, y])];
+    return `<path d="M32 49V59" stroke="${L}" stroke-width="3" stroke-linecap="round"/><path d="M${pts(o)}Z" fill="${c}" stroke="${L}" stroke-width="2.6" stroke-linejoin="round"/><path d="M32 48V18M32 38L44 26M32 38L20 26M32 44L45 37M32 44L19 37" stroke="${tone(c, -0.28)}" stroke-width="1.5" fill="none"/>` + shine('M24 22 27 26', 2);
+  },
+  ecu(c, L) { // pièce d'or : résiste au Black Friday
+    return `<ellipse cx="32" cy="38" rx="22" ry="20" fill="${tone(c, -0.35)}" stroke="${L}" stroke-width="3"/><ellipse cx="32" cy="33" rx="22" ry="20" fill="${c}" stroke="${L}" stroke-width="3"/><ellipse cx="32" cy="33" rx="16" ry="14.5" fill="none" stroke="${tone(c, -0.25)}" stroke-width="2"/><text x="32" y="41" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="22" fill="${tone(c, -0.4)}">€</text>` + shine('M16 27Q19 20 26 17') + spark(54, 14, 4, '#fff', L);
+  },
+  citrouille(c, L) { // citrouille d'Halloween
+    return `<path d="M32 18Q31 12 36 9" stroke="#4d7a2a" stroke-width="4" fill="none" stroke-linecap="round"/><ellipse cx="20" cy="37" rx="12" ry="17" fill="${tone(c, -0.12)}" stroke="${L}" stroke-width="2.6"/><ellipse cx="44" cy="37" rx="12" ry="17" fill="${tone(c, -0.12)}" stroke="${L}" stroke-width="2.6"/><ellipse cx="32" cy="37" rx="12" ry="18" fill="${c}" stroke="${L}" stroke-width="2.6"/>` + poly([[22, 33], [27, 28], [29, 34]], '#3a2410', L, 1) + poly([[42, 33], [37, 28], [35, 34]], '#3a2410', L, 1) + `<path d="M21 41Q32 50 43 41Q38 44 36 43L34 46L32 43L29 46L27 43Q24 44 21 41Z" fill="#3a2410"/>` + shine('M26 25Q28 21 31 20', 2);
+  },
+  painepice(c, L) { // bonhomme en pain d'épices
+    const d = 'M32 9A7.5 7.5 0 0 1 38 21L49 23A4 4 0 0 1 48 31L40 31L44 52A4.5 4.5 0 0 1 36 55L32 45L28 55A4.5 4.5 0 0 1 20 52L24 31L16 31A4 4 0 0 1 15 23L26 21A7.5 7.5 0 0 1 32 9Z';
+    return `<path d="${d}" fill="${c}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><circle cx="29.5" cy="15" r="1.3" fill="${L}"/><circle cx="34.5" cy="15" r="1.3" fill="${L}"/><path d="M29.5 18Q32 20 34.5 18M18 25.5Q19 27 18 28.5M46 25.5Q45 27 46 28.5M23 50.5Q24.5 49 26 50.5M38 50.5Q39.5 49 41 50.5" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/><circle cx="32" cy="29" r="1.8" fill="#e0294f"/><circle cx="32" cy="36" r="1.8" fill="#3fae5c"/>`;
+  },
+  sucreorge(c, L) { // sucre d'orge de Noël
+    const d = 'M26 56V24A8 8 0 0 1 42 24V27';
+    return `<path d="${d}" stroke="${L}" stroke-width="13" fill="none" stroke-linecap="round"/><path d="${d}" stroke="#fff" stroke-width="8" fill="none" stroke-linecap="round"/><path d="${d}" stroke="${c}" stroke-width="8" fill="none" stroke-dasharray="4 5"/><path d="M23.5 50V25" stroke="#fff" stroke-width="1.6" opacity=".9"/>` + `<path d="M42 28Q50 26 52 32Q46 34 42 28Z" fill="#3fae5c" stroke="${L}" stroke-width="1.8"/><circle cx="44" cy="32" r="2.4" fill="#e0294f" stroke="${L}" stroke-width="1.2"/>`;
+  },
+  gateau(c, L) { // petit gâteau d'anniversaire
+    return `<path d="M32 9Q36 14 32 17Q28 14 32 9Z" fill="#ffb02e" stroke="${L}" stroke-width="1.4"/><rect x="30" y="17" width="4" height="10" fill="#4d96ff" stroke="${L}" stroke-width="1.6"/>` + poly([[15, 38], [49, 38], [45, 57], [19, 57]], '#f2c99a', L, 2.6) + `<path d="M24 39L26 57M32 39V57M40 39L38 57" stroke="${L}" stroke-width="1.2" opacity=".5"/><path d="M13 39Q11 31 18 30Q20 24 27 26Q32 22 37 26Q44 24 46 30Q53 31 51 39Z" fill="${c}" stroke="${L}" stroke-width="2.6" stroke-linejoin="round"/>${[[22, 33], [30, 30], [38, 33], [44, 35], [26, 36]].map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="1.3" fill="${['#ffd93b', '#4d96ff', '#6bcb77', '#fff', '#9b6bff'][i]}"/>`).join('')}` + shine('M18 33Q20 31 23 30.5', 1.8);
+  },
+  // Mois complets
+  givre(c, L) { // stalactites de givre
+    return poly([[10, 22], [16, 22], [13, 46]], tone(c, 0.2), L, 2.2) + poly([[18, 22], [28, 22], [23, 57]], tone(c, 0), L, 2.2) + poly([[30, 22], [38, 22], [34, 48]], tone(c, 0.15), L, 2.2) + poly([[40, 22], [50, 22], [45, 54]], tone(c, -0.1), L, 2.2) + `<rect x="7" y="13" width="50" height="10" rx="5" fill="#fff" stroke="${L}" stroke-width="2.6"/>` + shine('M21 27 22 38', 1.8) + shine('M42 27 43 36', 1.8) + spark(55, 36, 3.2, '#fff', L);
+  },
+  sucre(c, L) { // deux morceaux de sucre
+    return cubeAt(22, 34, 12, c, L) + cubeAt(42, 26, 11, c, L) + [[20, 42], [16, 37], [24, 47], [40, 34], [46, 30], [37, 22]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".9" fill="${tone(c, -0.3)}"/>`).join('') + spark(54, 47, 3, '#fff', L);
+  },
+  rosee(c, L) { // goutte de rosée
+    const d = 'M32 9C40 22 50 31 50 41A18 18 0 0 1 14 41C14 31 24 22 32 9Z';
+    return `<path d="${d}" fill="${c}"/><path d="M50 41A18 18 0 0 1 14 41Q22 52 36 50Q47 48 50 41Z" fill="${tone(c, -0.2)}"/><path d="${d}" fill="none" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>` + shine('M21 40Q21 32 27 25') + `<circle cx="22" cy="46" r="1.8" fill="#fff"/>`;
+  },
+  nuage(c, L) { // nuage et giboulées d'avril
+    return [[20, 50], [32, 54], [44, 50]].map(([x, y]) => `<path d="M${x} ${y - 6}Q${x + 3} ${y - 1} ${x} ${y + 1}Q${x - 3} ${y - 1} ${x} ${y - 6}Z" fill="#4d96ff" stroke="${L}" stroke-width="1.4"/>`).join('') + blob([[20, 34, 9], [32, 28, 12], [44, 33, 9], [32, 37, 8], [24, 38, 7], [40, 38, 7]], c, L, 1.5) + shine('M25 24Q28 20 32 19.5', 2.2);
+  },
+  cerise(c, L) { // deux cerises
+    return `<path d="M22 40Q26 24 38 12M44 42Q42 26 38 12" stroke="#5a7a2a" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M38 13Q48 8 54 14Q46 20 38 13Z" fill="#4caf50" stroke="${L}" stroke-width="1.8"/><circle cx="21" cy="45" r="10" fill="${c}" stroke="${L}" stroke-width="2.8"/><circle cx="44" cy="46" r="10" fill="${tone(c, -0.08)}" stroke="${L}" stroke-width="2.8"/>` + shine('M16 42Q17 39 20 38', 2.2) + shine('M39 43Q40 40 43 39', 2.2);
+  },
+  fraise(c, L) { // fraise de juin
+    const d = 'M14 26Q32 18 50 26Q52 42 32 57Q12 42 14 26Z';
+    return `<path d="${d}" fill="${c}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>${[[22, 31], [32, 29], [42, 31], [26, 39], [38, 39], [32, 46], [20, 36], [44, 36]].map(([x, y]) => `<path d="M${x} ${y}l1 2.2" stroke="#ffe08a" stroke-width="1.6" stroke-linecap="round"/>`).join('')}` + poly([[32, 26], [22, 16], [28, 23], [32, 13], [36, 23], [42, 16]], '#4caf50', L, 2) + shine('M18 30Q20 27 23 26.5', 2);
+  },
+  sorbet(c, L) { // glace à l'eau de juillet
+    return `<rect x="29" y="40" width="6" height="18" rx="3" fill="#e8c38f" stroke="${L}" stroke-width="2.4"/><path d="M18 44V22A14 14 0 0 1 46 22V44Q43 47 40 44Q37 48 34 44Q31 48 28 44Q25 48 22 44Q20 46 18 44Z" fill="${c}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><path d="M18 30Q32 26 46 30V36Q32 32 18 36Z" fill="#ffd45c" opacity=".9"/>` + shine('M22 28V21Q23 15 28 13', 2.4);
+  },
+  sablier(c, L) { // sablier du mois d'août
+    return `<path d="M18 16H46Q46 30 34 34Q46 38 46 52H18Q18 38 30 34Q18 30 18 16Z" fill="#e9f6ff" stroke="${L}" stroke-width="2.6" stroke-linejoin="round"/><path d="M24 22H40Q38 28 32 31Q26 28 24 22ZM21 50Q22 42 32 40Q42 42 43 50Z" fill="${c}"/><path d="M32 31V40" stroke="${c}" stroke-width="1.6"/>` + `<rect x="12" y="10" width="40" height="7" rx="3" fill="#a0623a" stroke="${L}" stroke-width="2.4"/><rect x="12" y="51" width="40" height="7" rx="3" fill="#a0623a" stroke="${L}" stroke-width="2.4"/>` + shine('M22 20Q22 26 26 29', 1.8);
+  },
+  raisin(c, L) { // grappe de raisin des vendanges
+    return `<path d="M31 19Q31 13 36 9" stroke="#6b4a2a" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M34 15Q44 7 52 13Q44 21 34 15Z" fill="#6bb04a" stroke="${L}" stroke-width="1.8"/>` + [[19, 24], [31, 24], [43, 24], [25, 34], [37, 34], [31, 44], [31, 53]].map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="6.4" fill="${tone(c, (i % 3) * 0.07 - 0.05)}" stroke="${L}" stroke-width="2"/><circle cx="${x - 2}" cy="${y - 2}" r="1.4" fill="#fff" opacity=".85"/>`).join('');
+  },
+  chataigne(c, L) { // châtaigne dans sa bogue
+    const spikes = Array.from({ length: 16 }, (_, i) => { const a = Math.PI + i * Math.PI / 15, x = 32 + 20 * Math.cos(a), y = 40 + 18 * Math.sin(a); return `M${x.toFixed(1)} ${y.toFixed(1)}L${(32 + 26 * Math.cos(a)).toFixed(1)} ${(40 + 24 * Math.sin(a)).toFixed(1)}`; }).join('');
+    return `<path d="${spikes}" stroke="#6b8a2a" stroke-width="2" stroke-linecap="round"/><path d="M12 40A20 18 0 0 1 52 40Q52 50 32 52Q12 50 12 40Z" fill="#9cc25a" stroke="${L}" stroke-width="2.6"/><path d="M20 42Q20 26 32 22Q44 26 44 42Q38 49 32 49Q26 49 20 42Z" fill="${c}" stroke="${L}" stroke-width="2.6"/><path d="M21 42Q32 48 43 42Q38 50 32 50Q26 50 21 42Z" fill="#e8d2a8" stroke="${L}" stroke-width="1.6"/><path d="M32 22L32 18" stroke="${L}" stroke-width="2"/>` + shine('M25 36Q25 29 30 26', 2.2);
+  },
+  champignon(c, L) { // cèpe de novembre
+    return `<path d="M25 36Q22 50 26 56H38Q42 50 39 36Z" fill="#f2e2c4" stroke="${L}" stroke-width="2.6" stroke-linejoin="round"/><path d="M9 36Q10 14 32 13Q54 14 55 36Q44 40 32 39Q20 40 9 36Z" fill="${c}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><path d="M11 35Q32 42 53 35" stroke="${tone(c, -0.3)}" stroke-width="2" fill="none"/>` + shine('M17 27Q20 19 28 17') + `<path d="M28 44Q27 50 29 54" stroke="#fff" stroke-width="1.6" fill="none" opacity=".8"/>`;
+  },
+  houx(c, L) { // feuilles de houx et baies
+    const leaf = 'M8 30Q12 26 12 22Q16 25 20 22Q21 27 26 27Q24 31 28 34Q22 35 22 40Q17 37 14 40Q14 34 8 30Z';
+    return `<path d="${leaf}" fill="${c}" stroke="${L}" stroke-width="2.2" stroke-linejoin="round" transform="translate(2 4)"/><path d="${leaf}" fill="${tone(c, -0.1)}" stroke="${L}" stroke-width="2.2" stroke-linejoin="round" transform="translate(64 2) scale(-1 1) rotate(-10 18 30)"/><path d="M14 32L28 37M50 30L37 36" stroke="${tone(c, 0.3)}" stroke-width="1.4"/>${[[28, 44], [37, 44], [32.5, 51]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5.6" fill="#e0294f" stroke="${L}" stroke-width="2.2"/><circle cx="${x - 1.8}" cy="${y - 1.8}" r="1.3" fill="#fff"/>`).join('')}`;
+  },
+  // Grands paliers
+  quartzfume(c, L) { // cristal à deux pointes
+    const o = [[6, 34], [16, 25], [48, 25], [58, 34], [48, 43], [16, 43]];
+    return `<g transform="rotate(-24 32 34)">${poly([[16, 25], [48, 25], [44, 33], [20, 33]], tone(c, 0.35), L)}${poly([[20, 33], [44, 33], [48, 43], [16, 43]], tone(c, -0.15), L)}${poly([[6, 34], [16, 25], [20, 33]], tone(c, 0.5), L)}${poly([[6, 34], [20, 33], [16, 43]], tone(c, 0.05), L)}${poly([[58, 34], [48, 25], [44, 33]], tone(c, 0.1), L)}${poly([[58, 34], [44, 33], [48, 43]], tone(c, -0.35), L)}${edge(o, L)}${shine('M20 29 36 29', 2.2, 0.9)}</g>`;
+  },
+  jaspe(c, L) { // galet de jaspe tacheté
+    return `<rect x="10" y="17" width="44" height="36" rx="13" transform="rotate(-10 32 35)" fill="${c}"/>${[[22, 30, 4], [38, 26, 3], [42, 42, 5], [26, 44, 3], [33, 36, 2.4], [18, 40, 2]].map(([x, y, r]) => `<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r * 0.7}" fill="${tone(c, -0.3)}"/>`).join('')}<rect x="10" y="17" width="44" height="36" rx="13" transform="rotate(-10 32 35)" fill="none" stroke="${L}" stroke-width="3"/>` + shine('M16 26Q18 21 24 19.5');
+  },
+  spinelle(c, L) { // taille hexagonale
+    const o = ell(32, 34, 24, 23, 6, 0), i = ell(32, 34, 12, 11.5, 6, 0);
+    return fan(o, 32, 34, c, L) + poly(i, tone(c, 0.3), L) + edge(o, L) + shine('M15 24 20 18') + spark(36, 30, 3.4, tone(c, 0.85), L);
+  },
+  hematite(c, L) { // taille étoile
+    const o = star(32, 35, 25, 11);
+    return fan(o, 32, 35, c, L) + edge(o, L) + shine('M24 26 28 21', 2.2) + spark(32, 35, 3.6, '#fff', L);
+  },
+  zircon(c, L) { // taille écusson
+    const o = [[11, 14], [53, 14], [53, 32], [32, 57], [11, 32]];
+    return fan(o, 32, 30, c, L) + poly([[20, 21], [44, 21], [44, 31], [32, 45], [20, 31]], tone(c, 0.3), L) + edge(o, L) + shine('M15 26 15 19', 2.4) + spark(50, 50, 3.4, '#fff', L);
+  },
+  bague(c, L) { // bague en or blanc
+    return `<ellipse cx="32" cy="40" rx="18" ry="15" fill="none" stroke="${L}" stroke-width="10"/><ellipse cx="32" cy="40" rx="18" ry="15" fill="none" stroke="${c}" stroke-width="5.4"/><path d="M17 36Q20 29 27 27" stroke="#fff" stroke-width="1.8" fill="none"/>` + poly([[24, 24], [28, 18], [36, 18], [40, 24], [32, 32]], '#bfeaff', L, 2.2) + poly([[24, 24], [40, 24], [32, 32]], '#8fd3f5', L, 1.2) + spark(46, 13, 4, '#fff', L);
+  },
+  alexandrite(c, L) { // taille demi-lune, verte et violette
+    const o = [[8, 44], ...Array.from({ length: 9 }, (_, i) => { const a = Math.PI + (i + 1) * Math.PI / 10; return [+(32 + 24 * Math.cos(a)).toFixed(1), +(44 + 26 * Math.sin(a)).toFixed(1)]; }), [56, 44]];
+    return o.slice(0, -1).map((p, i) => poly([p, o[i + 1], [32, 44]], i < 5 ? tone(c, 0.3 - i * 0.06) : tone('#8a4fd6', 0.1 - (i - 5) * 0.08), L)).join('') + poly([[8, 44], [56, 44], [32, 54]], tone(c, -0.3), L) + edge([...o, [32, 54]], L) + shine('M14 36 18 29');
+  },
+  princesse(c, L) { // diamant rose, taille princesse
+    const o = [[10, 12], [54, 12], [54, 56], [10, 56]];
+    return poly([[10, 12], [54, 12], [32, 34]], tone(c, 0.45), L) + poly([[54, 12], [54, 56], [32, 34]], tone(c, -0.1), L) + poly([[54, 56], [10, 56], [32, 34]], tone(c, -0.3), L) + poly([[10, 56], [10, 12], [32, 34]], tone(c, 0.2), L) + poly([[22, 24], [42, 24], [42, 44], [22, 44]], tone(c, 0.25), L) + `<path d="M22 24L42 44M42 24L22 44" stroke="${L}" stroke-width="1"/>` + edge(o, L) + shine('M15 22 20 17') + spark(56, 10, 4, '#fff', L);
+  },
+  cairn(c, L) { // galets empilés
+    return [[32, 50, 20, 6.5, 0], [31, 39, 15, 5.5, -0.06], [33, 29.5, 11, 4.8, 0.1], [32, 21, 7, 4, 0.22]].map(([x, y, rx, ry, t]) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${tone(c, t)}" stroke="${L}" stroke-width="2.6"/><path d="M${x - rx * 0.6} ${y - ry * 0.3}Q${x - rx * 0.2} ${y - ry * 0.8} ${x + rx * 0.2} ${y - ry * 0.75}" stroke="#fff" stroke-width="1.6" fill="none" opacity=".8"/>`).join('');
+  },
+  tetra(c, L) { // cristal pyramide
+    return poly([[32, 9], [8, 52], [36, 57]], tone(c, 0.3), L) + poly([[32, 9], [36, 57], [56, 46]], tone(c, -0.15), L) + edge([[32, 9], [56, 46], [36, 57], [8, 52]], L) + shine('M27 20 18 38', 2.4, 0.9) + spark(50, 18, 4, '#fff', L) + spark(14, 20, 2.8, '#fff', L);
+  },
+  lingots(c, L) { // pile de lingots d'or
+    const bar = (x, y) => poly([[x - 9, y], [x + 9, y], [x + 12, y + 9], [x - 12, y + 9]], tone(c, -0.1), L, 2.2) + poly([[x - 7, y - 4], [x + 7, y - 4], [x + 9, y], [x - 9, y]], tone(c, 0.4), L, 1.8);
+    return bar(19, 46) + bar(45, 46) + bar(32, 33) + bar(32, 20) + shine('M26 24 30 24', 1.8) + spark(52, 16, 4, '#fff8d6', L);
+  },
+  cadeau(c, L) { // paquet cadeau
+    return poly([[12, 30], [52, 30], [52, 56], [12, 56]], c, L, 2.6) + poly([[9, 22], [55, 22], [55, 31], [9, 31]], tone(c, 0.15), L, 2.6) + `<rect x="28" y="22" width="8" height="34" fill="#ffd24a" stroke="${L}" stroke-width="2"/><path d="M32 22Q20 8 16 16Q18 22 32 22Q46 22 48 16Q44 8 32 22Z" fill="#ffd24a" stroke="${L}" stroke-width="2.2"/>` + shine('M15 35V41', 2.2);
+  },
+  bourse(c, L) { // petite bourse en velours
+    return `<path d="M20 22Q14 30 12 42Q11 56 32 56Q53 56 52 42Q50 30 44 22Z" fill="${c}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><path d="M18 22H46" stroke="${L}" stroke-width="2"/><path d="M20 22Q24 12 26 14Q29 18 32 12Q35 18 38 14Q40 12 44 22" fill="${tone(c, 0.15)}" stroke="${L}" stroke-width="2.4" stroke-linejoin="round"/><path d="M22 24Q32 28 42 24" stroke="#ffd24a" stroke-width="2.4" fill="none"/><circle cx="44" cy="26" r="2.4" fill="#ffd24a" stroke="${L}" stroke-width="1.2"/>` + `<ellipse cx="32" cy="42" rx="7" ry="7" fill="#ffd24a" stroke="${L}" stroke-width="2"/><text x="32" y="46" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="10" fill="#8a5a00">€</text>` + shine('M17 36Q18 30 21 27', 2.2);
+  },
+  d20(c, L) { // dé à vingt faces
+    const o = ell(32, 34, 24, 24, 6, -Math.PI / 2), t = [[32, 22], [43, 41], [21, 41]];
+    const f = [[o[0], o[1], t[0]], [o[1], t[1], t[0]], [o[1], o[2], t[1]], [o[2], o[3], t[1]], [o[3], t[2], t[1]], [o[3], o[4], t[2]], [o[4], o[5], t[2]], [o[5], t[0], t[2]], [o[5], o[0], t[0]]];
+    return f.map((q, i) => poly(q, tone(c, [0.35, 0.1, -0.15, -0.3, -0.2, -0.05, 0.15, 0.2, 0.45][i]), L)).join('') + poly(t, tone(c, 0.2), L) + edge(o, L) + `<text x="32" y="39" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="10" fill="#fff">20</text>`;
+  },
+  basalte(c, L) { // orgues de basalte
+    const col = (x, top, h, t) => { const hx = [[x - 7, top], [x - 3.5, top - 3], [x + 3.5, top - 3], [x + 7, top], [x + 3.5, top + 3], [x - 3.5, top + 3]]; return poly([[x - 7, top], [x - 3.5, top + 3], [x - 3.5, top + 3 + h], [x - 7, top + h]], tone(c, 0.05 + t), L, 1.8) + poly([[x - 3.5, top + 3], [x + 3.5, top + 3], [x + 3.5, top + 3 + h], [x - 3.5, top + 3 + h]], tone(c, -0.12 + t), L, 1.8) + poly([[x + 3.5, top + 3], [x + 7, top], [x + 7, top + h], [x + 3.5, top + 3 + h]], tone(c, -0.3 + t), L, 1.8) + poly(hx, tone(c, 0.35 + t), L, 1.8); };
+    return col(18, 30, 24, 0) + col(46, 26, 28, 0) + col(32, 16, 38, 0.05);
+  },
+  pousse(c, L) { // jeune pousse qui sort des pièces
+    return `<ellipse cx="32" cy="52" rx="20" ry="6" fill="#ffd24a" stroke="${L}" stroke-width="2.4"/><ellipse cx="32" cy="48" rx="20" ry="6" fill="#ffe68a" stroke="${L}" stroke-width="2.4"/>` + thick('M32 48V24', c, L, 3) + `<path d="M32 32Q18 32 14 18Q28 16 32 32Z" fill="${c}" stroke="${L}" stroke-width="2.4" stroke-linejoin="round"/><path d="M32 26Q42 26 50 12Q36 10 32 26Z" fill="${tone(c, 0.15)}" stroke="${L}" stroke-width="2.4" stroke-linejoin="round"/><path d="M30 30Q22 26 18 20M34 24Q40 20 46 14" stroke="${tone(c, 0.4)}" stroke-width="1.4" fill="none"/>`;
+  },
+  gland(c, L) { // gland de chêne
+    return `<path d="M18 30Q18 50 32 56Q46 50 46 30Z" fill="${c}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><path d="M14 30Q14 17 32 16Q50 17 50 30Q40 34 32 33Q24 34 14 30Z" fill="#7a5230" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><path d="M20 24l4 3M27 21l4 3M35 21l4 3M42 24l4 3M23 28l3 2M38 28l3 2" stroke="#b5875a" stroke-width="1.6" stroke-linecap="round"/><path d="M32 16Q33 10 38 9" stroke="#7a5230" stroke-width="3" fill="none" stroke-linecap="round"/>` + shine('M23 38Q23 46 27 50', 2.4);
+  },
+  arbre(c, L) { // grand arbre
+    return `<path d="M28 58L29 42H35L36 58Z" fill="#8a5a33" stroke="${L}" stroke-width="2.4" stroke-linejoin="round"/>` + blob([[32, 24, 13], [20, 32, 10], [44, 32, 10], [32, 38, 10], [24, 18, 8], [41, 18, 8]], c, L, 1.5) + [[24, 26], [38, 22], [32, 34], [44, 34], [20, 34]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.8" fill="${tone(c, 0.35)}"/>`).join('') + shine('M18 22Q21 15 27 13', 2.2);
+  },
+  eclair(c, L) { // éclair
+    const o = [[36, 8], [16, 36], [30, 36], [24, 59], [48, 28], [34, 28], [42, 8]];
+    return poly(o, c, L, 3) + poly([[36, 8], [42, 8], [34, 28], [30, 28]], tone(c, 0.4), L, 0.1) + edge(o, L) + spark(52, 44, 3.4, '#fff', L) + spark(12, 18, 3, '#fff', L);
+  },
+  brique(c, L) { // brique
+    const top = [[8, 28], [36, 18], [58, 26], [30, 36]], f = [[8, 28], [30, 36], [30, 50], [8, 42]], r = [[30, 36], [58, 26], [58, 40], [30, 50]];
+    return poly(f, tone(c, -0.05), L, 2.4) + poly(r, tone(c, -0.28), L, 2.4) + poly(top, tone(c, 0.2), L, 2.4) + [[23, 26], [33, 23], [43, 25.5], [27, 30], [37, 27.5]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="3" ry="1.6" fill="${tone(c, -0.45)}"/>`).join('') + shine('M12 31 12 38', 2);
+  },
+  vitrail(c, L) { // rosace de vitrail
+    const cols = ['#e0294f', '#2f63d8', '#ffd24a', '#3fae5c', '#9a5ce0', '#20bcc6', '#ff9a3c', '#2f63d8'];
+    const seg = Array.from({ length: 8 }, (_, i) => { const a = i * Math.PI / 4, b = a + Math.PI / 4, p = (r, x) => [+(32 + r * Math.cos(x)).toFixed(1), +(34 + r * Math.sin(x)).toFixed(1)]; return poly([p(9, a), p(22, a), p(22, b), p(9, b)], cols[i], L, 1.6) + poly([[32, 34], p(9, a), p(9, b)], cols[(i + 3) % 8], L, 1.4); }).join('');
+    return seg + `<circle cx="32" cy="34" r="22" fill="none" stroke="${L}" stroke-width="3.4"/><circle cx="32" cy="34" r="9" fill="none" stroke="${L}" stroke-width="2"/>` + shine('M15 26Q18 20 23 17', 2, 0.85);
+  },
+  mosaique(c, L) { // carreau de mosaïque
+    const cols = ['#ff6b6b', '#ffd93b', '#4d96ff', '#6bcb77', '#9b6bff', '#ff9f43'];
+    let t = ''; for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) t += `<rect x="${13 + i * 9.6}" y="${15 + j * 9.6}" width="8.4" height="8.4" rx="1.6" fill="${cols[(i * 5 + j * 3) % 6]}" stroke="${L}" stroke-width="1"/>`;
+    return `<g transform="rotate(-10 32 34)"><rect x="10" y="12" width="44" height="44" rx="6" fill="${c}" stroke="${L}" stroke-width="3"/>${t}</g>` + shine('M14 20 18 16', 2);
+  },
+  etoile(c, L) { // saphir étoilé
+    const rays = [0, 1, 2].map(i => { const a = i * Math.PI / 3; return `M${(32 - 17 * Math.cos(a)).toFixed(1)} ${(34 - 17 * Math.sin(a)).toFixed(1)}L${(32 + 17 * Math.cos(a)).toFixed(1)} ${(34 + 17 * Math.sin(a)).toFixed(1)}`; }).join('');
+    return `<circle cx="32" cy="34" r="22" fill="${c}"/><path d="M54 34A22 22 0 0 1 14 46Q30 54 46 46Q53 40 54 34Z" fill="${tone(c, -0.3)}"/><path d="${rays}" stroke="#fff" stroke-width="1.8" opacity=".85" stroke-linecap="round"/><circle cx="32" cy="34" r="3" fill="#fff" opacity=".9"/><circle cx="32" cy="34" r="22" fill="none" stroke="${L}" stroke-width="3"/>` + shine('M15 28Q18 19 26 15');
+  },
+  aurore(c, L) { // aurore boréale
+    return `<ellipse cx="32" cy="34" rx="25" ry="20" fill="#16224a"/><path d="M8 34Q18 18 30 28T56 24L56 30Q44 32 32 38T8 42Z" fill="${c}" opacity=".85"/><path d="M10 40Q22 30 34 38T56 34" stroke="#ff8fc7" stroke-width="3" fill="none" opacity=".8"/>${[[20, 22], [40, 18], [46, 44], [16, 46], [30, 48]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1" fill="#fff"/>`).join('')}<path d="M8 46Q32 40 56 46L52 50Q32 56 12 50Z" fill="#0c1430"/><ellipse cx="32" cy="34" rx="25" ry="20" fill="none" stroke="${L}" stroke-width="3"/>`;
+  },
+  comete(c, L) { // comète
+    return `<path d="M44 22L8 52M40 18L10 40M48 28L20 56" stroke="${c}" stroke-width="5" stroke-linecap="round" opacity=".55"/><path d="M42 20L14 46" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".8"/><circle cx="46" cy="20" r="10" fill="#fff8d6" stroke="${L}" stroke-width="3"/><circle cx="46" cy="20" r="6" fill="${tone(c, 0.5)}"/>` + spark(14, 16, 3.4, '#ffd93b', L) + spark(56, 46, 3, '#ffd93b', L);
+  },
+  galaxie(c, L) { // galaxie spirale
+    const arm = k => { const P = []; for (let a = 0; a <= 2.6 * Math.PI; a += 0.25) { const r = 3 + 3.2 * a; P.push([32 + r * Math.cos(a + k), 34 + r * Math.sin(a + k) * 0.75]); } return 'M' + P.map(p => p.map(v => v.toFixed(1)).join(' ')).join('L'); };
+    return `<ellipse cx="32" cy="34" rx="26" ry="20" fill="#1b1440" stroke="${L}" stroke-width="3"/><path d="${arm(0)}" stroke="${c}" stroke-width="4" fill="none" stroke-linecap="round" opacity=".9"/><path d="${arm(Math.PI)}" stroke="#ff8fc7" stroke-width="4" fill="none" stroke-linecap="round" opacity=".9"/><circle cx="32" cy="34" r="5" fill="#fff8d6"/>${[[14, 26], [50, 40], [44, 20], [20, 46], [52, 28]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1" fill="#fff"/>`).join('')}` + spark(56, 12, 4, '#ffd93b', L) + spark(8, 52, 3, '#fff', L);
+  },
+};
+Object.assign(D, D2);
+
+Object.assign(MATS, {
+  nouvelan: { mat: 'de paillettes', c: '#c7d2e8', line: '#3b4a6b', draw: 'disco' },
+  galette: { mat: 'de frangipane', c: '#f0b84f', line: '#6e4400', draw: 'galette' },
+  chandeleur: { mat: 'de crêpe', c: '#f3c36b', line: '#7a4a10', draw: 'crepe' },
+  neige: { mat: 'de neige', c: '#f6faff', line: '#4a6d90', draw: 'neige' },
+  mardigras: { mat: 'de beignet', c: '#ff9ec4', line: '#6e3a1a', draw: 'beignet' },
+  grandmeres: { mat: 'de miel', c: '#f5b301', line: '#6e4400', draw: 'miel' },
+  printemps: { mat: 'de fleur', c: '#ffb3d1', line: '#8a2c4c', draw: 'fleur' },
+  poisson: { mat: 'd’écaille', c: '#5ec4e8', line: '#1a5a78', draw: 'poisson' },
+  paques: { mat: 'de praliné', c: '#a0623a', line: '#3a1d0c', draw: 'cloche' },
+  muguet: { mat: 'de muguet', c: '#4caf50', line: '#24502a', draw: 'muguet' },
+  meres: { mat: 'de rose', c: '#e8436b', line: '#6e1530', draw: 'rose' },
+  peres: { mat: 'de soie', c: '#3f7be0', line: '#162f6b', draw: 'cravate' },
+  musique: { mat: 'd’ébène', c: '#4a4050', line: '#151018', draw: 'notes' },
+  quatorze: { mat: 'd’étincelle', c: '#ffffff', line: '#1d2550', draw: 'feuartifice' },
+  aout: { mat: 'de coquillage', c: '#ffb08a', line: '#7a3a1e', draw: 'coquillage' },
+  rentree: { mat: 'de graphite', c: '#ffc93c', line: '#4a3a10', draw: 'crayon' },
+  automne: { mat: 'de feuille d’automne', c: '#e8662c', line: '#6e2a0a', draw: 'erable' },
+  blackfriday: { mat: 'd’écu', c: '#f2b01e', line: '#6e4400', draw: 'ecu' },
+  halloween: { mat: 'de citrouille', c: '#ff8a1f', line: '#6e3300', draw: 'citrouille' },
+  avent: { mat: 'de pain d’épices', c: '#c4793a', line: '#4a2a10', draw: 'painepice' },
+  noel: { mat: 'de sucre d’orge', c: '#e8344d', line: '#5a1020', draw: 'sucreorge' },
+  unan: { mat: 'de gâteau', c: '#ff9ec4', line: '#6e2a40', draw: 'gateau' },
+  m0: { mat: 'de givre', c: '#cfeeff', line: '#2f7fb0', draw: 'givre' },
+  m1: { mat: 'de sucre', c: '#ffffff', line: '#7a8494', draw: 'sucre' },
+  m2: { mat: 'de rosée', c: '#7fd0ff', line: '#1f5f8a', draw: 'rosee' },
+  m3: { mat: 'de nuage', c: '#eef3fb', line: '#4a5f80', draw: 'nuage' },
+  m4: { mat: 'de cerise', c: '#e0294f', line: '#5a0a1e', draw: 'cerise' },
+  m5: { mat: 'de fraise', c: '#f2384f', line: '#6e0f1e', draw: 'fraise' },
+  m6: { mat: 'de sorbet', c: '#ff7fa8', line: '#6e2040', draw: 'sorbet' },
+  m7: { mat: 'de sable', c: '#e9c46a', line: '#4a3a1a', draw: 'sablier' },
+  m8: { mat: 'de raisin', c: '#8a4fd6', line: '#2e1550', draw: 'raisin' },
+  m9: { mat: 'de châtaigne', c: '#8a4a24', line: '#3a1a08', draw: 'chataigne' },
+  m10: { mat: 'de cèpe', c: '#9a5b2e', line: '#3e2210', draw: 'champignon' },
+  m11: { mat: 'de houx', c: '#2f8f4a', line: '#123a20', draw: 'houx' },
+  s39: { mat: 'de quartz fumé', c: '#9a8676', line: '#3e3026', draw: 'quartzfume' },
+  p75: { mat: 'de jaspe', c: '#c0573b', line: '#5a1f10', draw: 'jaspe' },
+  p100: { mat: 'de spinelle', c: '#d9488f', line: '#5e1238', draw: 'spinelle' },
+  p150: { mat: 'd’hématite', c: '#7d828c', line: '#2a2d33', draw: 'hematite' },
+  p200: { mat: 'de zircon', c: '#4fc0e8', line: '#14506a', draw: 'zircon' },
+  cap6: { mat: 'd’or blanc', c: '#e9ecf2', line: '#5d6880', draw: 'bague' },
+  cap7: { mat: 'd’alexandrite', c: '#2fae8a', line: '#1f2a4a', draw: 'alexandrite' },
+  cap8: { mat: 'de diamant rose', c: '#ffb3d1', line: '#8a2c4c', draw: 'princesse' },
+  bonus25: { mat: 'de galet', c: '#b9b2a6', line: '#4a443c', draw: 'cairn' },
+  bonus50: { mat: 'de cristal', c: '#dff3ff', line: '#2f6f90', draw: 'tetra' },
+  bonus100: { mat: 'd’or massif', c: '#f2b01e', line: '#6e4400', draw: 'lingots' },
+  recu10: { mat: 'de papier doré', c: '#e0294f', line: '#5a0a1e', draw: 'cadeau' },
+  recu20: { mat: 'de velours', c: '#8a3ab9', line: '#36124f', draw: 'bourse' },
+  de50: { mat: 'de résine', c: '#3fc1a5', line: '#10503f', draw: 'd20' },
+  de100: { mat: 'de basalte', c: '#6b7078', line: '#23262b', draw: 'basalte' },
+  gain25: { mat: 'de sève', c: '#5cc46b', line: '#1f5a2a', draw: 'pousse' },
+  gain50: { mat: 'de chêne', c: '#c98a3d', line: '#4a2c08', draw: 'gland' },
+  gain100: { mat: 'de séquoia', c: '#2f9e55', line: '#123f22', draw: 'arbre' },
+  cinq: { mat: 'd’éclair', c: '#ffd43b', line: '#6e5200', draw: 'eclair' },
+  proj2: { mat: 'de brique', c: '#c8553d', line: '#4a1a0e', draw: 'brique' },
+  proj3: { mat: 'de vitrail', c: '#ffd24a', line: '#2a2030', draw: 'vitrail' },
+  proj5: { mat: 'de mosaïque', c: '#f3ead8', line: '#4a3a2a', draw: 'mosaique' },
+  collec40: { mat: 'de saphir étoilé', c: '#3a5fd0', line: '#14245a', draw: 'etoile' },
+  collec60: { mat: 'd’aurore boréale', c: '#4fe0a0', line: '#0c1430', draw: 'aurore' },
+  collec80: { mat: 'de comète', c: '#7fd0ff', line: '#1f2f5a', draw: 'comete' },
+  legende: { mat: 'de galaxie', c: '#7fb0ff', line: '#0c0830', draw: 'galaxie' },
+});
+
 export const matSVG = m => D[m.draw](m.c, m.line);
 // Pépite pas encore gagnée : une pépite grise avec un point d'interrogation.
 export const mystSVG = () => NUGF.map((d, i) => `<path d="${d}" fill="${['#e9e6e1', '#f3f1ed', '#e2ded8', '#d9d4cd', '#e0dcd5', '#cfc9c1', '#c7c0b7', '#d6d1ca', '#bfb8ae'][i]}" stroke="#a29a8e" stroke-width="1.1" stroke-linejoin="round"/>`).join('') + edge([[6, 40], [14, 24], [30, 15], [46, 17], [58, 30], [56, 46], [42, 55], [20, 54]], '#a29a8e') + '<text x="32" y="43" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="21" fill="#7d7468" stroke="#fff" stroke-width="3" paint-order="stroke">?</text>';
