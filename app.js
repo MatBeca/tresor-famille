@@ -5,7 +5,8 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc, collection, collectionGroup, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
-const VERSION = '103'; // à garder égal au cache du service worker (sw.js)
+import { MATS, matSVG } from './pepites.js';
+const VERSION = '104'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -364,19 +365,19 @@ function homeView(k, t) {
   const hint = g ? (t.total >= g.budget ? `Objectif « ${esc(g.name)} » atteint !` : `Encore ${f(g.budget - t.total)} pour « ${esc(g.name)} »`) : (t.total >= J.cap ? `Palier de ${f(J.cap)} atteint !` : `Encore ${f(J.cap - t.total)} pour le palier de ${f(J.cap)}`);
   return `<section class="hero"><div><p class="hi">Salut ${esc(k.name)} !</p><p class="lbl">${g && t.total >= g.budget ? 'C’est pépite ! Ta tirelire est pleine' : 'Ta tirelire'}</p><div class="amount">${f(t.total)}</div>
 <div class="progrow"><div class="prog">${g ? '<b style="left:25%"></b><b style="left:50%"></b><b style="left:75%"></b>' : ''}<i style="width:${prog.toFixed(1)}%"></i></div>${growNug(prog)}</div><p class="small">${hint}</p></div>${J.svg}</section>
-${!paid && !pauseOf(cur) ? `<button class="todo" data-act="go" data-v="paie"><span class="ic">${I.coin}</span><span><b>Ta paie t’attend !</b><small>${due > 1 ? `${due} paies à ranger` : streakOf(cur) >= 2 ? `Range-la pour garder ta série de ${streakOf(cur)} semaines` : 'Range tes pièces de la semaine'}</small></span><span class="end">${I.chev}</span></button>` : bourseOpen(cur) && postOf(cur) !== 'none' && !rolled && t.rolls.length ? `<button class="todo" data-act="go" data-v="bourse"><span class="ic">${I.die}</span><span><b>Ton dé de la semaine t’attend</b><small>Va-t-il faire monter ta tirelire ?</small></span><span class="end">${I.chev}</span></button>` : pepCard()}
+${!paid && !pauseOf(cur) ? `<button class="todo" data-act="go" data-v="paie"><span class="ic">${I.coin}</span><span><b>Ta paie t’attend !</b><small>${due > 1 ? `${due} paies à ranger` : streakOf(cur) >= 2 ? `Range-la pour garder ta série de ${streakOf(cur)} semaines` : 'Range tes pièces de la semaine'}</small></span><span class="end">${I.chev}</span></button>` : bourseOpen(cur) && postOf(cur) !== 'none' && !rolled && t.rolls.length ? `<button class="todo" data-act="go" data-v="bourse"><span class="ic">${I.die}</span><span><b>Ton dé de la semaine t’attend</b><small>Va-t-il faire monter ta tirelire ?</small></span><span class="end">${I.chev}</span></button>` : ''}
 <div class="tiles"><div class="tile"><small><i style="background:var(--own)"></i>Mon argent</small><b>${f(t.own)}</b></div>
 <div class="tile"><small><i style="background:var(--gold)"></i>Bonus ${P().de}</small><b>${f(t.bonus)}</b></div>
 <div class="tile"><small><i style="background:var(--grow)"></i>Gagné tout seul</small><b class="${t.gains < 0 ? 'neg' : 'g'}">${f(t.gains)}</b></div>
 <div class="tile"><small><i style="background:var(--purse)"></i>Porte-monnaie à recevoir</small><b>${f(t.purseDue)}</b></div></div>
 ${t.out > 0 ? `<p class="soft small" style="margin:8px 4px 0">Projets réalisés : ${f(t.out)}</p>` : ''}
+${pepCard()}
 <h3 class="sec">Mon projet</h3><div class="list"><button class="item" data-act="go" data-v="projet"><span class="ic" style="background:var(--kidt);color:var(--kidtxt)">${I.flag}</span><span>${g ? `<b>${esc(g.name)}${msBand(cur) === 'pct' ? ` : ${Math.floor(Math.min(1, Math.max(0, t.total) / g.budget) * 100)} %` : ''}</b><small>${t.total >= g.budget ? 'Atteint : prépare ta présentation !' : `${f(Math.max(0, t.total))} sur ${f(g.budget)}`}</small>` : '<b>Choisis un projet</b><small>Un vélo, un jeu, ton futur permis ? Pas obligatoire, mais motivant.</small>'}</span><span class="end">${I.chev}</span></button></div>
 <h3 class="sec">Cette semaine</h3><div class="list">
 <button class="item" data-act="go" data-v="paie"><span class="ic" style="background:#fff3c4;color:#a87300">${I.coin}</span><span><b>Ma paie</b><small>${pauseOf(cur) ? 'En pause ' + untilTxt(pauseOf(cur)) : paid ? 'Rangée, bravo !' : due > 1 ? `${due} paies t’attendent` : `${f(k.weekly)} t’attendent`}</small></span><span class="end ${paid && !pauseOf(cur) ? 'done' : ''}">${paid && !pauseOf(cur) ? I.check : I.chev}</span></button>
 <button class="item" data-act="go" data-v="bourse"><span class="ic" style="background:var(--glass)">${I.die}</span><span><b>La bourse</b><small>${!bourseOpen(cur) ? `S’ouvre quand ta tirelire aura ${f(BOURSE_MIN)}` : !t.rolls.length && !rolled ? 'Nouveau : la bourse est ouverte !' : postOf(cur) === 'none' ? 'Tu ne joues pas la bourse' : rolled ? `Dé ${t.bourse.face} : ${eurS(t.bourse.gain)}` : 'Lance le dé de la semaine'}</small></span><span class="end ${rolled ? 'done' : ''}">${rolled ? I.check : I.chev}</span></button>
 <button class="item" data-act="go" data-v="recu"><span class="ic" style="background:color-mix(in srgb,var(--grow) 14%,transparent);color:var(--grow)">${I.gift}</span><span><b>J’ai reçu de l’argent</b><small>${t.waiting.length ? `${t.waiting.length} en attente de validation` : 'Un cadeau, un anniversaire ?'}</small></span><span class="end">${I.chev}</span></button>
 <button class="item" data-act="go" data-v="lecons"><span class="ic" style="background:color-mix(in srgb,var(--gold) 22%,var(--card));color:#6e4400">${NUG('', '')}</span><span><b>Comprendre l’argent</b><small>6 petites leçons et des quiz</small></span><span class="end">${I.chev}</span></button>
-<button class="item" data-act="go" data-v="pepites"><span class="ic" style="background:color-mix(in srgb,var(--gold) 22%,var(--card));color:#6e4400">${I.star}</span><span><b>Mes pépites</b><small>${(() => { const n = medals(cur).filter(m => m.ok).length; return `${n} sur ${MEDALS.length} gagnée${n > 1 ? 's' : ''}`; })()}</small><span class="mrow">${medals(cur).map(m => `<i class="${m.ok ? 'on' : ''}" style="--m:${m.c}"></i>`).join('')}</span></span><span class="end">${I.chev}</span></button>
 <button class="item" data-act="go" data-v="carnet"><span class="ic" style="background:var(--glass)">${I.book}</span><span><b>Mon carnet</b><small>Tout ce qui est entré et sorti</small></span><span class="end">${I.chev}</span></button></div>`;
 }
 
@@ -946,59 +947,34 @@ function bestStreak(id) {
 }
 const MEDALS = [
   { id: 'paie1', name: 'Premier pas', how: 'Ranger ta toute première paie.', test: c => c.paid >= 1 },
+  { id: 'projet0', name: 'Un rêve en tête', how: 'Choisir le projet pour lequel tu mets de côté.', test: c => c.goal },
   { id: 'bonus1', name: 'Premier bonus', how: 'Mettre des pièces dans ta tirelire et recevoir le bonus de tes parents.', test: c => c.bonus > 0 },
+  { id: 'recu1', name: 'Cadeau bien rangé', how: 'Ranger dans ta tirelire de l’argent que tu as reçu.', test: c => c.recu },
+  { id: 'lecon1', name: 'Curieux', how: 'Réussir le quiz d’une première leçon.', test: c => c.lq >= 1 },
   { id: 's3', name: 'Régulier', how: 'Ranger ta paie 3 semaines d’affilée.', test: c => c.best >= 3, serie: 3 },
   { id: 's5', name: 'Fidèle', how: 'Ranger ta paie 5 semaines d’affilée.', test: c => c.best >= 5, serie: 5 },
   { id: 's10', name: 'Infatigable', how: 'Ranger ta paie 10 semaines d’affilée.', test: c => c.best >= 10, serie: 10 },
   { id: 's26', name: 'Six mois sans faillir', how: 'Ranger ta paie 26 semaines d’affilée.', test: c => c.best >= 26, serie: 26 },
   { id: 's52', name: 'Une année entière', how: 'Ranger ta paie 52 semaines d’affilée.', test: c => c.best >= 52, serie: 52 },
   { id: 'cap', name: 'Premier palier', how: `Faire passer ta tirelire au-dessus de ${f(CAPS[0])}.`, test: c => c.peak >= CAPS[0] },
+  { id: 'cap2', name: 'Deuxième palier', how: `Faire passer ta tirelire au-dessus de ${f(CAPS[1])}.`, test: c => c.peak >= CAPS[1] },
   { id: 'bourse', name: 'La bourse s’ouvre', how: `Atteindre ${f(BOURSE_MIN)} dans ta tirelire.`, test: c => c.peak >= BOURSE_MIN },
   { id: 'de1', name: 'Premier lancer', how: 'Lancer le dé de la bourse une première fois.', test: c => c.rolls >= 1 },
+  { id: 'chance', name: 'Coup de chance', how: 'Faire gagner ta tirelire avec le dé.', test: c => c.won },
+  { id: 'calme', name: 'Garder son calme', how: 'Continuer la bourse après une semaine où le dé t’a fait perdre.', test: c => c.calm },
+  { id: 'de10', name: 'Investisseur patient', how: 'Lancer le dé de la bourse 10 semaines.', test: c => c.rolls >= 10 },
+  { id: 'gain1', name: 'Ton argent travaille', how: `Gagner ${f(1)} grâce à la bourse, sans rien ajouter.`, test: c => c.gains >= 1 },
   { id: 'projet', name: 'Projet réalisé', how: 'Réunir tout l’argent de ton projet.', test: c => c.goalDone },
   { id: 'savant', name: 'Petit savant', how: 'Réussir le quiz des 6 leçons.', test: c => c.lq >= 6 },
 ];
 
-// Chaque pépite a sa matière : mêmes facettes, couleurs propres (le chocolat a la forme d'une pépite de chocolat).
-const MATS = {
-  paie1: { mat: 'de chocolat', c: '#7a4524', choc: 1 },
-  bonus1: { mat: 'de quartz rose', c: '#f08cab', line: '#8a2c4c' },
-  s3: { mat: 'de bronze', c: '#b9783f', line: '#5a3315' },
-  s5: { mat: 'd’argent', c: '#a9b4c2', line: '#47505c' },
-  s10: { mat: 'd’or', c: '#f2b01e', line: '#6e4400', gold: 1 },
-  s26: { mat: 'de platine', c: '#dde3ee', line: '#5d6880', glint: 1 },
-  s52: { mat: 'de diamant', c: '#9fe3f5', line: '#2b6f86', glint: 2 },
-  cap: { mat: 'd’émeraude', c: '#1fae6a', line: '#0b5233', glint: 1 },
-  bourse: { mat: 'de rubis', c: '#e0294f', line: '#6e0f24', glint: 1 },
-  de1: { mat: 'de saphir', c: '#2f63d8', line: '#132e6e', glint: 1 },
-  projet: { mat: 'd’améthyste', c: '#9a5ce0', line: '#44206e', glint: 1 },
-  savant: { mat: 'de turquoise', c: '#20bcc6', line: '#0c5a60' },
-};
 MEDALS.forEach(m => Object.assign(m, MATS[m.id]));
-const hx = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
-const mixc = (a, b, t) => '#' + hx(a).map((v, i) => Math.round(v + (hx(b)[i] - v) * t).toString(16).padStart(2, '0')).join('');
-const tone = (c, t) => t >= 0 ? mixc(c, '#ffffff', t) : mixc(c, '#000000', -t);
-const FACETS = ['M14 24 30 15 28 30Z', 'M30 15 46 17 42 32 28 30Z', 'M46 17 58 30 42 32Z', 'M6 40 14 24 28 30 30 44Z', 'M28 30 42 32 30 44Z', 'M58 30 56 46 42 32Z', 'M42 32 56 46 42 55 30 44Z', 'M6 40 30 44 20 54Z', 'M30 44 42 55 20 54Z'];
-const FTONE = [0.45, 0.7, 0.25, 0, 0.15, -0.15, -0.25, -0.05, -0.4];
-const GOLDF = ['#ffe68a', '#fff4bd', '#ffd24a', '#f7b52a', '#ffcb3a', '#e39a10', '#d08a00', '#eba216', '#b87400'];
-const SPARK = (x, y, r, fill, line) => `<path d="M${x} ${y - r}Q${x + r * 0.2} ${y - r * 0.2} ${x + r} ${y}Q${x + r * 0.2} ${y + r * 0.2} ${x} ${y + r}Q${x - r * 0.2} ${y + r * 0.2} ${x - r} ${y}Q${x - r * 0.2} ${y - r * 0.2} ${x} ${y - r}Z" fill="${fill}" stroke="${line}" stroke-width="1.2" stroke-linejoin="round"/>`;
-function matSVG(m) {
-  if (m.choc) {
-    const c = m.c, d = tone(c, -0.45);
-    return `<path d="M33 11Q36 13 35 18Q34 24 42 30Q55 39 52 48Q49 56 32 56Q15 56 12 48Q9 39 22 30Q30 24 30 17Q30 12 33 11Z" fill="${c}" stroke="${d}" stroke-width="3" stroke-linejoin="round"/><path d="M50 46Q47 53 32 53Q20 53 15 48Q24 51 34 50Q45 49 50 46Z" fill="${tone(c, -0.25)}"/><path d="M33 13Q34.5 15 33.5 19" stroke="${tone(c, 0.35)}" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M19 38Q22 33 27 31" stroke="${tone(c, 0.55)}" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="17.5" cy="42.5" r="1.6" fill="${tone(c, 0.55)}"/>`;
-  }
-  const L = m.line || tone(m.c, -0.6), F = m.gold ? GOLDF : FTONE.map(t => tone(m.c, t));
-  const fac = FACETS.map((d, i) => `<path d="${d}" fill="${F[i]}" stroke="${L}" stroke-width="1.1" stroke-linejoin="round"/>`).join('');
-  const glint = m.glint ? '<path d="M36 34 39 31" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".8"/>' : '';
-  const extra = m.glint === 2 ? SPARK(55, 13, 5, '#ffffff', L) + SPARK(8, 25, 3.5, '#ffffff', L) : '';
-  return `${fac}<path d="M6 40 14 24 30 15 46 17 58 30 56 46 42 55 20 54Z" fill="none" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><path d="M20 27 26 21" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>${glint}${SPARK(33, 22, 4.5, tone(m.c, 0.85), L)}${extra}`;
-}
 const matNug = (m, cls = 'mnug') => `<svg class="${cls}" viewBox="2 8 60 52" aria-hidden="true">${matSVG(m)}</svg>`;
 const pepOf = m => `pépite\u00a0${m.mat.replace(' ', '\u00a0')}`;
 function medals(id) {
   const k = kidOf(id); if (!k) return [];
-  const E = evs(id), T = tot(id), g = goalOf(id);
-  const c = { paid: paidWeeks(id).size, bonus: E.reduce((a, e) => a + ((e.t === 'paie' || (e.t === 'recu' && !e.pending && !e.refused)) ? e.bonus || 0 : 0), 0), best: bestStreak(id), peak: r2(T.peak), rolls: E.filter(e => e.t === 'bourse').length, goalDone: E.some(e => e.t === 'projet') || (g && T.total >= g.budget), lq: Object.keys(k.lq || {}).length };
+  const E = evs(id), T = tot(id), g = goalOf(id), B = E.filter(e => e.t === 'bourse').sort((a, b) => (a.d < b.d ? -1 : 1));
+  const c = { paid: paidWeeks(id).size, bonus: E.reduce((a, e) => a + ((e.t === 'paie' || (e.t === 'recu' && !e.pending && !e.refused)) ? e.bonus || 0 : 0), 0), best: bestStreak(id), peak: r2(T.peak), rolls: E.filter(e => e.t === 'bourse').length, goalDone: E.some(e => e.t === 'projet') || (g && T.total >= g.budget), lq: Object.keys(k.lq || {}).length, goal: !!g || E.some(e => e.t === 'projet'), recu: E.some(e => e.t === 'recu' && !e.pending && !e.refused), won: B.some(e => e.gain > 0), calm: B.some((e, i) => e.gain < 0 && i < B.length - 1), gains: r2(T.gains || 0) };
   return MEDALS.map(m => ({ ...m, ok: !!m.test(c) }));
 }
 const medalSet = id => new Set(medals(id).filter(m => m.ok).map(m => m.id));

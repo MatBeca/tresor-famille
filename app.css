@@ -482,3 +482,4 @@ textarea{width:100%;font:inherit;font-size:16px;font-weight:600;border-radius:14
 .todo.pep{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 12%,var(--card))}.todo.pep .ic{background:var(--gold);color:#5a3a00}.todo.pep .mrow{margin-top:6px}
 .medal em{font-style:normal;font-size:12.5px;font-weight:700;color:color-mix(in srgb,var(--m) 70%,var(--ink))}.medal:not(.on) em{color:var(--soft)}.medal.on{border-color:color-mix(in srgb,var(--m) 55%,var(--line));background:color-mix(in srgb,var(--m) 7%,var(--card))}
 .todo.pep .ic{background:color-mix(in srgb,var(--m,var(--gold)) 16%,var(--card))}.todo.pep .pnug{width:36px;height:32px}
+.card .prog{background:color-mix(in srgb,var(--line) 80%,var(--ink) 6%);height:14px}.todo.pep{margin:14px 0 0}
