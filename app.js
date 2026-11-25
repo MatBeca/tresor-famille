@@ -5,7 +5,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc, collection, collectionGroup, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
-const VERSION = '102'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '103'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -354,8 +354,9 @@ function growNug(prog) {
 }
 function pepCard() {
   const st = streakOf(cur), nx = nextSerie(cur), ms = medals(cur), n = ms.filter(m => m.ok).length;
-  const sub = nx ? `Encore ${nx.left} paie${nx.left > 1 ? 's' : ''} rangée${nx.left > 1 ? 's' : ''} pour la pépite «\u00a0${nx.m.name}\u00a0»` : `${n} sur ${MEDALS.length} gagnée${n > 1 ? 's' : ''}`;
-  return `<button class="todo pep" data-act="go" data-v="pepites"><span class="ic">${I.star}</span><span><b>${st >= 2 ? `Série de ${st} semaines` : 'Mes pépites'}</b><small>${sub}</small><span class="mrow">${ms.map(m => `<i class="${m.ok ? 'on' : ''}"></i>`).join('')}</span></span><span class="end">${I.chev}</span></button>`;
+  const sub = nx ? `Encore ${nx.left} paie${nx.left > 1 ? 's' : ''} rangée${nx.left > 1 ? 's' : ''} pour ta ${pepOf(nx.m)}` : `${n} sur ${MEDALS.length} gagnée${n > 1 ? 's' : ''}`;
+  const nm = nx ? nx.m : ms.find(m => !m.ok);
+  return `<button class="todo pep" data-act="go" data-v="pepites"${nm ? ` style="--m:${nm.c}"` : ''}><span class="ic">${nm ? matNug(nm, 'pnug') : I.star}</span><span><b>${st >= 2 ? `Série de ${st} semaines` : 'Mes pépites'}</b><small>${sub}</small><span class="mrow">${ms.map(m => `<i class="${m.ok ? 'on' : ''}" style="--m:${m.c}"></i>`).join('')}</span></span><span class="end">${I.chev}</span></button>`;
 }
 function homeView(k, t) {
   const g = goalOf(cur), J = jar(t, g), due = owed(cur).length, paid = due === 0, rolled = sameWeek(t.bourse && t.bourse.d);
@@ -375,7 +376,7 @@ ${t.out > 0 ? `<p class="soft small" style="margin:8px 4px 0">Projets réalisés
 <button class="item" data-act="go" data-v="bourse"><span class="ic" style="background:var(--glass)">${I.die}</span><span><b>La bourse</b><small>${!bourseOpen(cur) ? `S’ouvre quand ta tirelire aura ${f(BOURSE_MIN)}` : !t.rolls.length && !rolled ? 'Nouveau : la bourse est ouverte !' : postOf(cur) === 'none' ? 'Tu ne joues pas la bourse' : rolled ? `Dé ${t.bourse.face} : ${eurS(t.bourse.gain)}` : 'Lance le dé de la semaine'}</small></span><span class="end ${rolled ? 'done' : ''}">${rolled ? I.check : I.chev}</span></button>
 <button class="item" data-act="go" data-v="recu"><span class="ic" style="background:color-mix(in srgb,var(--grow) 14%,transparent);color:var(--grow)">${I.gift}</span><span><b>J’ai reçu de l’argent</b><small>${t.waiting.length ? `${t.waiting.length} en attente de validation` : 'Un cadeau, un anniversaire ?'}</small></span><span class="end">${I.chev}</span></button>
 <button class="item" data-act="go" data-v="lecons"><span class="ic" style="background:color-mix(in srgb,var(--gold) 22%,var(--card));color:#6e4400">${NUG('', '')}</span><span><b>Comprendre l’argent</b><small>6 petites leçons et des quiz</small></span><span class="end">${I.chev}</span></button>
-<button class="item" data-act="go" data-v="pepites"><span class="ic" style="background:color-mix(in srgb,var(--gold) 22%,var(--card));color:#6e4400">${I.star}</span><span><b>Mes pépites</b><small>${(() => { const n = medals(cur).filter(m => m.ok).length; return `${n} sur ${MEDALS.length} gagnée${n > 1 ? 's' : ''}`; })()}</small><span class="mrow">${medals(cur).map(m => `<i class="${m.ok ? 'on' : ''}"></i>`).join('')}</span></span><span class="end">${I.chev}</span></button>
+<button class="item" data-act="go" data-v="pepites"><span class="ic" style="background:color-mix(in srgb,var(--gold) 22%,var(--card));color:#6e4400">${I.star}</span><span><b>Mes pépites</b><small>${(() => { const n = medals(cur).filter(m => m.ok).length; return `${n} sur ${MEDALS.length} gagnée${n > 1 ? 's' : ''}`; })()}</small><span class="mrow">${medals(cur).map(m => `<i class="${m.ok ? 'on' : ''}" style="--m:${m.c}"></i>`).join('')}</span></span><span class="end">${I.chev}</span></button>
 <button class="item" data-act="go" data-v="carnet"><span class="ic" style="background:var(--glass)">${I.book}</span><span><b>Mon carnet</b><small>Tout ce qui est entré et sorti</small></span><span class="end">${I.chev}</span></button></div>`;
 }
 
@@ -957,6 +958,43 @@ const MEDALS = [
   { id: 'projet', name: 'Projet réalisé', how: 'Réunir tout l’argent de ton projet.', test: c => c.goalDone },
   { id: 'savant', name: 'Petit savant', how: 'Réussir le quiz des 6 leçons.', test: c => c.lq >= 6 },
 ];
+
+// Chaque pépite a sa matière : mêmes facettes, couleurs propres (le chocolat a la forme d'une pépite de chocolat).
+const MATS = {
+  paie1: { mat: 'de chocolat', c: '#7a4524', choc: 1 },
+  bonus1: { mat: 'de quartz rose', c: '#f08cab', line: '#8a2c4c' },
+  s3: { mat: 'de bronze', c: '#b9783f', line: '#5a3315' },
+  s5: { mat: 'd’argent', c: '#a9b4c2', line: '#47505c' },
+  s10: { mat: 'd’or', c: '#f2b01e', line: '#6e4400', gold: 1 },
+  s26: { mat: 'de platine', c: '#dde3ee', line: '#5d6880', glint: 1 },
+  s52: { mat: 'de diamant', c: '#9fe3f5', line: '#2b6f86', glint: 2 },
+  cap: { mat: 'd’émeraude', c: '#1fae6a', line: '#0b5233', glint: 1 },
+  bourse: { mat: 'de rubis', c: '#e0294f', line: '#6e0f24', glint: 1 },
+  de1: { mat: 'de saphir', c: '#2f63d8', line: '#132e6e', glint: 1 },
+  projet: { mat: 'd’améthyste', c: '#9a5ce0', line: '#44206e', glint: 1 },
+  savant: { mat: 'de turquoise', c: '#20bcc6', line: '#0c5a60' },
+};
+MEDALS.forEach(m => Object.assign(m, MATS[m.id]));
+const hx = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const mixc = (a, b, t) => '#' + hx(a).map((v, i) => Math.round(v + (hx(b)[i] - v) * t).toString(16).padStart(2, '0')).join('');
+const tone = (c, t) => t >= 0 ? mixc(c, '#ffffff', t) : mixc(c, '#000000', -t);
+const FACETS = ['M14 24 30 15 28 30Z', 'M30 15 46 17 42 32 28 30Z', 'M46 17 58 30 42 32Z', 'M6 40 14 24 28 30 30 44Z', 'M28 30 42 32 30 44Z', 'M58 30 56 46 42 32Z', 'M42 32 56 46 42 55 30 44Z', 'M6 40 30 44 20 54Z', 'M30 44 42 55 20 54Z'];
+const FTONE = [0.45, 0.7, 0.25, 0, 0.15, -0.15, -0.25, -0.05, -0.4];
+const GOLDF = ['#ffe68a', '#fff4bd', '#ffd24a', '#f7b52a', '#ffcb3a', '#e39a10', '#d08a00', '#eba216', '#b87400'];
+const SPARK = (x, y, r, fill, line) => `<path d="M${x} ${y - r}Q${x + r * 0.2} ${y - r * 0.2} ${x + r} ${y}Q${x + r * 0.2} ${y + r * 0.2} ${x} ${y + r}Q${x - r * 0.2} ${y + r * 0.2} ${x - r} ${y}Q${x - r * 0.2} ${y - r * 0.2} ${x} ${y - r}Z" fill="${fill}" stroke="${line}" stroke-width="1.2" stroke-linejoin="round"/>`;
+function matSVG(m) {
+  if (m.choc) {
+    const c = m.c, d = tone(c, -0.45);
+    return `<path d="M33 11Q36 13 35 18Q34 24 42 30Q55 39 52 48Q49 56 32 56Q15 56 12 48Q9 39 22 30Q30 24 30 17Q30 12 33 11Z" fill="${c}" stroke="${d}" stroke-width="3" stroke-linejoin="round"/><path d="M50 46Q47 53 32 53Q20 53 15 48Q24 51 34 50Q45 49 50 46Z" fill="${tone(c, -0.25)}"/><path d="M33 13Q34.5 15 33.5 19" stroke="${tone(c, 0.35)}" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M19 38Q22 33 27 31" stroke="${tone(c, 0.55)}" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="17.5" cy="42.5" r="1.6" fill="${tone(c, 0.55)}"/>`;
+  }
+  const L = m.line || tone(m.c, -0.6), F = m.gold ? GOLDF : FTONE.map(t => tone(m.c, t));
+  const fac = FACETS.map((d, i) => `<path d="${d}" fill="${F[i]}" stroke="${L}" stroke-width="1.1" stroke-linejoin="round"/>`).join('');
+  const glint = m.glint ? '<path d="M36 34 39 31" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".8"/>' : '';
+  const extra = m.glint === 2 ? SPARK(55, 13, 5, '#ffffff', L) + SPARK(8, 25, 3.5, '#ffffff', L) : '';
+  return `${fac}<path d="M6 40 14 24 30 15 46 17 58 30 56 46 42 55 20 54Z" fill="none" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><path d="M20 27 26 21" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>${glint}${SPARK(33, 22, 4.5, tone(m.c, 0.85), L)}${extra}`;
+}
+const matNug = (m, cls = 'mnug') => `<svg class="${cls}" viewBox="2 8 60 52" aria-hidden="true">${matSVG(m)}</svg>`;
+const pepOf = m => `pépite\u00a0${m.mat.replace(' ', '\u00a0')}`;
 function medals(id) {
   const k = kidOf(id); if (!k) return [];
   const E = evs(id), T = tot(id), g = goalOf(id);
@@ -970,15 +1008,15 @@ function newMedal(id, before) {
   if (!got.length) return '';
   const m = got[got.length - 1];
   if (m.serie) queuePush('serie', { kid: id, n: m.serie });
-  return `Nouvelle pépite : « ${m.name} » !`;
+  return `Nouvelle ${pepOf(m)}\u00a0: «\u00a0${m.name}\u00a0»\u00a0!`;
 }
 function nextSerie(id) { const st = streakOf(id), m = MEDALS.find(x => x.serie && x.serie > st && x.serie > bestStreak(id)); return m ? { m, left: m.serie - st } : null; }
 function pepitesView() {
   const L = medals(cur), n = L.filter(m => m.ok).length, st = streakOf(cur), nx = nextSerie(cur);
   return `<button class="backlink" data-act="go" data-v="home">${I.chev}<span>Ma tirelire</span></button><h2 class="title">Mes pépites</h2>
 <p class="lead">Chaque pépite récompense un réflexe de bon épargnant. Tu en as ${n} sur ${L.length}.</p>
-${st >= 1 ? `<section class="card serie"><b>${st} semaine${st > 1 ? 's' : ''} d’affilée</b><span>${nx ? `Encore ${nx.left} paie${nx.left > 1 ? 's' : ''} rangée${nx.left > 1 ? 's' : ''} pour la pépite « ${nx.m.name} ».` : 'Tu as toutes les pépites de régularité. Respect !'}</span></section>` : ''}
-<div class="medals">${L.map(m => `<div class="medal ${m.ok ? 'on' : ''}">${NUG('mnug', '')}<b>${m.ok ? m.name : '?'}</b><small>${m.how}</small></div>`).join('')}</div>`;
+${st >= 1 ? `<section class="card serie"><b>${st} semaine${st > 1 ? 's' : ''} d’affilée</b><span>${nx ? `Encore ${nx.left} paie${nx.left > 1 ? 's' : ''} rangée${nx.left > 1 ? 's' : ''} pour ta ${pepOf(nx.m)}.` : 'Tu as toutes les pépites de régularité. Respect !'}</span></section>` : ''}
+<div class="medals">${L.map(m => `<div class="medal ${m.ok ? 'on' : ''}" style="--m:${m.c}">${matNug(m)}<b>${m.ok ? m.name : '?'}</b><em>${m.ok ? `Pépite ${m.mat}` : 'Pépite mystère'}</em><small>${m.how}</small></div>`).join('')}</div>`;
 }
 
 
@@ -1372,7 +1410,7 @@ document.addEventListener('click', ev => {
       const md0 = medalSet(cur), ln0 = lessonsOpen(cur);
       EV[cur] = [...evs(cur), { t: 'paie', d: iso(), w: new Date(ow[0]).toISOString(), inv, dep, bonus }];
       const nx = nextSerie(cur), st1 = streakOf(cur);
-      const cel = newMedal(cur, md0) || (lessonsOpen(cur) > ln0 && lessonsOpen(cur) <= lessonList().length ? 'Nouvelle leçon débloquée !' : '') || (st1 >= 2 && nx ? `${st1} semaines d’affilée ! Encore ${nx.left} pour la pépite « ${nx.m.name} ».` : '');
+      const cel = newMedal(cur, md0) || (lessonsOpen(cur) > ln0 && lessonsOpen(cur) <= lessonList().length ? 'Nouvelle leçon débloquée !' : '') || (st1 >= 2 && nx ? `${st1} semaines d’affilée ! Encore ${nx.left} pour ta ${pepOf(nx.m)}.` : '');
       if (guide !== null) guidePaid = true;
       saveK(cur);
       sayMs(before, inv ? `Bravo ! ${f(inv + bonus)} rejoignent ta tirelire.` : 'Paie rangée : tout est dans ton porte-monnaie.', dep ? `${f(dep)} pour ton porte-monnaie : ${P().label.toLowerCase()} ${F.parents === 'parents' ? 'te les donneront' : 'te les donnera'}.` : '');

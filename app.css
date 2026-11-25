@@ -469,7 +469,7 @@ textarea{width:100%;font:inherit;font-size:16px;font-weight:600;border-radius:14
 .item.locked{opacity:.55;cursor:default}
 
 /* collection de pépites */
-.mrow{display:flex;gap:4px;margin-top:6px}.mrow i{width:10px;height:10px;border-radius:3px;transform:rotate(45deg);background:var(--line)}.mrow i.on{background:var(--gold)}
+.mrow{display:flex;gap:4px;margin-top:6px}.mrow i{width:10px;height:10px;border-radius:3px;transform:rotate(45deg);background:var(--line)}.mrow i.on{background:var(--m,var(--gold))}
 .card.serie{display:grid;gap:4px;border:2px solid var(--gold);background:color-mix(in srgb,var(--gold) 12%,var(--card))}.card.serie b{font:700 22px Fredoka,sans-serif}
 .medals{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
 .medal{background:var(--card);border:2px solid var(--line);border-radius:20px;padding:14px 12px;text-align:center;display:grid;justify-items:center;gap:4px}
@@ -480,3 +480,5 @@ textarea{width:100%;font:inherit;font-size:16px;font-weight:600;border-radius:14
 .pushask{text-align:center}.pushask .pask{width:84px;height:72px;margin:0 auto 6px;display:block}.pushask h2{margin:0 0 6px}.pushask p{margin:0 0 6px}
 
 .todo.pep{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 12%,var(--card))}.todo.pep .ic{background:var(--gold);color:#5a3a00}.todo.pep .mrow{margin-top:6px}
+.medal em{font-style:normal;font-size:12.5px;font-weight:700;color:color-mix(in srgb,var(--m) 70%,var(--ink))}.medal:not(.on) em{color:var(--soft)}.medal.on{border-color:color-mix(in srgb,var(--m) 55%,var(--line));background:color-mix(in srgb,var(--m) 7%,var(--card))}
+.todo.pep .ic{background:color-mix(in srgb,var(--m,var(--gold)) 16%,var(--card))}.todo.pep .pnug{width:36px;height:32px}
