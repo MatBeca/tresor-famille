@@ -6,7 +6,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
-const VERSION = '109'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '110'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -1044,8 +1044,10 @@ function medals(id) {
   }
   let run = 0, best = 0; for (const e of B) { run = e.gain > 0 ? run + 1 : 0; best = Math.max(best, run); }
   Object.assign(c, { sea, months, run: best, proj: E.filter(e => e.t === 'projet').length });
-  c.n = MEDALS.filter(m => !COLLEC.includes(m.id) && m.test(c)).length;
-  return MEDALS.map(m => ({ ...m, ok: !!m.test(c) }));
+  // Une pépite gagnée reste gagnée, même si sa condition n'est plus vraie (projet supprimé, tirelire redescendue…).
+  const kk = kidOf(id), got = new Set(kk && Array.isArray(kk.ms) ? kk.ms : []), has = m => got.has(m.id) || !!m.test(c);
+  c.n = MEDALS.filter(m => !COLLEC.includes(m.id) && has(m)).length;
+  return MEDALS.map(m => ({ ...m, ok: has(m) }));
 }
 const medalSet = id => new Set(medals(id).filter(m => m.ok).map(m => m.id));
 // Après une action de l'enfant : annonce la pépite gagnée (et prévient les parents pour les séries).
