@@ -478,3 +478,5 @@ textarea{width:100%;font:inherit;font-size:16px;font-weight:600;border-radius:14
 .medal b{font:700 17px Fredoka,sans-serif}.medal small{color:var(--soft);font-size:13px;line-height:1.35}
 .medal:not(.on) b{color:var(--soft)}
 .pushask{text-align:center}.pushask .pask{width:84px;height:72px;margin:0 auto 6px;display:block}.pushask h2{margin:0 0 6px}.pushask p{margin:0 0 6px}
+
+.todo.pep{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 12%,var(--card))}.todo.pep .ic{background:var(--gold);color:#5a3a00}.todo.pep .mrow{margin-top:6px}

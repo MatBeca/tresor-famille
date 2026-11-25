@@ -5,7 +5,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc, collection, collectionGroup, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
-const VERSION = '101'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '102'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -352,13 +352,18 @@ function growNug(prog) {
   const lbl = st === 4 ? 'Ta pépite est complète : c’est pépite !' : `Ta pépite : taille ${st + 1} sur 5`;
   return `<svg class="gnug${st === 4 ? ' full' : ''}" viewBox="2 8 60 52" role="img" aria-label="${lbl}"><g transform="translate(${(32 - 32 * sc).toFixed(1)} ${(57 - 55 * sc).toFixed(1)}) scale(${sc})">${st === 4 ? NUGB : NUGP}</g></svg>`;
 }
+function pepCard() {
+  const st = streakOf(cur), nx = nextSerie(cur), ms = medals(cur), n = ms.filter(m => m.ok).length;
+  const sub = nx ? `Encore ${nx.left} paie${nx.left > 1 ? 's' : ''} rangée${nx.left > 1 ? 's' : ''} pour la pépite «\u00a0${nx.m.name}\u00a0»` : `${n} sur ${MEDALS.length} gagnée${n > 1 ? 's' : ''}`;
+  return `<button class="todo pep" data-act="go" data-v="pepites"><span class="ic">${I.star}</span><span><b>${st >= 2 ? `Série de ${st} semaines` : 'Mes pépites'}</b><small>${sub}</small><span class="mrow">${ms.map(m => `<i class="${m.ok ? 'on' : ''}"></i>`).join('')}</span></span><span class="end">${I.chev}</span></button>`;
+}
 function homeView(k, t) {
   const g = goalOf(cur), J = jar(t, g), due = owed(cur).length, paid = due === 0, rolled = sameWeek(t.bourse && t.bourse.d);
   const prog = Math.min(100, Math.max(0, t.total / (g ? g.budget : J.cap) * 100));
   const hint = g ? (t.total >= g.budget ? `Objectif « ${esc(g.name)} » atteint !` : `Encore ${f(g.budget - t.total)} pour « ${esc(g.name)} »`) : (t.total >= J.cap ? `Palier de ${f(J.cap)} atteint !` : `Encore ${f(J.cap - t.total)} pour le palier de ${f(J.cap)}`);
   return `<section class="hero"><div><p class="hi">Salut ${esc(k.name)} !</p><p class="lbl">${g && t.total >= g.budget ? 'C’est pépite ! Ta tirelire est pleine' : 'Ta tirelire'}</p><div class="amount">${f(t.total)}</div>
 <div class="progrow"><div class="prog">${g ? '<b style="left:25%"></b><b style="left:50%"></b><b style="left:75%"></b>' : ''}<i style="width:${prog.toFixed(1)}%"></i></div>${growNug(prog)}</div><p class="small">${hint}</p></div>${J.svg}</section>
-${!paid && !pauseOf(cur) ? `<button class="todo" data-act="go" data-v="paie"><span class="ic">${I.coin}</span><span><b>Ta paie t’attend !</b><small>${due > 1 ? `${due} paies à ranger` : streakOf(cur) >= 2 ? `Range-la pour garder ta série de ${streakOf(cur)} semaines` : 'Range tes pièces de la semaine'}</small></span><span class="end">${I.chev}</span></button>` : bourseOpen(cur) && postOf(cur) !== 'none' && !rolled && t.rolls.length ? `<button class="todo" data-act="go" data-v="bourse"><span class="ic">${I.die}</span><span><b>Ton dé de la semaine t’attend</b><small>Va-t-il faire monter ta tirelire ?</small></span><span class="end">${I.chev}</span></button>` : ''}
+${!paid && !pauseOf(cur) ? `<button class="todo" data-act="go" data-v="paie"><span class="ic">${I.coin}</span><span><b>Ta paie t’attend !</b><small>${due > 1 ? `${due} paies à ranger` : streakOf(cur) >= 2 ? `Range-la pour garder ta série de ${streakOf(cur)} semaines` : 'Range tes pièces de la semaine'}</small></span><span class="end">${I.chev}</span></button>` : bourseOpen(cur) && postOf(cur) !== 'none' && !rolled && t.rolls.length ? `<button class="todo" data-act="go" data-v="bourse"><span class="ic">${I.die}</span><span><b>Ton dé de la semaine t’attend</b><small>Va-t-il faire monter ta tirelire ?</small></span><span class="end">${I.chev}</span></button>` : pepCard()}
 <div class="tiles"><div class="tile"><small><i style="background:var(--own)"></i>Mon argent</small><b>${f(t.own)}</b></div>
 <div class="tile"><small><i style="background:var(--gold)"></i>Bonus ${P().de}</small><b>${f(t.bonus)}</b></div>
 <div class="tile"><small><i style="background:var(--grow)"></i>Gagné tout seul</small><b class="${t.gains < 0 ? 'neg' : 'g'}">${f(t.gains)}</b></div>
