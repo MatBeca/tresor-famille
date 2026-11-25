@@ -5,8 +5,8 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, getDoc, deleteDoc, collection, collectionGroup, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
-import { MATS, matSVG } from './pepites.js';
-const VERSION = '104'; // à garder égal au cache du service worker (sw.js)
+import { MATS, matSVG, mystSVG } from './pepites.js';
+const VERSION = '105'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -354,10 +354,9 @@ function growNug(prog) {
   return `<svg class="gnug${st === 4 ? ' full' : ''}" viewBox="2 8 60 52" role="img" aria-label="${lbl}"><g transform="translate(${(32 - 32 * sc).toFixed(1)} ${(57 - 55 * sc).toFixed(1)}) scale(${sc})">${st === 4 ? NUGB : NUGP}</g></svg>`;
 }
 function pepCard() {
-  const st = streakOf(cur), nx = nextSerie(cur), ms = medals(cur), n = ms.filter(m => m.ok).length;
-  const sub = nx ? `Encore ${nx.left} paie${nx.left > 1 ? 's' : ''} rangée${nx.left > 1 ? 's' : ''} pour ta ${pepOf(nx.m)}` : `${n} sur ${MEDALS.length} gagnée${n > 1 ? 's' : ''}`;
-  const nm = nx ? nx.m : ms.find(m => !m.ok);
-  return `<button class="todo pep" data-act="go" data-v="pepites"${nm ? ` style="--m:${nm.c}"` : ''}><span class="ic">${nm ? matNug(nm, 'pnug') : I.star}</span><span><b>${st >= 2 ? `Série de ${st} semaines` : 'Mes pépites'}</b><small>${sub}</small><span class="mrow">${ms.map(m => `<i class="${m.ok ? 'on' : ''}" style="--m:${m.c}"></i>`).join('')}</span></span><span class="end">${I.chev}</span></button>`;
+  const ms = medals(cur), won = ms.filter(m => m.ok), k = kidOf(cur), last = won.find(m => m.id === (k && k.pm)) || won[won.length - 1];
+  const ic = last ? matNug(last, 'pnug') : `<svg class="pnug" viewBox="2 8 60 52" aria-hidden="true">${mystSVG()}</svg>`;
+  return `<button class="todo pep" data-act="go" data-v="pepites"${last ? ` style="--m:${last.c}"` : ''}><span class="ic">${ic}</span><span>${last ? `<small>Ta dernière pépite</small><b>${last.name}</b>` : '<b>Mes pépites</b>'}<small>${last ? `Découvre tes ${won.length} pépites et celles qui te manquent` : 'Range ta première paie pour gagner ta première pépite'}</small><span class="mrow">${ms.map(m => `<i class="${m.ok ? 'on' : ''}" style="--m:${m.c}"></i>`).join('')}</span></span><span class="end">${I.chev}</span></button>`;
 }
 function homeView(k, t) {
   const g = goalOf(cur), J = jar(t, g), due = owed(cur).length, paid = due === 0, rolled = sameWeek(t.bourse && t.bourse.d);
@@ -949,23 +948,43 @@ const MEDALS = [
   { id: 'paie1', name: 'Premier pas', how: 'Ranger ta toute première paie.', test: c => c.paid >= 1 },
   { id: 'projet0', name: 'Un rêve en tête', how: 'Choisir le projet pour lequel tu mets de côté.', test: c => c.goal },
   { id: 'bonus1', name: 'Premier bonus', how: 'Mettre des pièces dans ta tirelire et recevoir le bonus de tes parents.', test: c => c.bonus > 0 },
-  { id: 'recu1', name: 'Cadeau bien rangé', how: 'Ranger dans ta tirelire de l’argent que tu as reçu.', test: c => c.recu },
+  { id: 'recu1', name: 'Cadeau bien rangé', how: 'Ranger dans ta tirelire de l’argent que tu as reçu.', test: c => c.recu >= 1 },
   { id: 'lecon1', name: 'Curieux', how: 'Réussir le quiz d’une première leçon.', test: c => c.lq >= 1 },
+  { id: 'style', name: 'Mon style', how: 'Choisir ta façon de jouer à la bourse.', test: c => c.style },
+  { id: 's2', name: 'Bien parti', how: 'Ranger ta paie 2 semaines d’affilée.', test: c => c.best >= 2, serie: 2 },
   { id: 's3', name: 'Régulier', how: 'Ranger ta paie 3 semaines d’affilée.', test: c => c.best >= 3, serie: 3 },
   { id: 's5', name: 'Fidèle', how: 'Ranger ta paie 5 semaines d’affilée.', test: c => c.best >= 5, serie: 5 },
   { id: 's10', name: 'Infatigable', how: 'Ranger ta paie 10 semaines d’affilée.', test: c => c.best >= 10, serie: 10 },
+  { id: 's15', name: 'Persévérant', how: 'Ranger ta paie 15 semaines d’affilée.', test: c => c.best >= 15, serie: 15 },
   { id: 's26', name: 'Six mois sans faillir', how: 'Ranger ta paie 26 semaines d’affilée.', test: c => c.best >= 26, serie: 26 },
   { id: 's52', name: 'Une année entière', how: 'Ranger ta paie 52 semaines d’affilée.', test: c => c.best >= 52, serie: 52 },
+  { id: 's78', name: 'Un an et demi', how: 'Ranger ta paie 78 semaines d’affilée.', test: c => c.best >= 78, serie: 78 },
+  { id: 's104', name: 'Deux ans sans faillir', how: 'Ranger ta paie 104 semaines d’affilée.', test: c => c.best >= 104, serie: 104 },
+  { id: 'p10', name: 'Dix paies rangées', how: 'Ranger 10 paies en tout.', test: c => c.paid >= 10 },
+  { id: 'p25', name: 'Vingt-cinq paies', how: 'Ranger 25 paies en tout.', test: c => c.paid >= 25 },
+  { id: 'p50', name: 'Cinquante paies', how: 'Ranger 50 paies en tout.', test: c => c.paid >= 50 },
+  { id: 'tout', name: 'Tout dans la tirelire', how: 'Ranger toute une paie dans ta tirelire, sans rien garder pour dépenser.', test: c => c.tout },
+  { id: 'bonus10', name: 'Bonus fidèle', how: `Recevoir ${f(10)} de bonus en tout.`, test: c => c.bonus >= 10 },
+  { id: 'recu5', name: 'Cadeaux bien gardés', how: 'Ranger 5 fois de l’argent reçu.', test: c => c.recu >= 5 },
   { id: 'cap', name: 'Premier palier', how: `Faire passer ta tirelire au-dessus de ${f(CAPS[0])}.`, test: c => c.peak >= CAPS[0] },
   { id: 'cap2', name: 'Deuxième palier', how: `Faire passer ta tirelire au-dessus de ${f(CAPS[1])}.`, test: c => c.peak >= CAPS[1] },
+  { id: 'cap3', name: 'Trois chiffres', how: `Faire passer ta tirelire au-dessus de ${f(CAPS[2])}.`, test: c => c.peak >= CAPS[2] },
+  { id: 'cap4', name: 'Deux cents euros', how: `Faire passer ta tirelire au-dessus de ${f(CAPS[3])}.`, test: c => c.peak >= CAPS[3] },
+  { id: 'cap5', name: 'Cinq cents euros', how: `Faire passer ta tirelire au-dessus de ${f(CAPS[5])}.`, test: c => c.peak >= CAPS[5] },
   { id: 'bourse', name: 'La bourse s’ouvre', how: `Atteindre ${f(BOURSE_MIN)} dans ta tirelire.`, test: c => c.peak >= BOURSE_MIN },
   { id: 'de1', name: 'Premier lancer', how: 'Lancer le dé de la bourse une première fois.', test: c => c.rolls >= 1 },
   { id: 'chance', name: 'Coup de chance', how: 'Faire gagner ta tirelire avec le dé.', test: c => c.won },
+  { id: 'six', name: 'Le six !', how: 'Faire sortir le 6 au dé de la bourse.', test: c => c.six },
   { id: 'calme', name: 'Garder son calme', how: 'Continuer la bourse après une semaine où le dé t’a fait perdre.', test: c => c.calm },
+  { id: 'trois', name: 'Trois de suite', how: 'Faire gagner ta tirelire 3 semaines de suite avec le dé.', test: c => c.trois },
   { id: 'de10', name: 'Investisseur patient', how: 'Lancer le dé de la bourse 10 semaines.', test: c => c.rolls >= 10 },
+  { id: 'de25', name: 'Marathonien', how: 'Lancer le dé de la bourse 25 semaines.', test: c => c.rolls >= 25 },
   { id: 'gain1', name: 'Ton argent travaille', how: `Gagner ${f(1)} grâce à la bourse, sans rien ajouter.`, test: c => c.gains >= 1 },
-  { id: 'projet', name: 'Projet réalisé', how: 'Réunir tout l’argent de ton projet.', test: c => c.goalDone },
+  { id: 'gain10', name: 'Argent qui bosse', how: `Gagner ${f(10)} grâce à la bourse.`, test: c => c.gains >= 10 },
+  { id: 'lecon3', name: 'Apprenti', how: 'Réussir le quiz de 3 leçons.', test: c => c.lq >= 3 },
   { id: 'savant', name: 'Petit savant', how: 'Réussir le quiz des 6 leçons.', test: c => c.lq >= 6 },
+  { id: 'projet', name: 'Projet réalisé', how: 'Réunir tout l’argent de ton projet.', test: c => c.goalDone },
+  { id: 'collec', name: 'Collectionneur', how: 'Gagner 20 autres pépites.', test: c => c.n >= 20 },
 ];
 
 MEDALS.forEach(m => Object.assign(m, MATS[m.id]));
@@ -974,7 +993,8 @@ const pepOf = m => `pépite\u00a0${m.mat.replace(' ', '\u00a0')}`;
 function medals(id) {
   const k = kidOf(id); if (!k) return [];
   const E = evs(id), T = tot(id), g = goalOf(id), B = E.filter(e => e.t === 'bourse').sort((a, b) => (a.d < b.d ? -1 : 1));
-  const c = { paid: paidWeeks(id).size, bonus: E.reduce((a, e) => a + ((e.t === 'paie' || (e.t === 'recu' && !e.pending && !e.refused)) ? e.bonus || 0 : 0), 0), best: bestStreak(id), peak: r2(T.peak), rolls: E.filter(e => e.t === 'bourse').length, goalDone: E.some(e => e.t === 'projet') || (g && T.total >= g.budget), lq: Object.keys(k.lq || {}).length, goal: !!g || E.some(e => e.t === 'projet'), recu: E.some(e => e.t === 'recu' && !e.pending && !e.refused), won: B.some(e => e.gain > 0), calm: B.some((e, i) => e.gain < 0 && i < B.length - 1), gains: r2(T.gains || 0) };
+  const c = { paid: paidWeeks(id).size, bonus: E.reduce((a, e) => a + ((e.t === 'paie' || (e.t === 'recu' && !e.pending && !e.refused)) ? e.bonus || 0 : 0), 0), best: bestStreak(id), peak: r2(T.peak), rolls: E.filter(e => e.t === 'bourse').length, goalDone: E.some(e => e.t === 'projet') || (g && T.total >= g.budget), lq: Object.keys(k.lq || {}).length, goal: !!g || E.some(e => e.t === 'projet'), recu: E.filter(e => e.t === 'recu' && !e.pending && !e.refused).length, won: B.some(e => e.gain > 0), calm: B.some((e, i) => e.gain < 0 && i < B.length - 1), gains: r2(T.gains || 0), style: E.some(e => e.t === 'posture' && e.p !== 'none'), six: B.some(e => e.face === 6), trois: B.some((e, i) => i >= 2 && e.gain > 0 && B[i - 1].gain > 0 && B[i - 2].gain > 0), tout: E.some(e => e.t === 'paie' && e.inv > 0 && !e.dep) };
+  c.n = MEDALS.filter(m => m.id !== 'collec' && m.test(c)).length;
   return MEDALS.map(m => ({ ...m, ok: !!m.test(c) }));
 }
 const medalSet = id => new Set(medals(id).filter(m => m.ok).map(m => m.id));
@@ -982,8 +1002,11 @@ const medalSet = id => new Set(medals(id).filter(m => m.ok).map(m => m.id));
 function newMedal(id, before) {
   const got = medals(id).filter(m => m.ok && !before.has(m.id));
   if (!got.length) return '';
-  const m = got[got.length - 1];
-  if (m.serie) queuePush('serie', { kid: id, n: m.serie });
+  const m = got[got.length - 1], kk = kidOf(id);
+  if (kk) { kk.pm = m.id; saveF(); }
+  const sm = got.filter(x => x.serie).pop();
+  if (sm) queuePush('serie', { kid: id, n: sm.serie });
+  if (got.length > 1) return `${got.length} nouvelles pépites\u00a0: ${got.map(x => `«\u00a0${x.name}\u00a0»`).join(' et ')}\u00a0!`;
   return `Nouvelle ${pepOf(m)}\u00a0: «\u00a0${m.name}\u00a0»\u00a0!`;
 }
 function nextSerie(id) { const st = streakOf(id), m = MEDALS.find(x => x.serie && x.serie > st && x.serie > bestStreak(id)); return m ? { m, left: m.serie - st } : null; }
@@ -991,8 +1014,8 @@ function pepitesView() {
   const L = medals(cur), n = L.filter(m => m.ok).length, st = streakOf(cur), nx = nextSerie(cur);
   return `<button class="backlink" data-act="go" data-v="home">${I.chev}<span>Ma tirelire</span></button><h2 class="title">Mes pépites</h2>
 <p class="lead">Chaque pépite récompense un réflexe de bon épargnant. Tu en as ${n} sur ${L.length}.</p>
-${st >= 1 ? `<section class="card serie"><b>${st} semaine${st > 1 ? 's' : ''} d’affilée</b><span>${nx ? `Encore ${nx.left} paie${nx.left > 1 ? 's' : ''} rangée${nx.left > 1 ? 's' : ''} pour ta ${pepOf(nx.m)}.` : 'Tu as toutes les pépites de régularité. Respect !'}</span></section>` : ''}
-<div class="medals">${L.map(m => `<div class="medal ${m.ok ? 'on' : ''}" style="--m:${m.c}">${matNug(m)}<b>${m.ok ? m.name : '?'}</b><em>${m.ok ? `Pépite ${m.mat}` : 'Pépite mystère'}</em><small>${m.how}</small></div>`).join('')}</div>`;
+${st >= 1 ? `<section class="card serie"><b>${st} semaine${st > 1 ? 's' : ''} d’affilée</b><span>${nx ? `Encore ${nx.left} paie${nx.left > 1 ? 's' : ''} rangée${nx.left > 1 ? 's' : ''} pour gagner une nouvelle pépite.` : 'Tu as toutes les pépites de régularité. Respect !'}</span></section>` : ''}
+<div class="medals">${L.map(m => `<div class="medal ${m.ok ? 'on' : ''}" style="--m:${m.c}">${m.ok ? matNug(m) : `<svg class="mnug" viewBox="2 8 60 52" aria-hidden="true">${mystSVG()}</svg>`}<b>${m.ok ? m.name : '?'}</b><em>${m.ok ? `Pépite ${m.mat}` : 'Pépite mystère'}</em><small>${m.how}</small></div>`).join('')}</div>`;
 }
 
 
@@ -1386,7 +1409,7 @@ document.addEventListener('click', ev => {
       const md0 = medalSet(cur), ln0 = lessonsOpen(cur);
       EV[cur] = [...evs(cur), { t: 'paie', d: iso(), w: new Date(ow[0]).toISOString(), inv, dep, bonus }];
       const nx = nextSerie(cur), st1 = streakOf(cur);
-      const cel = newMedal(cur, md0) || (lessonsOpen(cur) > ln0 && lessonsOpen(cur) <= lessonList().length ? 'Nouvelle leçon débloquée !' : '') || (st1 >= 2 && nx ? `${st1} semaines d’affilée ! Encore ${nx.left} pour ta ${pepOf(nx.m)}.` : '');
+      const cel = newMedal(cur, md0) || (lessonsOpen(cur) > ln0 && lessonsOpen(cur) <= lessonList().length ? 'Nouvelle leçon débloquée !' : '') || (st1 >= 2 && nx ? `${st1} semaines d’affilée ! Encore ${nx.left} pour une nouvelle pépite.` : '');
       if (guide !== null) guidePaid = true;
       saveK(cur);
       sayMs(before, inv ? `Bravo ! ${f(inv + bonus)} rejoignent ta tirelire.` : 'Paie rangée : tout est dans ton porte-monnaie.', dep ? `${f(dep)} pour ton porte-monnaie : ${P().label.toLowerCase()} ${F.parents === 'parents' ? 'te les donneront' : 'te les donnera'}.` : '');

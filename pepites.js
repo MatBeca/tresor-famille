@@ -2,6 +2,7 @@
 const hx = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
 const mixc = (a, b, t) => '#' + hx(a).map((v, i) => Math.round(v + (hx(b)[i] - v) * t).toString(16).padStart(2, '0')).join('');
 export const tone = (c, t) => t >= 0 ? mixc(c, '#ffffff', t) : mixc(c, '#000000', -t);
+const ell = (cx, cy, rx, ry, n, a0 = -Math.PI / 2) => Array.from({ length: n }, (_, i) => { const a = a0 + i * 2 * Math.PI / n; return [+(cx + rx * Math.cos(a)).toFixed(2), +(cy + ry * Math.sin(a)).toFixed(2)]; });
 const pts = a => a.map(p => p.join(' ')).join(' ');
 const poly = (a, fill, line, w = 1.1) => `<path d="M${pts(a)}Z" fill="${fill}" stroke="${line}" stroke-width="${w}" stroke-linejoin="round"/>`;
 const edge = (a, line) => `<path d="M${pts(a)}Z" fill="none" stroke="${line}" stroke-width="3" stroke-linejoin="round"/>`;
@@ -103,6 +104,94 @@ const D = {
   turquoise(c, L) { // cabochon ovale veiné
     return `<ellipse cx="32" cy="35" rx="25" ry="18" fill="${c}"/><path d="M57 35A25 18 0 0 1 9 39A25 18 0 0 0 56 39Z" fill="${tone(c, -0.25)}"/><path d="M14 33q6-5 11 0t9-2q4-3 8 1M24 44q5-3 9 1t9-3M37 22q3 4 1 8" stroke="#5a4a3a" stroke-width="1.3" fill="none" stroke-linecap="round" opacity=".75"/><ellipse cx="32" cy="35" rx="25" ry="18" fill="none" stroke="${L}" stroke-width="3"/>` + shine('M15 28Q19 21 28 19');
   },
+  citrine(c, L) { // taille trillion
+    const o = [[32, 10], [44, 29], [55, 50], [32, 54], [9, 50], [20, 29]];
+    return fan(o, 32, 39, c, L) + poly([[32, 27], [42, 45], [22, 45]], tone(c, 0.35), L) + edge(o, L) + shine('M24 27 29 19') + spark(32, 39, 3.4, tone(c, 0.85), L);
+  },
+  topaze(c, L) { // ovale facetté
+    const o = ell(32, 34, 24, 18, 14), i = ell(32, 34, 12, 8, 7);
+    return fan(o, 32, 34, c, L) + poly(i, tone(c, 0.3), L) + edge(o, L) + shine('M14 27Q18 21 24 18.5');
+  },
+  aigue(c, L) { // baguette à gradins
+    const o = [[12, 22], [52, 22], [52, 46], [12, 46]], i = [[18, 27], [46, 27], [46, 41], [18, 41]];
+    const seg = (a, b, t) => poly([o[a], o[b], i[b], i[a]], tone(c, t), L);
+    return `<g transform="rotate(-22 32 34)">${seg(0, 1, 0.45) + seg(1, 2, -0.2) + seg(2, 3, -0.35) + seg(3, 0, 0.2) + poly(i, tone(c, 0.12), L) + poly([[22, 31], [42, 31], [42, 37], [22, 37]], tone(c, 0.25), L, 0.8) + edge(o, L) + shine('M15.5 30 15.5 38', 2.4)}</g>`;
+  },
+  grenat(c, L) { // rond brillant vu de dessus
+    const o = ell(32, 34, 23, 23, 16), i = ell(32, 34, 11, 11, 8, Math.PI / 8);
+    return fan(o, 32, 34, c, L) + poly(i, tone(c, 0.22), L) + edge(o, L) + shine('M15 26Q18 20 23 17') + spark(36, 30, 3.4, tone(c, 0.8), L);
+  },
+  tourmaline(c, L) { // tranche « pastèque » : bord vert, cœur rose
+    const o = ell(32, 34, 23, 23, 6, Math.PI / 6), w = ell(32, 34, 17.5, 17.5, 6, Math.PI / 6), i = ell(32, 34, 15.5, 15.5, 6, Math.PI / 6), k = ell(32, 34, 6, 6, 6, Math.PI / 6);
+    return poly(o, '#3fae5c', L) + poly(w, '#f3f6ea', L, 0.8) + poly(i, c, L, 0.8) + poly(k, tone(c, -0.25), L, 0.8) + `<path d="M${pts(i)}Z" fill="${tone(c, 0.35)}" opacity=".5" transform="translate(-3 -3) scale(.55) translate(26 28)"/>` + edge(o, L) + shine('M14 24 20 17.5');
+  },
+  obsidienne(c, L) { // éclat de pierre volcanique, noir et brillant
+    const o = [[30, 9], [46, 25], [43, 44], [30, 57], [17, 41], [20, 22]];
+    return fan(o, 31, 34, c, L) + edge(o, L) + shine('M23 24 28 15') + shine('M37 42 40 36', 2.2, 0.8) + spark(48, 14, 4, '#fff', L);
+  },
+  malachite(c, L) { // pierre polie aux bandes vertes
+    const d = 'M10 36C10 24 22 16 34 17C48 18 56 28 54 40C52 52 40 57 28 55C16 53 10 46 10 36Z';
+    const bands = [0.78, 0.56, 0.34].map((k, j) => `<path d="${d}" transform="translate(${32 * (1 - k)} ${36 * (1 - k)}) scale(${k})" fill="${tone(c, j % 2 ? 0.25 : -0.22)}"/>`).join('');
+    return `<path d="${d}" fill="${c}"/>${bands}<path d="M54 40C52 52 40 57 28 55C16 53 10 46 10 36C18 48 32 52 44 48C50 46 53 43 54 40Z" fill="#000" opacity=".15"/><path d="${d}" fill="none" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>` + shine('M15 29Q19 22 26 19.5');
+  },
+  corail(c, L) { // branche de corail
+    const br = 'M32 55V37M32 47Q24 41 21 31Q20 25 16 19M21 33Q14 31 11 25M32 40Q38 32 43 26Q46 20 45 13M43 27Q50 26 53 20M32 38Q31 29 33 21';
+    return `<path d="${br}" stroke="${L}" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${br}" stroke="${c}" stroke-width="5.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M19.5 29Q19 25 16 20.5M41.5 25Q44 20 44 15.5" stroke="${tone(c, 0.5)}" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M20 57Q22 51 32 51Q42 51 44 57Z" fill="#e8d2a8" stroke="${L}" stroke-width="2.4" stroke-linejoin="round"/>`;
+  },
+  glace(c, L) { // cristal de glace en flocon
+    const arm = a => `M32 34L${32 + 22 * Math.cos(a)} ${34 + 22 * Math.sin(a)}M${32 + 13 * Math.cos(a)} ${34 + 13 * Math.sin(a)}L${32 + 13 * Math.cos(a) + 7 * Math.cos(a - 0.9)} ${34 + 13 * Math.sin(a) + 7 * Math.sin(a - 0.9)}M${32 + 13 * Math.cos(a)} ${34 + 13 * Math.sin(a)}L${32 + 13 * Math.cos(a) + 7 * Math.cos(a + 0.9)} ${34 + 13 * Math.sin(a) + 7 * Math.sin(a + 0.9)}`;
+    const d = [0, 1, 2, 3, 4, 5].map(i => arm(-Math.PI / 2 + i * Math.PI / 3)).join('');
+    return `<path d="${d}" stroke="${L}" stroke-width="8" fill="none" stroke-linecap="round"/><path d="${d}" stroke="${c}" stroke-width="4" fill="none" stroke-linecap="round"/>${poly(ell(32, 34, 7, 7, 6, Math.PI / 6), tone(c, 0.5), L, 1.6)}` + spark(52, 14, 3.6, '#fff', L);
+  },
+  tigre(c, L) { // œil-de-tigre : cabochon rayé et chatoyant
+    return `<rect x="9" y="17" width="46" height="36" rx="15" fill="${c}"/><path d="M12 30Q22 26 32 30T54 29M10 39Q22 35 32 39T55 38M13 47Q22 44 32 47T52 46" stroke="${tone(c, -0.3)}" stroke-width="2.6" fill="none"/><path d="M14 34Q24 30 32 34T54 33" stroke="#ffe08a" stroke-width="3.4" fill="none" opacity=".85"/><rect x="9" y="17" width="46" height="36" rx="15" fill="none" stroke="${L}" stroke-width="3"/>` + shine('M16 23Q20 20 26 19.5');
+  },
+  fluorite(c, L) { // octaèdre violet et vert
+    const g = '#5fd0b5';
+    return poly([[32, 9], [10, 33], [29, 38]], tone(c, 0.35), L) + poly([[32, 9], [29, 38], [54, 32]], tone(c, -0.1), L) + poly([[10, 33], [29, 38], [32, 58]], tone(g, 0.2), L) + poly([[29, 38], [54, 32], [32, 58]], tone(g, -0.2), L) + edge([[32, 9], [54, 32], [32, 58], [10, 33]], L) + shine('M18 28 25 20') + spark(50, 14, 3.6, '#fff', L);
+  },
+  pyrite(c, L) { // cube : l'« or des fous »
+    const top = [[32, 13], [54, 23], [32, 33], [10, 23]], lf = [[10, 23], [32, 33], [32, 56], [10, 46]], rt = [[32, 33], [54, 23], [54, 46], [32, 56]];
+    const st = (a, b, n) => Array.from({ length: n }, (_, j) => { const k = (j + 1) / (n + 1); return `M${a[0][0] + (a[1][0] - a[0][0]) * k} ${a[0][1] + (a[1][1] - a[0][1]) * k}L${b[0][0] + (b[1][0] - b[0][0]) * k} ${b[0][1] + (b[1][1] - b[0][1]) * k}`; }).join('');
+    return poly(top, tone(c, 0.35), L) + poly(lf, tone(c, -0.05), L) + poly(rt, tone(c, -0.3), L) + `<path d="${st([[10, 23], [32, 13]], [[32, 33], [54, 23]], 3)}${st([[10, 23], [10, 46]], [[32, 33], [32, 56]], 3)}${st([[54, 23], [54, 46]], [[32, 33], [32, 56]], 3)}" stroke="${L}" stroke-width=".7" opacity=".45"/>` + edge([[32, 13], [54, 23], [54, 46], [32, 56], [10, 46], [10, 23]], L) + shine('M16 25 24 21.5', 2.2) + spark(53, 12, 4, '#fff8d6', L);
+  },
+  labradorite(c, L) { // pierre sombre aux reflets bleus
+    const d = 'M9 40C7 28 18 18 31 18C44 17 56 24 55 37C54 50 42 56 29 55C18 54 10 49 9 40Z';
+    return `<path d="${d}" fill="${c}"/><path d="M14 40Q24 28 40 30T52 26Q48 40 32 42T14 40Z" fill="#4fc3f7" opacity=".85"/><path d="M20 47Q32 40 46 44Q40 50 30 50T20 47Z" fill="#5ee0b0" opacity=".7"/><path d="M24 33Q32 28 42 31" stroke="#b5f0ff" stroke-width="1.6" fill="none" opacity=".9"/><path d="${d}" fill="none" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>` + shine('M15 30Q19 23 26 21');
+  },
+  lune(c, L) { // pierre de lune en croissant
+    const d = 'M40 12A22 22 0 1 0 40 56A42 42 0 0 1 40 12Z';
+    return `<path d="${d}" fill="${c}"/><path d="M22 21Q15 34 22 47" stroke="#9ec5ff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".7"/><path d="${d}" fill="none" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>` + shine('M25 17Q29 14.5 33 13.6') + spark(50, 26, 4, '#fff', L) + spark(48, 42, 2.6, '#fff', L);
+  },
+  tanzanite(c, L) { // taille marquise
+    const o = [[6, 34], [14, 26], [24, 21], [32, 20], [40, 21], [50, 26], [58, 34], [50, 42], [40, 47], [32, 48], [24, 47], [14, 42]];
+    return `<g transform="rotate(-24 32 34) translate(32 34) scale(.86) translate(-32 -34)">${fan(o, 32, 34, c, L)}${poly([[20, 34], [32, 28], [44, 34], [32, 40]], tone(c, 0.3), L)}${edge(o, L)}${shine('M15 30 22 25.5')}</g>`;
+  },
+  soleil(c, L) { // pierre de soleil : un petit soleil pailleté
+    const rays = Array.from({ length: 8 }, (_, i) => { const a = i * Math.PI / 4 - Math.PI / 2, b = 0.32; return poly([[32 + 16 * Math.cos(a - b), 34 + 16 * Math.sin(a - b)], [32 + 25 * Math.cos(a), 34 + 25 * Math.sin(a)], [32 + 16 * Math.cos(a + b), 34 + 16 * Math.sin(a + b)]], tone(c, i % 2 ? 0.25 : -0.05), L, 2); }).join('');
+    const dots = [[27, 30], [36, 28], [38, 38], [29, 40], [33, 34], [24, 36], [40, 33]];
+    return rays + `<circle cx="32" cy="34" r="15" fill="${c}" stroke="${L}" stroke-width="3"/>${dots.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.1" fill="${tone(c, -0.35)}"/>`).join('')}` + shine('M23 30Q25 25 30 23.5');
+  },
+  ammonite(c, L) { // fossile en spirale
+    const P = []; for (let a = 0; a <= 4 * Math.PI; a += 0.2) { const r = 2.5 + 20 * a / (4 * Math.PI); P.push([32 + r * Math.cos(a), 34 + r * Math.sin(a)]); }
+    const sp = 'M' + P.map(p => p.map(v => v.toFixed(1)).join(' ')).join('L');
+    const ribs = P.filter((_, i) => i > 30 && i % 2 === 0).map(([x, y]) => { const dx = x - 32, dy = y - 34, r = Math.hypot(dx, dy), k = (r - 9) / r; return `M${x.toFixed(1)} ${y.toFixed(1)}L${(32 + dx * k).toFixed(1)} ${(34 + dy * k).toFixed(1)}`; }).join('');
+    return `<circle cx="32" cy="34" r="22.5" fill="${c}"/><path d="${ribs}" stroke="${tone(c, -0.3)}" stroke-width="1.2"/><path d="${sp}" stroke="${L}" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="32" cy="34" r="22.5" fill="none" stroke="${L}" stroke-width="3"/>` + shine('M15 26Q19 19 26 15.5');
+  },
+  rose(c, L) { // rose des sables : pétales de pierre
+    const pet = [[18, 41, 12, 4.8, -60, -0.05], [46, 41, 12, 4.8, 60, -0.2], [24, 30, 12, 4.8, -25, 0.18], [40, 30, 12, 4.8, 25, 0.02], [32, 33, 13, 4.6, 90, 0.3], [32, 48, 16, 5.5, 0, -0.1], [22, 45, 11, 4.5, -15, 0.12], [42, 45, 11, 4.5, 15, -0.02]];
+    return pet.map(([x, y, rx, ry, r, t]) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" transform="rotate(${r} ${x} ${y})" fill="${tone(c, t)}" stroke="${L}" stroke-width="2"/>`).join('') + shine('M24 25.5 30 23.5', 2.2);
+  },
+  agate(c, L) { // tranche de géode aux bandes bleues
+    const d = 'M10 34C9 22 20 14 33 15C46 16 56 25 54 38C52 50 41 56 29 55C17 54 11 45 10 34Z';
+    const bands = [[0.82, 0.55], [0.66, 0.05], [0.5, 0.6], [0.36, 0.25]].map(([k, t]) => `<path d="${d}" transform="translate(${32 * (1 - k)} ${35 * (1 - k)}) scale(${k})" fill="${tone(c, t)}"/>`).join('');
+    const cry = [[30, 33], [34, 36], [31, 38], [35, 32]].map(([x, y]) => poly([[x, y - 2.5], [x + 2, y + 1.5], [x - 2, y + 1.5]], '#fff', tone(c, -0.2), 0.6)).join('');
+    return `<path d="${d}" fill="${c}"/>${bands}${cry}<path d="${d}" fill="none" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>` + shine('M15 27Q18 21 24 18');
+  },
+  arcenciel(c, L) { // la pépite de la marque, en couleurs
+    const R = ['#ffd93b', '#fff1a8', '#ff9f43', '#ff6b6b', '#ffc56b', '#6bcb77', '#4d96ff', '#ff8fc7', '#9b6bff'];
+    return NUGF.map((d, i) => `<path d="${d}" fill="${R[i]}" stroke="${L}" stroke-width="1.1" stroke-linejoin="round"/>`).join('') + edge([[6, 40], [14, 24], [30, 15], [46, 17], [58, 30], [56, 46], [42, 55], [20, 54]], L) + shine('M20 27 26 21') + spark(33, 22, 4.5, '#fff', L) + spark(55, 13, 4, '#ffd93b', L) + spark(8, 15, 3, '#4d96ff', L);
+  },
 };
 
 // Matière, couleur, trait et dessin de chaque pépite (même ordre que la liste des pépites).
@@ -127,5 +216,27 @@ export const MATS = {
   gain1: { mat: 'de cuivre', c: '#d0643a', line: '#5e2410', draw: 'cuivre' },
   projet: { mat: 'd’améthyste', c: '#9a5ce0', line: '#44206e', draw: 'amethyste' },
   savant: { mat: 'de turquoise', c: '#20bcc6', line: '#0c5a60', draw: 'turquoise' },
+  s2: { mat: 'de citrine', c: '#ffd83b', line: '#7a5f00', draw: 'citrine' },
+  s15: { mat: 'de grenat', c: '#a81d3f', line: '#4a0817', draw: 'grenat' },
+  s78: { mat: 'de pierre de soleil', c: '#ff9a3c', line: '#8a3d00', draw: 'soleil' },
+  s104: { mat: 'd’ammonite', c: '#dcbc8c', line: '#5e4220', draw: 'ammonite' },
+  p10: { mat: 'de pyrite', c: '#c9b04a', line: '#5a4a10', draw: 'pyrite' },
+  p25: { mat: 'd’aigue-marine', c: '#7fd6d9', line: '#1f6a70', draw: 'aigue' },
+  p50: { mat: 'de topaze', c: '#f28a5a', line: '#7a321a', draw: 'topaze' },
+  tout: { mat: 'd’agate', c: '#5b8fd6', line: '#23406e', draw: 'agate' },
+  bonus10: { mat: 'de corail', c: '#ff6f61', line: '#8a2a20', draw: 'corail' },
+  recu5: { mat: 'de rose des sables', c: '#e3b98a', line: '#7a5230', draw: 'rose' },
+  cap3: { mat: 'd’œil-de-tigre', c: '#b5781f', line: '#4a2c06', draw: 'tigre' },
+  cap4: { mat: 'de fluorite', c: '#b48cf0', line: '#3b2a6b', draw: 'fluorite' },
+  cap5: { mat: 'de tanzanite', c: '#5b4fd6', line: '#241a6b', draw: 'tanzanite' },
+  style: { mat: 'de labradorite', c: '#4d5866', line: '#1d232b', draw: 'labradorite' },
+  six: { mat: 'de tourmaline', c: '#f27aa0', line: '#5a2030', draw: 'tourmaline' },
+  trois: { mat: 'de pierre de lune', c: '#eef2fa', line: '#5a6a8a', draw: 'lune' },
+  de25: { mat: 'd’obsidienne', c: '#3a3544', line: '#0d0b10', draw: 'obsidienne' },
+  gain10: { mat: 'de malachite', c: '#2fa36b', line: '#0f4a2e', draw: 'malachite' },
+  lecon3: { mat: 'de glace', c: '#bfe9ff', line: '#2f7fb0', draw: 'glace' },
+  collec: { mat: 'arc-en-ciel', c: '#9b6bff', line: '#3a2a5a', draw: 'arcenciel' },
 };
 export const matSVG = m => D[m.draw](m.c, m.line);
+// Pépite pas encore gagnée : une pépite grise avec un point d'interrogation.
+export const mystSVG = () => NUGF.map((d, i) => `<path d="${d}" fill="${['#e9e6e1', '#f3f1ed', '#e2ded8', '#d9d4cd', '#e0dcd5', '#cfc9c1', '#c7c0b7', '#d6d1ca', '#bfb8ae'][i]}" stroke="#a29a8e" stroke-width="1.1" stroke-linejoin="round"/>`).join('') + edge([[6, 40], [14, 24], [30, 15], [46, 17], [58, 30], [56, 46], [42, 55], [20, 54]], '#a29a8e') + '<text x="32" y="43" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="21" fill="#7d7468" stroke="#fff" stroke-width="3" paint-order="stroke">?</text>';
