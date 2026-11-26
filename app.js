@@ -7,7 +7,7 @@ import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
 import { GAMES, LEVELS, levelOfAge, newParty, traySum, isRight, explain, eu, ROUNDS, WIN, PER_DAY } from './games.js';
-const VERSION = '123'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '124'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -242,7 +242,9 @@ function milestone(before, after) {
   for (const m of [1, 0.75, 0.5, 0.25]) if (b < m && a >= m) return m === 1 ? `C’est pépite ! Objectif « ${esc(g.name)} » atteint !` : ({ step: `Étape ${m * 4} sur 4 franchie pour « ${esc(g.name)} » : ta pépite grossit !`, frac: `${cap1(FRAC[m])} du chemin pour « ${esc(g.name)} » : ta pépite grossit !`, pct: `Palier ${m * 100} % atteint pour « ${esc(g.name)} » !` })[msBand(cur)];
   return '';
 }
-function sayMs(before, msg, sub) { markBourse(true); const after = tot(cur).total, ms = milestone(before, after), gg = goalOf(cur); if (gg && before < gg.budget && after >= gg.budget) { const k = kidOf(cur); if (k) { (k.gx || (k.gx = {})).objectif = 1; saveF(); } } if (ms) { say(ms, msg); const g = goalOf(cur), c = CAPS.find(x => before < x && after >= x); if (g ? before < g.budget && after >= g.budget : c) queuePush(g ? 'objectif' : 'palier', { kid: cur, amount: g ? r2(g.budget) : c, goal: g ? g.name : null }); } else say(msg, sub); }
+// Objectif du projet atteint grâce à l'argent rangé, gagné ou reçu (pas en créant un projet moins cher que la tirelire) : ça débloque « Projet réalisé ».
+function markGoal(id, before) { const g = goalOf(id), k = kidOf(id), after = tot(id).total; if (g && k && before < g.budget && after >= g.budget) { (k.gx || (k.gx = {})).objectif = 1; saveF(); } }
+function sayMs(before, msg, sub) { markBourse(true); const after = tot(cur).total, ms = milestone(before, after); markGoal(cur, before); if (ms) { say(ms, msg); const g = goalOf(cur), c = CAPS.find(x => before < x && after >= x); if (g ? before < g.budget && after >= g.budget : c) queuePush(g ? 'objectif' : 'palier', { kid: cur, amount: g ? r2(g.budget) : c, goal: g ? g.name : null }); } else say(msg, sub); }
 function project(id, perWeek, strat) {
   const k = kidOf(id), t = tot(id), m = strat ? POST[strat].faces.reduce((x, y) => x + y, 0) / 6 / 100 : projMean(id), match = F.match / 100, now = new Date(), birth = new Date(k.birth + 'T12:00:00'), share = k.weekly ? Math.min(1, perWeek / k.weekly) : 1;
   let own = t.own, bonus = t.bonus, gains = t.gains, w = 0, pw = perWeek; const pts = [];
@@ -1705,6 +1707,7 @@ function okGift(id, d, yes) {
   const before = tot(id).total;
   EV[id] = evs(id).map(x => x === e ? (yes ? { ...x, pending: false, ok: iso() } : { ...x, pending: false, refused: iso() }) : x);
   saveK(id);
+  if (yes) markGoal(id, before);
   if (!yes) { say(`Refusé : ${f(e.inv + e.dep)}${e.from ? ' de ' + esc(e.from) : ''} ne compte pas.`); return; }
   if (id === cur && view === 'recu') { view = 'home'; window.scrollTo(0, 0); }
   if (id === cur) sayMs(before, e.inv ? `Validé ! ${f(e.inv + e.bonus)} rejoignent ta tirelire.` : `Validé ! ${f(e.dep)} dans ton porte-monnaie.`, e.inv ? `Pense à mettre ${f(e.inv)} en lieu sûr.` : '');
