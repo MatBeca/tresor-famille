@@ -7,7 +7,7 @@ import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
 import { GAMES, LEVELS, levelOfAge, newParty, traySum, isRight, explain, eu, ROUNDS, WIN, PER_DAY } from './games.js';
-const VERSION = '116'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '117'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -142,11 +142,17 @@ function coinsOf(w) { const n = Math.floor(w + 1e-9); return [...Array(n).fill(1
 function coinsTxt(w) { const c = coinsOf(w), n = c.filter(v => v === 1).length, h = c.length > n; return [n ? `${n} pièce${n > 1 ? 's' : ''} de 1 €` : '', h ? '1 pièce de 50 centimes' : ''].filter(Boolean).join(' et '); }
 const halfNum = v => { const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) ? Math.round(n * 2) / 2 : NaN; };
 function coinSVG(v) {
-  const half = v < 1, o = half ? { b: '#f0ae1c', l: '#ffd760', d: '#c78300', s: '#6e4400' } : { b: '#d7dde7', l: '#f6f8fb', d: '#a7afbe', s: '#3f4558' };
+  const half = v < 1, two = v >= 2, gold = { b: '#f0ae1c', l: '#ffd760', d: '#c78300', s: '#6e4400' }, o = half || two ? gold : { b: '#d7dde7', l: '#f6f8fb', d: '#a7afbe', s: '#3f4558' };
   const body = `<circle cx="32" cy="32" r="29" fill="${o.d}"/><circle cx="30.6" cy="30.6" r="27.4" fill="${o.b}"/><path d="M6.5 27A26 26 0 0 1 27 6.5L30.5 15.5 15.5 30.5Z" fill="${o.l}"/><circle cx="32" cy="32" r="29" fill="none" stroke="${o.s}" stroke-width="3"/>`;
+  const c = two ? { d: '#a7afbe', b: '#d7dde7', l: '#f6f8fb', s: '#3f4558', t: '#2b3040', n: '2' } : { d: '#d08a00', b: '#f5b323', l: '#ffe68a', s: '#6e4400', t: '#6e4400', n: '1' };
   const core = half ? `<circle cx="32" cy="32" r="21.5" fill="none" stroke="${o.d}" stroke-width="1.8"/><text x="32" y="38.5" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="18" fill="#6e4400">50<tspan font-size="12" dx="1">c</tspan></text>`
-    : `<circle cx="32" cy="32" r="17.5" fill="#d08a00"/><circle cx="31.2" cy="31.2" r="16.3" fill="#f5b323"/><path d="M15.6 29A16 16 0 0 1 29 15.6L31 22.5 22.5 31Z" fill="#ffe68a"/><circle cx="32" cy="32" r="17.5" fill="none" stroke="#6e4400" stroke-width="2.4"/><text x="32" y="39.5" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="20" fill="#6e4400">1<tspan font-size="13" dx="1">€</tspan></text>`;
+    : `<circle cx="32" cy="32" r="17.5" fill="${c.d}"/><circle cx="31.2" cy="31.2" r="16.3" fill="${c.b}"/><path d="M15.6 29A16 16 0 0 1 29 15.6L31 22.5 22.5 31Z" fill="${c.l}"/><circle cx="32" cy="32" r="17.5" fill="none" stroke="${c.s}" stroke-width="2.4"/><text x="32" y="39.5" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="20" fill="${c.t}">${c.n}<tspan font-size="13" dx="1">€</tspan></text>`;
   return `<svg viewBox="0 0 64 64" aria-hidden="true">${body}${core}<path d="M13.5 21.5 18.5 15.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>`;
+}
+// Billets dans le même style que les pièces : à plat, contour épais, facette claire en haut à gauche.
+function billSVG(v) {
+  const o = { 5: { b: '#a9c4cf', d: '#7a98a6', l: '#dcebf0', s: '#2f4652' }, 10: { b: '#ef8f86', d: '#c4645c', l: '#fbd0cb', s: '#5a1f1a' }, 20: { b: '#86aef0', d: '#5a82c4', l: '#d0e0fa', s: '#1d3766' } }[v] || { b: '#c8b6e8', d: '#9a84c4', l: '#ebe2fa', s: '#3a2a5a' };
+  return `<svg viewBox="0 0 100 58" aria-hidden="true"><rect x="5" y="7" width="92" height="48" rx="7" fill="${o.d}"/><rect x="2" y="3" width="92" height="48" rx="7" fill="${o.b}"/><path d="M2 22V10Q2 3 9 3H34L18 22Z" fill="${o.l}"/><rect x="8" y="9" width="80" height="36" rx="4" fill="none" stroke="${o.d}" stroke-width="1.8"/><circle cx="27" cy="27" r="10.5" fill="${o.l}" stroke="${o.s}" stroke-width="2.2"/><path d="M27 20.5l1.9 4 4.4.5-3.3 3 .9 4.3-3.9-2.2-3.9 2.2.9-4.3-3.3-3 4.4-.5z" fill="${o.d}"/><text x="65" y="36" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="24" fill="${o.s}">${v}<tspan font-size="15" dx="1.5">€</tspan></text><rect x="2" y="3" width="92" height="48" rx="7" fill="none" stroke="${o.s}" stroke-width="3"/><path d="M9.5 12.5 14 8.5" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>`;
 }
 const coinEl = (v, act) => { const lbl = v < 1 ? '50 centimes' : '1 euro'; return act ? `<button class="coin${v < 1 ? ' half' : ''}" data-act="${act}" aria-label="Reprendre cette pièce de ${lbl}" ${ready ? '' : 'disabled'}>${coinSVG(v)}</button>` : `<span class="coin${v < 1 ? ' half' : ''}" role="img" aria-label="Pièce de ${lbl}">${coinSVG(v)}</span>`; };
 function say(msg, sub) { toast = { msg, sub }; clearTimeout(toastT); toastT = setTimeout(() => { toast = null; render(); }, 4500); }
@@ -395,7 +401,7 @@ ${Object.entries(GAMES).map(([id, g]) => {
   }).join('')}
 <p class="soft small" style="text-align:center">D’autres jeux arrivent bientôt.</p>`;
 }
-const coinH = (c, act, n, dis) => `<button class="gcoin${c >= 500 ? ' bill' : c < 100 ? ' small' : ''}" data-act="${act}" data-n="${n}" ${dis ? 'disabled' : ''} aria-label="${eu(c)}">${eu(c)}</button>`;
+const coinH = (c, act, n, dis) => `<button class="gm${c >= 500 ? ' bill' : c < 100 ? ' half' : c >= 200 ? ' two' : ''}" data-act="${act}" data-n="${n}" ${dis ? 'disabled' : ''} aria-label="${c >= 500 ? 'Billet de' : 'Pièce de'} ${eu(c)}">${c >= 500 ? billSVG(c / 100) : coinSVG(c / 100)}</button>`;
 function raceBars(r) {
   const max = Math.max(...r.bars.map(b => b[1]), 1);
   return `<div class="grace">${r.bars.map(([n, v], i) => `<div class="grow"><span>${n}</span><div class="gbar"><i class="r${i}" style="--w:${Math.max(3, Math.round(100 * v / max))}%;--d:${(i * 0.3).toFixed(1)}s"></i></div><b>${v} €</b></div>`).join('')}</div>`;
@@ -414,7 +420,7 @@ function jeuView(k) {
   const head = `<div class="ghead"><button class="backlink" data-act="go" data-v="jeux">${I.chev}<span>Quitter</span></button><span class="gdots" aria-label="Manche ${P.i + 1} sur ${ROUNDS}">${P.rounds.map((_, i) => `<i class="${i < P.i ? 'done' : i === P.i ? 'cur' : ''}"></i>`).join('')}</span></div><h2 class="title">${g.ic} ${g.name}</h2>`;
   let body;
   if (r.kind === 'pay' || r.kind === 'change') {
-    body = `<section class="card gq"><div class="gitem" aria-hidden="true">${r.ic}</div><p>${r.q}</p></section>
+    body = `<section class="card gq"><div class="gitem" aria-hidden="true">${r.ic}</div><p>${r.q}</p>${r.kind === 'change' ? `<div class="ggiven"><small class="soft">Le client te donne</small><span class="gm bill">${billSVG(r.given / 100)}</span></div>` : ''}</section>
 <section class="card gcounter"><p class="small soft" style="margin:0 0 6px">Sur le comptoir : <b>${eu(traySum(r))}</b></p><div class="gtray">${r.tray.map((c, i) => coinH(c, 'jxtake', i, A)).join('') || '<span class="soft small">Touche les pièces pour les poser ici.</span>'}</div></section>
 ${A ? '' : `<div class="gcoins">${r.coins.map(c => coinH(c, 'jxcoin', c)).join('')}</div><button class="btn full" data-act="jxpay" ${r.tray.length ? '' : 'disabled'}>${r.kind === 'pay' ? 'Payer' : 'Rendre la monnaie'}</button>`}`;
   } else {
@@ -1003,10 +1009,10 @@ function adminCsv(kind) {
   const R = adminDeep(), day = ms => ms ? ymdL(ms) : '';
   if (kind === 'enfants') {
     const head = ['famille', 'enfant', 'age', 'inscription_famille', 'semaines_depuis_inscription', 'semaines_actives', 'part_semaines_actives_pct', 'derniere_visite', 'jours_ouverture', 'ouvertures', 'ouvertures_appareil_enfant', 'visites_espace_parents', 'appareils', 'systemes', 'appareil_enfant', 'appli_installee', 'notifications', 'clics_notifications', 'source_lien', 'source_sondage', 'recommandation_0_10', 'prix_accepte', 'commentaire_sondage', 'bonus_paie_pct', 'bonus_cadeaux_pct',
-      'debut_enfant', 'argent_de_poche_hebdo', 'semaines_enfant', 'paies_rangees', 'taux_paie_rangee_pct', 'meilleure_serie', 'jours_avant_premiere_paie', 'part_paie_mise_de_cote_pct', 'tirelire', 'plus_haut', 'bonus_recus', 'gains_bourse', 'depense_projets', 'argent_recu_declare', 'lancers_de', 'style_bourse', 'projet_en_cours', 'budget_projet', 'projets_realises', 'lecons_reussies', 'pepites', 'guide_termine', 'niveau_jeux_choisi', 'parties_marche', 'victoires_marche', 'parties_course', 'victoires_course'];
+      'debut_enfant', 'argent_de_poche_hebdo', 'semaines_enfant', 'paies_rangees', 'taux_paie_rangee_pct', 'meilleure_serie', 'jours_avant_premiere_paie', 'part_paie_mise_de_cote_pct', 'tirelire', 'plus_haut', 'bonus_recus', 'gains_bourse', 'depense_projets', 'argent_recu_declare', 'lancers_de', 'style_bourse', 'projet_en_cours', 'budget_projet', 'projets_realises', 'lecons_reussies', 'pepites', 'guide_termine', 'niveau_jeux_choisi', ...Object.keys(GAMES).flatMap(g => ['parties_' + g, 'victoires_' + g])];
     const rows = [head];
     for (const r of R) for (const k of r.kids) rows.push([r.id, k.n, k.age, day(r.created), r.weeks, r.act.size, Math.round(100 * Math.min(1, r.act.size / r.weeks)), r.last, r.days, r.opens, r.kidOpens, r.parentVisits, r.devs, r.os, r.kidDev, r.inst, r.push, Object.entries(r.nc).map(([a, b]) => a + ':' + b).join(' '), r.src, r.sv ? r.sv.src : '', r.sv ? r.sv.nps : '', r.sv ? r.sv.wtp : '', r.sv ? r.sv.txt : '', r.match, r.gmatch,
-      (k.start || '').slice(0, 10), k.weekly, k.kw, k.paid, k.rate, k.best, k.first, k.keep, k.tot, k.peak, k.bonus, k.gains, k.out, k.recus, k.rolls, k.post, k.goal, k.budget, k.projets, k.lq, k.peps, k.guided, k.glv, (k.gs.marche || {}).p || 0, (k.gs.marche || {}).w || 0, (k.gs.course || {}).p || 0, (k.gs.course || {}).w || 0]);
+      (k.start || '').slice(0, 10), k.weekly, k.kw, k.paid, k.rate, k.best, k.first, k.keep, k.tot, k.peak, k.bonus, k.gains, k.out, k.recus, k.rolls, k.post, k.goal, k.budget, k.projets, k.lq, k.peps, k.guided, k.glv, ...Object.keys(GAMES).flatMap(g => [(k.gs[g] || {}).p || 0, (k.gs[g] || {}).w || 0])]);
     return csvDownload('enfants', rows);
   }
   if (kind === 'semaines') {
@@ -1257,6 +1263,8 @@ const MEDALS = [
   ...MOIS.map((mo, i) => M('mois', 'm' + i, `${mo[0].toUpperCase() + mo.slice(1)} au complet`, `Ranger toutes tes paies du mois de ${mo}.`, c => c.months.has(i))),
   M('jeux', 'g_marche1', 'Petit marchand', 'Gagner une partie du Marché.', c => c.gw.marche >= 1),
   M('jeux', 'g_marche3', 'Roi du marché', 'Gagner une partie du Marché au niveau Grands.', c => c.gg.marche),
+  M('jeux', 'g_kilo1', 'Œil de lynx', 'Gagner une partie du Prix au kilo.', c => c.gw.kilo >= 1),
+  M('jeux', 'g_kilo3', 'Expert des étiquettes', 'Gagner le Prix au kilo au niveau Grands.', c => c.gg.kilo),
   M('jeux', 'g_course1', 'Sur la ligne de départ', 'Gagner une partie de la Course des tirelires.', c => c.gw.course >= 1),
   M('jeux', 'g_course3', 'Champion de la course', 'Gagner la Course des tirelires au niveau Grands.', c => c.gg.course),
   M('collec', 'collec', 'Collectionneur', 'Gagner 20 autres pépites.', c => c.n >= 20),
@@ -1286,7 +1294,7 @@ function medals(id) {
   }
   let run = 0, best = 0; for (const e of B) { run = e.gain > 0 ? run + 1 : 0; best = Math.max(best, run); }
   const gs = (kidOf(id) || {}).gs || {};
-  Object.assign(c, { sea, months, run: best, proj: E.filter(e => e.t === 'projet').length, gw: { marche: (gs.marche || {}).w || 0, course: (gs.course || {}).w || 0 }, gg: { marche: !!(gs.marche || {}).g, course: !!(gs.course || {}).g } });
+  Object.assign(c, { sea, months, run: best, proj: E.filter(e => e.t === 'projet').length, gw: Object.fromEntries(Object.keys(GAMES).map(g => [g, (gs[g] || {}).w || 0])), gg: Object.fromEntries(Object.keys(GAMES).map(g => [g, !!(gs[g] || {}).g])) });
   // Une pépite gagnée reste gagnée, même si sa condition n'est plus vraie (projet supprimé, tirelire redescendue…).
   const kk = kidOf(id), got = new Set(kk && Array.isArray(kk.ms) ? kk.ms : []), has = m => got.has(m.id) || !!m.test(c);
   c.n = MEDALS.filter(m => !COLLEC.includes(m.id) && has(m)).length;

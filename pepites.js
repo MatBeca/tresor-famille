@@ -559,6 +559,20 @@ Object.assign(MATS, {
   g_course3: { mat: 'de vermeil', c: '#f0b53a', line: '#6e3f00', draw: 'trophee' },
 });
 
+Object.assign(D, {
+  poids(c, L) { // poids d'un kilo en fonte
+    return `<path d="M26 22Q26 12 32 12Q38 12 38 22" stroke="${L}" stroke-width="6.5" fill="none"/><path d="M26 22Q26 12 32 12Q38 12 38 22" stroke="${tone(c, 0.25)}" stroke-width="3" fill="none"/><path d="M18 22H46L55 55H9Z" fill="${c}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><path d="M18 22H46L48 30H16Z" fill="${tone(c, 0.25)}"/><text x="32" y="47" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="13" fill="#fff">1 kg</text>` + shine('M17 30 14 42', 2.2, 0.8) + spark(54, 14, 3.6, '#fff', L);
+  },
+  bouteille(c, L) { // bouteille en verre
+    const d = 'M27 9H37V18Q37 22 42 26Q47 30 47 37V52Q47 57 42 57H22Q17 57 17 52V37Q17 30 22 26Q27 22 27 18Z';
+    return `<path d="${d}" fill="${c}" opacity=".9"/><path d="M17 40H47V52Q47 57 42 57H22Q17 57 17 52Z" fill="#ffd45c" opacity=".85"/><rect x="20" y="34" width="24" height="12" rx="2" fill="#fff" stroke="${L}" stroke-width="1.4"/><text x="32" y="43" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="7.5" fill="${L}">1 L</text><path d="${d}" fill="none" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><rect x="26" y="6" width="12" height="5" rx="1.5" fill="#e0294f" stroke="${L}" stroke-width="2"/>` + shine('M22 32V50', 2.4, 0.85) + spark(53, 16, 3.6, '#fff', L);
+  },
+});
+Object.assign(MATS, {
+  g_kilo1: { mat: 'de verre', c: '#bfe6f2', line: '#2c5f74', draw: 'bouteille' },
+  g_kilo3: { mat: 'de fonte', c: '#4f5560', line: '#1a1d22', draw: 'poids' },
+});
+
 export const matSVG = m => D[m.draw](m.c, m.line);
 // Pépite pas encore gagnée : une pépite grise avec un point d'interrogation.
 export const mystSVG = () => NUGF.map((d, i) => `<path d="${d}" fill="${['#e9e6e1', '#f3f1ed', '#e2ded8', '#d9d4cd', '#e0dcd5', '#cfc9c1', '#c7c0b7', '#d6d1ca', '#bfb8ae'][i]}" stroke="#a29a8e" stroke-width="1.1" stroke-linejoin="round"/>`).join('') + edge([[6, 40], [14, 24], [30, 15], [46, 17], [58, 30], [56, 46], [42, 55], [20, 54]], '#a29a8e') + '<text x="32" y="43" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="21" fill="#7d7468" stroke="#fff" stroke-width="3" paint-order="stroke">?</text>';

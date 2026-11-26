@@ -77,8 +77,55 @@ function courseRound(lv) {
   return { kind: 'mcq', q: `${B} met ${m} € de côté chaque mois, sans y toucher, pendant ${n} mois. Combien a-t-il, sans compter les intérêts ?`, opts, answer: String(tot), why: `${n} mois × ${m} € = ${tot} €. Petit à petit, ça finit par faire beaucoup !` };
 }
 
+// ---------- Le Prix au kilo : comparer au kilo ou au litre ----------
+// [icône, partitif, « de … », unité, tailles en g ou ml, prix réaliste au kilo ou au litre en centimes (min, max)]
+const KPROD = [['🥣', 'des céréales', 'de céréales', 'kg', [375, 500, 750, 1000], [400, 900]], ['🍝', 'des pâtes', 'de pâtes', 'kg', [500, 1000, 2000], [120, 400]], ['🍚', 'du riz', 'de riz', 'kg', [500, 1000, 2000], [150, 500]],
+  ['🍫', 'du chocolat', 'de chocolat', 'kg', [100, 200, 400], [800, 2000]], ['🍪', 'des biscuits', 'de biscuits', 'kg', [150, 300, 450, 600], [500, 1200]], ['🧃', 'du jus d’orange', 'de jus d’orange', 'L', [1000, 1500, 2000], [120, 350]],
+  ['🥛', 'du lait', 'de lait', 'L', [500, 1000, 2000], [90, 180]], ['💧', 'de l’eau', 'd’eau', 'L', [500, 1500, 3000], [25, 90]]];
+const qty = (g, u) => u === 'kg' ? (g < 1000 ? `${g} g` : `${String(g / 1000).replace('.', ',')} kg`) : (g < 1000 ? `${g / 10} cl` : `${String(g / 1000).replace('.', ',')} L`);
+const perU = (price, g) => Math.round(price * 1000 / g); // centimes par kilo ou par litre
+const priceOf = (base, g, f = 1) => Math.max(10, Math.round(base * g / 1000 * f / 10) * 10);
+const cap = t => t[0].toUpperCase() + t.slice(1);
+function kiloRound(lv) {
+  const [ic, part, de, u, sizes, [lo, hi]] = pick(KPROD), base = R(lo, hi), au = u === 'kg' ? 'au kilo' : 'au litre', le = u === 'kg' ? 'le kilo' : 'le litre';
+  if (lv === 'p') { // un paquet deux fois plus grand : est-il deux fois plus cher ?
+    const s1 = sizes[0], s2 = s1 * 2, p1 = Math.max(100, Math.round(base * s1 / 1000 / 50) * 50), p2 = p1 * 2 + pick([-1, 1]) * Math.min(R(1, 2) * 50, p1 - 50), best = p2 < 2 * p1 ? 'b' : 'a';
+    return { kind: 'deal', ic, q: `${cap(part)} : quel achat est le moins cher pour la même quantité ?`, opts: [['a', `2 ${u === 'kg' ? 'petits paquets' : 'petites bouteilles'} de ${qty(s1, u)} à ${eu(p1)} ${u === 'kg' ? 'chacun' : 'chacune'}`], ['b', `1 ${u === 'kg' ? 'grand paquet' : 'grande bouteille'} de ${qty(s2, u)} à ${eu(p2)}`]], answer: best,
+      why: `${u === 'kg' ? '2 petits paquets' : '2 petites bouteilles'}, c’est ${qty(s2, u)} pour ${eu(2 * p1)}. ${u === 'kg' ? 'Le grand' : 'La grande'} : ${qty(s2, u)} pour ${eu(p2)}. ${best === 'b' ? (u === 'kg' ? 'Le grand gagne !' : 'La grande gagne !') : (u === 'kg' ? 'Cette fois, le grand paquet n’est pas une bonne affaire.' : 'Cette fois, la grande bouteille n’est pas une bonne affaire.')}` };
+  }
+  if (lv === 'm') { // comparer au kilo ou au litre
+    let s1, s2, p1, p2, k1, k2, n = 0;
+    do { [s1, s2] = shuffle(sizes).slice(0, 2).sort((x, y) => x - y); p1 = priceOf(base, s1); p2 = priceOf(base, s2, R(75, 120) / 100); k1 = perU(p1, s1); k2 = perU(p2, s2); } while ((Math.abs(k1 - k2) / Math.max(k1, k2) < 0.06) && ++n < 50);
+    if (n >= 50) return kiloRound(lv);
+    return { kind: 'deal', ic, q: `${cap(part)} : lequel coûte le moins cher ${au} ?`, opts: shuffle([['a', `${qty(s1, u)} à ${eu(p1)}`], ['b', `${qty(s2, u)} à ${eu(p2)}`]]), answer: k1 < k2 ? 'a' : 'b',
+      why: `${qty(s1, u)} à ${eu(p1)}, ça fait ${eu(k1)} ${le}. ${qty(s2, u)} à ${eu(p2)}, ça fait ${eu(k2)} ${le}. Le prix ${au} est écrit en petit sur l’étiquette des magasins : il sert à ça !` };
+  }
+  const t = R(0, 2);
+  if (t === 0) { // calculer le prix au kilo
+    const g = pick(sizes.filter(x => x < 1000).concat(u === 'kg' ? [250, 500] : [250, 500])), p = priceOf(base, g), k = perU(p, g), w1 = Math.round(p * g / 1000), w2 = Math.round(k / 10);
+    const opts = shuffle([[String(k), `${eu(k)} ${le}`], [String(w1), `${eu(w1)} ${le}`], [String(w2), `${eu(w2)} ${le}`]].filter((o, i, a) => a.findIndex(x => x[0] === o[0]) === i));
+    if (opts.length < 3 || w1 < 1 || w2 < 1) return kiloRound(lv);
+    const x = +(1000 / g).toFixed(2);
+    return { kind: 'mcq', ic, q: `${u === 'kg' ? 'Un paquet' : 'Une bouteille'} ${de} de ${qty(g, u)} coûte ${eu(p)}. Combien coûte ${le} ?`, opts, answer: String(k),
+      why: `Dans ${u === 'kg' ? '1 kg' : '1 L'}, il y a ${String(x).replace('.', ',')} fois ${qty(g, u)} : ${eu(p)} × ${String(x).replace('.', ',')} ≈ ${eu(k)}.` };
+  }
+  if (t === 1) { // le piège du lot
+    const g = sizes[0], n = R(3, 4), big = sizes[sizes.length - 1] > g * n ? sizes[sizes.length - 1] : g * n * 2, lot = priceOf(base, g * n, R(90, 120) / 100), pb = priceOf(base, big, R(80, 115) / 100);
+    const k1 = perU(lot, g * n), k2 = perU(pb, big);
+    if (Math.abs(k1 - k2) / Math.max(k1, k2) < 0.06) return kiloRound(lv);
+    return { kind: 'deal', ic, q: `${cap(part)} en promo ! Lequel est vraiment le plus intéressant ?`, opts: shuffle([['a', `Le lot de ${n} × ${qty(g, u)} à ${eu(lot)}`], ['b', `${qty(big, u)} à ${eu(pb)}`]]), answer: k1 < k2 ? 'a' : 'b',
+      why: `Le lot fait ${qty(g * n, u)} pour ${eu(lot)} : ${eu(k1)} ${le}. L’autre : ${eu(k2)} ${le}. Un lot n’est pas toujours une bonne affaire !` };
+  }
+  let s1, s2, p1, p2, k1, k2, n = 0; // deux marques, tailles peu pratiques
+  do { s1 = pick(sizes); s2 = pick(sizes.filter(x => x !== s1)); p1 = priceOf(base, s1); p2 = priceOf(base, s2, R(88, 112) / 100); k1 = perU(p1, s1); k2 = perU(p2, s2); } while (Math.abs(k1 - k2) / Math.max(k1, k2) < 0.04 && ++n < 50);
+  if (n >= 50) return kiloRound(lv);
+  return { kind: 'deal', ic, q: `Deux marques ${de}. Laquelle coûte le moins cher ${au} ?`, opts: [['a', `Marque A : ${qty(s1, u)} à ${eu(p1)}`], ['b', `Marque B : ${qty(s2, u)} à ${eu(p2)}`]], answer: k1 < k2 ? 'a' : 'b',
+    why: `A : ${eu(k1)} ${le}. B : ${eu(k2)} ${le}. L’écart paraît petit, mais sur une année de courses, ça compte !` };
+}
+
 export const GAMES = {
   marche: { name: 'Le Marché', ic: '🏪', idea: 'Payer, rendre la monnaie, trouver la bonne affaire.', round: marcheRound },
+  kilo: { name: 'Le Prix au kilo', ic: '⚖️', idea: 'Le gros paquet est-il vraiment moins cher ? Compare au kilo et au litre.', round: kiloRound, unlock: 's2' },
   course: { name: 'La Course des tirelires', ic: '🏁', idea: 'Qui gagne : celui qui commence tôt ou celui qui met plus ?', round: courseRound, unlock: 's3' },
 };
 export const newParty = (id, lv) => ({ id, lv, i: 0, score: 0, rounds: Array.from({ length: ROUNDS }, () => GAMES[id].round(lv)), ans: null, done: false });
