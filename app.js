@@ -7,7 +7,7 @@ import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
 import { GAMES, LEVELS, levelOfAge, newParty, traySum, isRight, explain, eu, ROUNDS, WIN, PER_DAY } from './games.js';
-const VERSION = '127'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '128'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -398,9 +398,9 @@ function jeuxView(k) {
   return `<button class="backlink" data-act="go" data-v="home">${I.chev}<span>Ma tirelire</span></button><p class="kicker">Jouer pour apprendre</p><h2 class="title">Jeux</h2>
 <p class="lead">De petits jeux pour devenir un as de l’argent. ${unlimited(k) ? 'Tes parents t’ont donné des parties illimitées.' : `${perDay()} partie${perDay() > 1 ? 's' : ''} par jour et par jeu.`}</p>
 <section class="card"><h3>Ton niveau</h3><div class="pills">${LEVELS.map(([v, l, a]) => `<button class="pill" data-act="jxlevel" data-n="${v}" aria-pressed="${lv === v}">${l} <small>${a}</small></button>`).join('')}</div></section>
-${Object.entries(GAMES).map(([id, g]) => {
+${Object.entries(GAMES).sort(([a], [b]) => gameOpen(k, b) - gameOpen(k, a)).map(([id, g]) => { // jeux ouverts d'abord
     const open = gameOpen(k, id), left = gLeft(k, id), st = (k.gs || {})[id] || {}, how = (MEDALS.find(m => m.id === g.unlock) || {}).how || '';
-    return `<section class="card gcard${open ? '' : ' locked'}"><div class="gic" aria-hidden="true">${open ? g.ic : '🔒'}</div><div><h3>${g.name}</h3><p class="small soft" style="margin:2px 0 8px">${g.idea}</p>${open
+    return `<section class="card gcard${open ? '' : ' locked'}"><div class="gic" aria-hidden="true">${open ? g.ic : '🔒'}</div><div><h3>${g.name}${open && !st.p ? ' <span class="gnew">Nouveau</span>' : ''}</h3><p class="small soft" style="margin:2px 0 8px">${g.idea}</p>${open
       ? `${st.w ? `<p class="small" style="margin:0 0 8px">${st.w} partie${st.w > 1 ? 's' : ''} gagnée${st.w > 1 ? 's' : ''}</p>` : ''}<button class="btn sm" data-act="jxstart" data-n="${id}" ${left ? '' : 'disabled'}>${unlimited(k) ? 'Jouer' : left ? `Jouer · ${left} partie${left > 1 ? 's' : ''} aujourd’hui` : 'Reviens demain !'}</button>`
       : `<p class="small" style="margin:0">Se débloque quand tu arrives à ceci : ${how.charAt(0).toLowerCase() + how.slice(1)}</p>`}</div></section>`;
   }).join('')}

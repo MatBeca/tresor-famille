@@ -560,3 +560,4 @@ svg.jar.jup{animation:jpop 3s ease-in-out both;transform-origin:50% 90%}
 @keyframes gfox{from{transform:translate(30px,-30px) scale(.3);opacity:0}}
 @keyframes gshake{25%{transform:translateX(-5px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
 .gbaskets + .row .btn{white-space:nowrap}
+.gnew{display:inline-block;vertical-align:middle;margin-left:6px;padding:2px 8px;border-radius:999px;background:#e0294f;color:#fff;font:700 11px Nunito,sans-serif;animation:gpop .4s ease-out}
