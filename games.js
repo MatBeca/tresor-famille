@@ -158,50 +158,20 @@ function guimRound(lv) {
 }
 
 // ---------- Les Paniers : ne pas mettre tous ses œufs dans le même panier ----------
-// Chaque manche change : paniers au sol, dans l'arbre ou à l'abri, tailles différentes, menaces différentes.
-// On juge le rangement, pas la chance : la manche est réussie si l'enfant est sûr de garder autant d'œufs que le meilleur rangement possible.
-const PLACES = { sol: ['🧺', 'Au sol'], arbre: ['🌳', 'Dans l’arbre'], abri: ['🏠', 'À l’abri'] };
-const THREATS = { renard: ['🦊', 'Le renard', 'sol', 'visite un panier au sol'], orage: ['⛈️', 'L’orage', 'arbre', 'secoue un panier dans l’arbre'], raton: ['🦝', 'Le raton laveur', 'sol', 'fouille un panier au sol'] };
-function splits(n, caps) { // toutes les façons de ranger n œufs dans des paniers de capacités données
-  if (!caps.length) return n === 0 ? [[]] : [];
-  const out = []; for (let x = Math.min(n, caps[0]); x >= 0; x--) for (const rest of splits(n - x, caps.slice(1))) out.push([x, ...rest]);
-  return out;
-}
-const worstSaved = (r, d) => r.eggs - r.threats.reduce((a, t) => { const ix = r.baskets.map((b, i) => [b.place, i]).filter(([p]) => p === THREATS[t][2]).map(([, i]) => i); return a + (ix.length ? Math.max(...ix.map(i => d[i])) : 0); }, 0);
+// Simple et visuel : on range ses œufs, le renard vole un panier (deux chez les Grands). Il faut garder au moins un certain nombre d'œufs.
+// Ranger équitablement garantit toujours de réussir ; tout mettre dans un panier, c'est jouer à pile ou face.
 function panierRound(lv) {
-  if (lv === 'g') { // risque et rendement : combien risquer sans jamais finir en dessous de son départ ?
-    const n = pick([6, 8, 10]), bonus = pick([1, 2, 3]), mult = pick([2, 3]), chance = pick([['1 fois sur 2', 0.5], ['2 fois sur 3', 2 / 3]]);
-    return { kind: 'basket', mode: 'risk', eggs: n, bonus, mult, chance, dist: [0, 0], baskets: [{ ic: '🧺', name: 'Panier sûr', note: `+${bonus} œuf${bonus > 1 ? 's' : ''} offert${bonus > 1 ? 's' : ''} à la fin`, cap: n }, { ic: '🎲', name: 'Panier risqué', note: `${chance[0]} : ×${mult} ! Sinon, tout est perdu`, cap: n }],
-      q: `Tu as ${n} œufs. Gagne le plus possible, sans jamais risquer de finir avec moins de ${n} œufs !` };
-  }
-  let r, tries = 0;
-  do {
-    const nb = lv === 'p' ? R(2, 3) : R(3, 4), places = lv === 'p' ? shuffle(['abri', ...Array(nb - 1).fill('sol')]) : shuffle(['sol', 'sol', 'arbre', 'arbre', 'abri']).slice(0, nb);
-    if (!places.includes('sol')) places[0] = 'sol';
-    const threats = lv === 'p' ? [pick(['renard', 'raton'])] : [pick(['renard', 'raton']), ...(places.includes('arbre') ? ['orage'] : [])];
-    const baskets = places.map(pl => { const cap = pl === 'abri' ? R(1, 2) : R(2, lv === 'p' ? 4 : 5); return { ic: PLACES[pl][0], name: PLACES[pl][1], place: pl, cap, note: `${cap} œuf${cap > 1 ? 's' : ''} max` }; });
-    const capT = baskets.reduce((a, b) => a + b.cap, 0), n = Math.min(capT, lv === 'p' ? R(4, 6) : R(5, 8));
-    r = { kind: 'basket', mode: 'storm', eggs: n, baskets, threats, dist: baskets.map(() => 0) };
-    const all = splits(n, baskets.map(b => b.cap)), ws = all.map(d => worstSaved(r, d)), best = Math.max(...ws);
-    r.best = best; const abri = d => d.reduce((t, v, i) => t + (baskets[i].place === 'abri' ? v : 0), 0); r.ex = all.filter((d, i) => ws[i] === best).sort((x, y) => abri(y) - abri(x) || Math.max(...x) - Math.max(...y))[0]; r.nGood = ws.filter(w => w === best).length; r.nAll = all.length; // exemple : l'abri d'abord, puis le plus équilibré
-  } while ((r.nGood === r.nAll || r.best === r.eggs) && ++tries < 40); // jamais trivial : un mauvais rangement doit exister, et une menace doit compter
-  r.q = `Range tes ${r.eggs} œufs. ${r.threats.map(t => `${THREATS[t][0]} ${THREATS[t][1]} ${THREATS[t][3]}`).join('. ')}. Protège le plus d’œufs possible !`;
-  return r;
+  const nb = lv === 'p' ? R(2, 3) : lv === 'm' ? R(3, 4) : R(4, 5), foxes = lv === 'g' ? 2 : 1, eggs = lv === 'p' ? R(4, 6) : lv === 'm' ? R(6, 9) : R(8, 12);
+  const per = Math.ceil(eggs / nb), need = eggs - per * foxes; // ce que garantit le rangement le plus équilibré
+  if (need < 1) return panierRound(lv);
+  return { kind: 'basket', eggs, nb, foxes, need, dist: Array(nb).fill(0), q: `Range tes ${eggs} œufs. Le renard va voler ${foxes === 1 ? '1 panier' : '2 paniers'}. Garde au moins ${need} œuf${need > 1 ? 's' : ''} !` };
 }
 export function resolveBasket(r) {
   if (r.res) return r.res;
-  const N = r.eggs, d = r.dist;
-  if (r.mode === 'storm') {
-    const worst = worstSaved(r, d), ok = worst >= r.best, hits = {}; let lost = 0;
-    const evs = r.threats.map(t => { const ix = r.baskets.map((b, i) => [b.place, i]).filter(([p]) => p === THREATS[t][2]).map(([, i]) => i), i = pick(ix), k = d[i]; hits[i] = [THREATS[t][0], k]; lost += k; return `${THREATS[t][0]} ${THREATS[t][1]} ${k ? `casse ${plural(k, 'œuf', 'œufs')}` : 'ne trouve rien'} dans le panier ${i + 1}.`; });
-    const saved = N - lost;
-    return (r.res = { ok, lost, hits, saved, msg: `${evs.join(' ')} Tu gardes ${saved} œuf${saved > 1 ? 's' : ''} sur ${N}.`,
-      why: ok ? `Bien rangé ! Quoi qu’il arrive, tu étais sûr d’en garder au moins ${worst}. ${saved > worst ? 'Et en plus, la chance était avec toi !' : ''}` : `Avec la malchance, tu pouvais tomber à ${worst} œuf${worst > 1 ? 's' : ''}. Un rangement comme ${r.ex.join(' · ')} te garantissait d’en garder ${r.best}.${saved >= r.best ? ' Cette fois, tu as eu de la chance !' : ''}` });
-  }
-  const [safe, risky] = d, ok = risky === r.bonus && safe > 0, win = Math.random() < r.chance[1], fin = safe + (safe > 0 ? r.bonus : 0) + (win ? risky * r.mult : 0), lost = win ? 0 : risky, hits = risky ? { 1: [win ? '🎉' : '💥', win ? -risky * (r.mult - 1) : risky] } : {};
-  const worst = safe + (safe > 0 ? r.bonus : 0), best = worst + risky * r.mult;
-  return (r.res = { ok, lost, hits, saved: fin, msg: `${risky ? (win ? `Le panier risqué a fait ×${r.mult} !` : 'Le panier risqué a tout perdu.') : 'Tu n’as rien mis dans le risqué.'} Tu avais ${N} œufs, tu finis avec ${fin}${safe > 0 ? ` (dont ${r.bonus} offert${r.bonus > 1 ? 's' : ''} par le panier sûr)` : ''}.`,
-    why: ok ? `Parfait : tu as risqué ${risky} œuf${risky > 1 ? 's' : ''}, exactement ce que le panier sûr te rend. Au pire tu retombes à ${N}, au mieux tu montes à ${best}.` : risky > r.bonus ? `Trop risqué : au pire, tu pouvais finir avec ${worst} œufs, moins que tes ${N} du départ. Le panier sûr ne rend que ${r.bonus} œuf${r.bonus > 1 ? 's' : ''}, alors ne risque pas plus que ça.` : `Tu pouvais risquer ${r.bonus} œuf${r.bonus > 1 ? 's' : ''} sans danger, puisque le panier sûr te les rend. Un peu de risque, c’est ce qui fait grandir !` });
+  const stolen = shuffle(r.dist.map((_, i) => i)).slice(0, r.foxes), lost = stolen.reduce((a, i) => a + r.dist[i], 0), saved = r.eggs - lost, ok = saved >= r.need;
+  const hits = Object.fromEntries(stolen.map(i => [i, ['🦊', r.dist[i]]]));
+  return (r.res = { ok, lost, saved, hits, msg: `🦊 a volé ${stolen.length > 1 ? `les paniers ${stolen.map(i => i + 1).sort().join(' et ')}` : `le panier ${stolen[0] + 1}`}. Il te reste ${plural(saved, 'œuf', 'œufs')}.`,
+    why: ok ? '' : 'Astuce : mets des œufs dans chaque panier, le renard ne peut pas tous les prendre.' });
 }
 
 export const GAMES = {
@@ -209,11 +179,11 @@ export const GAMES = {
   kilo: { name: 'Le Prix au kilo', ic: '⚖️', idea: 'Le gros paquet est-il vraiment moins cher ? Compare avant d’acheter.', round: kiloRound, unlock: 's2' },
   course: { name: 'La Course des tirelires', ic: '🏁', idea: 'Qui gagne : celui qui commence tôt ou celui qui met plus ?', round: courseRound, unlock: 's3' },
   envie: { name: 'Envie ou besoin ?', ic: '🛍️', idea: 'D’abord l’essentiel, ensuite le plaisir.', round: envieRound, unlock: 's5' },
-  paniers: { name: 'Les Paniers', ic: '🧺', idea: 'Ne mets pas tous tes œufs dans le même panier : protège-les du renard et de l’orage !', round: panierRound, unlock: 'bourse' },
+  paniers: { name: 'Les Paniers', ic: '🧺', idea: 'Range tes œufs avant que le renard passe !', round: panierRound, unlock: 'bourse' },
   guimauve: { name: 'Le Défi de la guimauve', ic: '🍡', idea: 'Maintenant, ou plus tard mais plus ? Sais-tu attendre quand ça vaut le coup ?', round: guimRound, unlock: 's10' },
 };
 export const newParty = (id, lv) => ({ id, lv, i: 0, score: 0, rounds: Array.from({ length: ROUNDS }, () => GAMES[id].round(lv)), ans: null, done: false });
 export const traySum = r => r.tray.reduce((a, c) => a + c, 0);
 export const target = r => r.kind === 'pay' ? r.price : r.kind === 'change' ? r.given - r.price : null;
 export const isRight = (r, a) => r.kind === 'basket' ? resolveBasket(r).ok : (r.kind === 'pay' || r.kind === 'change') ? traySum(r) === target(r) : a === r.answer;
-export const explain = r => r.kind === 'basket' ? `${r.res.msg} ${r.res.why}` : r.kind === 'pay' ? `Il fallait ${eu(r.price)}.` : r.kind === 'change' ? `${eu(r.given)} − ${eu(r.price)} = ${eu(r.given - r.price)} à rendre.` : r.why;
+export const explain = r => r.kind === 'basket' ? `${r.res.msg}${r.res.why ? ' ' + r.res.why : ''}` : r.kind === 'pay' ? `Il fallait ${eu(r.price)}.` : r.kind === 'change' ? `${eu(r.given)} − ${eu(r.price)} = ${eu(r.given - r.price)} à rendre.` : r.why;

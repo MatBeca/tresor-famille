@@ -7,7 +7,7 @@ import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
 import { GAMES, LEVELS, levelOfAge, newParty, traySum, isRight, explain, eu, ROUNDS, WIN, PER_DAY } from './games.js';
-const VERSION = '126'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '127'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -425,11 +425,11 @@ function jeuView(k) {
   const head = `<div class="ghead"><button class="backlink" data-act="go" data-v="jeux">${I.chev}<span>Quitter</span></button><span class="gdots" aria-label="Manche ${P.i + 1} sur ${ROUNDS}">${P.rounds.map((_, i) => `<i class="${i < P.i ? 'done' : i === P.i ? 'cur' : ''}"></i>`).join('')}</span></div><h2 class="title">${g.ic} ${g.name}</h2>`;
   let body;
   if (r.kind === 'basket') {
-    const left = r.eggs - r.dist.reduce((a, v) => a + v, 0);
-    body = `<section class="card gq"><div class="gitem" aria-hidden="true">🥚</div><p>${r.q}</p></section>
-<p class="small soft" style="text-align:center;margin:6px 0">${A ? '' : left ? `Encore ${left} œuf${left > 1 ? 's' : ''} à ranger` : 'Tous tes œufs sont rangés !'}</p>
-<div class="gbaskets">${r.baskets.map((bk, i) => { const h = A && r.res && r.res.hits ? r.res.hits[i] : null; return `<div class="gbasket${h ? ' hit' : ''}"><div class="gbic" aria-hidden="true">${bk.ic}</div><b>Panier ${i + 1}</b><small class="soft">${bk.name}${bk.note ? ` · ${bk.note}` : ''}</small><div class="geggs" aria-label="${r.dist[i]} œuf${r.dist[i] > 1 ? 's' : ''}">${'🥚'.repeat(r.dist[i]) || '<span class="soft small">vide</span>'}</div>${h ? `<div class="ghit">${h[0]} ${h[1] > 0 ? `−${h[1]} œuf${h[1] > 1 ? 's' : ''}` : h[1] < 0 ? `+${-h[1]} œuf${h[1] < -1 ? 's' : ''}` : 'rien trouvé !'}</div>` : ''}${A ? '' : `<div class="row" style="justify-content:center"><button class="btn ghost sm" data-act="jxeggout" data-n="${i}" ${r.dist[i] ? '' : 'disabled'} aria-label="Retirer un œuf">−</button><button class="btn sm" data-act="jxegg" data-n="${i}" ${left && r.dist[i] < bk.cap ? '' : 'disabled'} aria-label="Ajouter un œuf">+</button></div>`}</div>`; }).join('')}</div>
-${A ? '' : `<button class="btn full" data-act="jxpay" ${left ? 'disabled' : ''}>C’est parti !</button>`}`;
+    const left = r.eggs - r.dist.reduce((a, v) => a + v, 0), h = A && r.res ? r.res.hits : {};
+    body = `<section class="card gq"><p>${r.q}</p></section>
+${A ? '' : `<div class="gpool" aria-label="${left} œuf${left > 1 ? 's' : ''} à ranger">${'🥚'.repeat(left) || '<span class="soft small">Tous rangés !</span>'}</div>`}
+<div class="gbaskets">${r.dist.map((n, i) => `<button class="gbasket${h[i] ? ' stolen' : ''}" data-act="jxegg" data-n="${i}" ${A || !left ? 'disabled' : ''} aria-label="Panier ${i + 1}, ${n} œuf${n > 1 ? 's' : ''}">${h[i] ? '<span class="gfox" aria-hidden="true">🦊</span>' : ''}<span class="gbic" aria-hidden="true">🧺</span><span class="geggs">${'🥚'.repeat(n) || '&nbsp;'}</span></button>`).join('')}</div>
+${A ? '' : `<div class="row"><button class="btn ghost" data-act="jxeggreset" ${left === r.eggs ? 'disabled' : ''}>Recommencer</button><button class="btn" style="flex:1" data-act="jxpay" ${left ? 'disabled' : ''}>C’est parti !</button></div>`}`;
   } else if (r.kind === 'pay' || r.kind === 'change') {
     body = `<section class="card gq"><div class="gitem" aria-hidden="true">${r.ic}</div><p>${r.q}</p>${r.kind === 'change' ? `<div class="ggiven"><small class="soft">Le client te donne</small><span class="gm bill">${billSVG(r.given / 100)}</span></div>` : ''}</section>
 <section class="card gcounter"><p class="small soft" style="margin:0 0 6px">Sur le comptoir : <b>${eu(traySum(r))}</b></p><div class="gtray">${r.tray.map((c, i) => coinH(c, 'jxtake', i, A)).join('') || '<span class="soft small">Touche les pièces pour les poser ici.</span>'}</div></section>
@@ -1918,8 +1918,8 @@ document.addEventListener('click', ev => {
     case 'jxcoin': if (party && !party.ans && !party.done) { const r = party.rounds[party.i]; if (r.tray && r.tray.length < 16) { r.tray.push(+b.dataset.n); sfx('coin'); } } break;
     case 'jxtake': if (party && !party.ans && !party.done) { const r = party.rounds[party.i]; if (r.tray) { r.tray.splice(+b.dataset.n, 1); sfx('back'); } } break;
     case 'jxpay': gAnswer(null); break;
-    case 'jxegg': if (party && !party.ans && !party.done) { const r = party.rounds[party.i], i = +b.dataset.n; if (r.kind === 'basket' && r.dist.reduce((a, v) => a + v, 0) < r.eggs && r.dist[i] !== undefined && r.dist[i] < r.baskets[i].cap) { r.dist[i]++; sfx('coin'); } } break;
-    case 'jxeggout': if (party && !party.ans && !party.done) { const r = party.rounds[party.i], i = +b.dataset.n; if (r.kind === 'basket' && r.dist[i] > 0) { r.dist[i]--; sfx('back'); } } break;
+    case 'jxegg': if (party && !party.ans && !party.done) { const r = party.rounds[party.i], i = +b.dataset.n; if (r.kind === 'basket' && r.dist.reduce((a, v) => a + v, 0) < r.eggs && r.dist[i] !== undefined) { r.dist[i]++; sfx('coin'); } } break;
+    case 'jxeggreset': if (party && !party.ans && !party.done) { const r = party.rounds[party.i]; if (r.kind === 'basket') { r.dist = r.dist.map(() => 0); sfx('back'); } } break;
     case 'jxans': gAnswer(b.dataset.n); break;
     case 'jxnext': gNext(); break;
     case 'svnps': form.svnps = +b.dataset.n; break;
