@@ -7,7 +7,7 @@ import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
 import { GAMES, LEVELS, levelOfAge, newParty, traySum, isRight, explain, eu, ROUNDS, WIN, PER_DAY } from './games.js';
-const VERSION = '119'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '120'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -429,6 +429,8 @@ ${A ? '' : `<div class="gcoins">${r.coins.map(c => coinH(c, 'jxcoin', c)).join('
   const fb = A ? `<section class="card gfb ${A.ok ? 'ok' : 'ko'}"><b>${A.msg}</b><p>${explain(r)}</p>${r.kind === 'race' ? raceBars(r) : ''}<button class="btn full" data-act="jxnext">${P.i + 1 < ROUNDS ? 'Manche suivante' : 'Voir le résultat'}</button></section>` : '';
   return head + body + fb;
 }
+// Plus longue suite de jours consécutifs parmi les jours joués (AAAA-MM-JJ).
+const dayRun = days => { const t = [...new Set(days)].sort().map(d => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)) / 864e5); let b = t.length ? 1 : 0, r = b; for (let i = 1; i < t.length; i++) { r = t[i] - t[i - 1] === 1 ? r + 1 : 1; b = Math.max(b, r); } return b; };
 function gStart(id) {
   const k = kidOf(cur);
   if (!k || !ready || !GAMES[id] || !gameOpen(k, id) || !gLeft(k, id)) return;
@@ -436,13 +438,17 @@ function gStart(id) {
   k.gp[id] = (k.gp[id] || 0) + 1;
   const gs = k.gs || (k.gs = {}), st = gs[id] || (gs[id] = { p: 0, w: 0 }); st.p++;
   if (F.stats && F.stats.wk && !F.noStats) { const r = F.stats.wk[ymdL(wk(new Date()))]; if (r) r[3] = (r[3] || 0) + 1; }
-  party = { ...newParty(id, gLevel(k)), kid: k.id };
+  const gd = k.gd || (k.gd = []); if (!gd.includes(d)) { gd.push(d); while (gd.length > 120) gd.shift(); }
+  const gx = k.gx || (k.gx = {});
+  if (k.gp[id] >= PER_DAY) gx.acharne = 1;
+  const ids = Object.keys(GAMES); if (ids.every(g => (k.gp[g] || 0) >= PER_DAY)) gx.marathon = 1;
+  party = { ...newParty(id, gLevel(k)), kid: k.id, run: 0, best: 0 };
   view = 'jeu'; saveF(); window.scrollTo(0, 0);
 }
 function gAnswer(a) {
   const P = party; if (!P || P.done || P.ans) return;
   const r = P.rounds[P.i], ok = isRight(r, a);
-  if (ok) P.score++;
+  if (ok) { P.score++; P.run++; P.best = Math.max(P.best, P.run); } else P.run = 0;
   const good = ['Bravo !', 'Exact !', 'Bien vu !', 'Parfait !'];
   P.ans = { ok, a, msg: ok ? good[Math.floor(Math.random() * good.length)] : 'Pas tout à fait…' };
   sfx(ok ? 'good' : 'bad');
@@ -453,7 +459,15 @@ function gNext() {
   if (P.i < ROUNDS) return;
   P.done = true;
   const k = kidOf(P.kid), win = P.score >= WIN;
-  if (k && win) { const st = (k.gs || (k.gs = {}))[P.id] || (k.gs[P.id] = { p: 1, w: 0 }); st.w++; if (P.lv === 'g') st.g = 1; saveF(); }
+  if (k) {
+    const gx = k.gx || (k.gx = {});
+    if (P.best >= 3) gx.trois = 1;
+    if (P.score === ROUNDS) gx.parfait = 1;
+    if (!win) gx.perdu = 1;
+    if (P.score === 0) gx.boulette = 1;
+    if (win) { const st = (k.gs || (k.gs = {}))[P.id] || (k.gs[P.id] = { p: 1, w: 0 }); st.w++; if (P.lv === 'g') st.g = 1; }
+    saveF();
+  }
   sfx(win ? 'pay' : 'flat');
 }
 function pepCard() {
@@ -1250,6 +1264,7 @@ const MEDALS = [
   M('bourse', 'de1', 'Premier lancer', 'Lancer le dé de la bourse une première fois.', c => c.rolls >= 1),
   M('bourse', 'chance', 'Coup de chance', 'Faire gagner ta tirelire avec le dé.', c => c.won),
   M('bourse', 'six', 'Le six !', 'Faire sortir le 6 au dé de la bourse.', c => c.six),
+  M('bourse', 'de_pire', 'Pas de bol !', 'Tomber sur la pire face du dé de la bourse. Ça arrive aux meilleurs !', c => c.pire),
   M('bourse', 'calme', 'Garder son calme', 'Continuer la bourse après une semaine où le dé t’a fait perdre.', c => c.calm),
   M('bourse', 'trois', 'Trois de suite', 'Faire gagner ta tirelire 3 semaines de suite avec le dé.', c => c.run >= 3),
   M('bourse', 'cinq', 'Cinq de suite', 'Faire gagner ta tirelire 5 semaines de suite avec le dé.', c => c.run >= 5),
@@ -1268,6 +1283,15 @@ const MEDALS = [
   M('jeux', 'g_kilo3', 'Expert des étiquettes', 'Gagner le Prix au kilo au niveau Grands.', c => c.gg.kilo),
   M('jeux', 'g_course1', 'Sur la ligne de départ', 'Gagner une partie de la Course des tirelires.', c => c.gw.course >= 1),
   M('jeux', 'g_course3', 'Champion de la course', 'Gagner la Course des tirelires au niveau Grands.', c => c.gg.course),
+  M('jeux', 'g_trois', 'Trois d’affilée', 'Donner 3 bonnes réponses de suite dans une partie.', c => c.gx.trois),
+  M('jeux', 'g_parfait', 'Sans faute', 'Finir une partie avec 5 bonnes réponses sur 5.', c => c.gx.parfait),
+  M('jeux', 'g_perdu', 'Perdre, c’est apprendre', 'Perdre une partie… et comprendre ses erreurs.', c => c.gx.perdu),
+  M('jeux', 'g_boulette', 'Champion de la boulette', 'Finir une partie avec 0 bonne réponse. Bravo, c’est un exploit !', c => c.gx.boulette),
+  M('jeux', 'g_acharne', 'Acharné', `Jouer les ${PER_DAY} parties d’un même jeu dans la journée.`, c => c.gx.acharne),
+  M('jeux', 'g_marathon', 'Marathon des jeux', 'Jouer toutes les parties de tous les jeux le même jour.', c => c.gx.marathon),
+  M('jeux', 'g_jour3', 'Joueur régulier', 'Jouer 3 jours d’affilée.', c => c.gdays >= 3),
+  M('jeux', 'g_jour7', 'Une semaine de jeux', 'Jouer 7 jours d’affilée.', c => c.gdays >= 7),
+  ...[[10, 'g_p10', 'Dix parties'], [25, 'g_p25', 'Vingt-cinq parties'], [50, 'g_p50', 'Cinquante parties'], [100, 'g_p100', 'Cent parties !']].map(([n, id, name]) => M('jeux', id, name, `Lancer ${n} parties de jeux en tout.`, c => c.gplays >= n)),
   M('collec', 'collec', 'Collectionneur', 'Gagner 20 autres pépites.', c => c.n >= 20),
   M('collec', 'collec40', 'Grand collectionneur', 'Gagner 40 autres pépites.', c => c.n >= 40),
   M('collec', 'collec60', 'Chasseur de pépites', 'Gagner 60 autres pépites.', c => c.n >= 60),
@@ -1295,7 +1319,7 @@ function medals(id) {
   }
   let run = 0, best = 0; for (const e of B) { run = e.gain > 0 ? run + 1 : 0; best = Math.max(best, run); }
   const gs = (kidOf(id) || {}).gs || {};
-  Object.assign(c, { sea, months, run: best, proj: E.filter(e => e.t === 'projet').length, gw: Object.fromEntries(Object.keys(GAMES).map(g => [g, (gs[g] || {}).w || 0])), gg: Object.fromEntries(Object.keys(GAMES).map(g => [g, !!(gs[g] || {}).g])) });
+  Object.assign(c, { sea, months, run: best, proj: E.filter(e => e.t === 'projet').length, gw: Object.fromEntries(Object.keys(GAMES).map(g => [g, (gs[g] || {}).w || 0])), gg: Object.fromEntries(Object.keys(GAMES).map(g => [g, !!(gs[g] || {}).g])), gx: (kidOf(id) || {}).gx || {}, gplays: Object.values(gs).reduce((a, g) => a + (g.p || 0), 0), gdays: dayRun((kidOf(id) || {}).gd || []), pire: B.some(e => e.face === 1) });
   // Une pépite gagnée reste gagnée, même si sa condition n'est plus vraie (projet supprimé, tirelire redescendue…).
   const kk = kidOf(id), got = new Set(kk && Array.isArray(kk.ms) ? kk.ms : []), has = m => !!(kk && kk.test) || got.has(m.id) || !!m.test(c);
   c.n = MEDALS.filter(m => !COLLEC.includes(m.id) && has(m)).length;

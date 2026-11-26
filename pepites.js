@@ -573,6 +573,68 @@ Object.assign(MATS, {
   g_kilo3: { mat: 'de fonte', c: '#4f5560', line: '#1a1d22', draw: 'poids' },
 });
 
+Object.assign(D, {
+  calendrier(c, L) { // page de calendrier, 3 jours cochés
+    const cells = []; for (let r = 0; r < 3; r++) for (let q = 0; q < 4; q++) cells.push([14 + q * 9.5, 30 + r * 8.5, r === 1 && q < 3]);
+    return `<rect x="9" y="14" width="46" height="42" rx="5" fill="${c}" stroke="${L}" stroke-width="3"/><path d="M9 19Q9 14 14 14H50Q55 14 55 19V25H9Z" fill="#e0294f" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><path d="M20 10V18M44 10V18" stroke="${L}" stroke-width="3.4" stroke-linecap="round"/>${cells.map(([x, y, on]) => `<rect x="${x}" y="${y}" width="7" height="6" rx="1.4" fill="${on ? '#6bcb77' : tone(c, -0.12)}"/>${on ? `<path d="M${x + 1.4} ${y + 3}l1.8 1.8 2.6-3.4" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round"/>` : ''}`).join('')}`;
+  },
+  bille(c, L) { // bille de verre soufflé
+    return `<circle cx="32" cy="34" r="21" fill="${c}"/><path d="M14 30Q24 22 32 34T50 38" stroke="#ff6b8b" stroke-width="5" fill="none" stroke-linecap="round" opacity=".85"/><path d="M16 42Q28 46 36 38T48 24" stroke="#ffd24a" stroke-width="4" fill="none" stroke-linecap="round" opacity=".85"/><path d="M53 34A21 21 0 0 1 18 49Q34 52 46 44Q51 40 53 34Z" fill="#000" opacity=".12"/><circle cx="32" cy="34" r="21" fill="none" stroke="${L}" stroke-width="3"/><ellipse cx="24" cy="24" rx="5" ry="3.4" transform="rotate(-35 24 24)" fill="#fff"/>`;
+  },
+  cible(c, L) { // cible en liège, une flèche en plein centre
+    return `<circle cx="30" cy="36" r="21" fill="${c}" stroke="${L}" stroke-width="3"/><circle cx="30" cy="36" r="14.5" fill="#e0294f" stroke="${L}" stroke-width="2"/><circle cx="30" cy="36" r="8.5" fill="#fff" stroke="${L}" stroke-width="2"/><circle cx="30" cy="36" r="3.5" fill="#e0294f" stroke="${L}" stroke-width="1.6"/><path d="M31 35L55 13" stroke="${L}" stroke-width="4.4" stroke-linecap="round"/><path d="M31 35L55 13" stroke="#a0623a" stroke-width="2"/><path d="M52 10L58 10L56 16Z M50 14L55 18" fill="#4d96ff" stroke="${L}" stroke-width="1.8" stroke-linejoin="round"/>` + [[14, 30], [42, 48], [20, 46]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.2" fill="${tone(c, -0.3)}"/>`).join('');
+  },
+  couronne(c, L) { // couronne en or rose
+    const o = [[10, 48], [8, 20], [21, 33], [32, 14], [43, 33], [56, 20], [54, 48]];
+    return poly(o, c, L, 3) + poly([[10, 48], [54, 48], [54, 55], [10, 55]], tone(c, -0.2), L, 3) + [[8, 20], [32, 14], [56, 20]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.6" fill="#fff8d6" stroke="${L}" stroke-width="2"/>`).join('') + `<circle cx="32" cy="40" r="4.2" fill="#e0294f" stroke="${L}" stroke-width="2"/><circle cx="19" cy="41" r="3" fill="#4d96ff" stroke="${L}" stroke-width="1.6"/><circle cx="45" cy="41" r="3" fill="#6bcb77" stroke="${L}" stroke-width="1.6"/>` + shine('M14 44 13 30', 2.2, 0.8) + spark(56, 10, 3.6, '#fff', L);
+  },
+  gant(c, L) { // gant de boxe
+    return `<path d="M20 50Q12 46 12 34Q12 18 30 16Q48 15 52 28Q55 40 46 46L46 50Z" fill="${c}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><path d="M18 36Q14 26 22 24Q28 24 28 32" fill="${tone(c, 0.12)}" stroke="${L}" stroke-width="2.4"/><rect x="18" y="48" width="30" height="10" rx="3" fill="#fff" stroke="${L}" stroke-width="2.6"/><path d="M24 48V58M32 48V58" stroke="${L}" stroke-width="1.2" opacity=".5"/>` + shine('M30 21Q38 19 44 23', 2.4);
+  },
+  basket(c, L) { // chaussure de course
+    return `<path d="M8 48Q8 38 14 34L24 24Q28 20 32 24L38 32Q46 34 52 36Q58 38 58 46V48Z" fill="${c}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><path d="M6 48H58Q58 54 52 55H12Q6 55 6 48Z" fill="#fff" stroke="${L}" stroke-width="2.6" stroke-linejoin="round"/><path d="M26 28L32 33M23 31L29 36M20 34L26 39" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M38 40Q46 38 52 42" stroke="${tone(c, -0.3)}" stroke-width="3" fill="none" stroke-linecap="round"/>` + `<path d="M2 30H10M0 38H8M4 22H12" stroke="${L}" stroke-width="2" stroke-linecap="round" opacity=".5"/>`;
+  },
+  domino(c, L) { // domino en bakélite
+    const dot = (x, y) => `<circle cx="${x}" cy="${y}" r="2.6" fill="${L}"/>`;
+    return `<g transform="rotate(-14 32 34) translate(32 34) scale(.88) translate(-32 -34)"><rect x="18" y="10" width="28" height="50" rx="5" fill="${tone(c, -0.25)}"/><rect x="16" y="8" width="28" height="50" rx="5" fill="${c}" stroke="${L}" stroke-width="3"/><path d="M19 33H41" stroke="${L}" stroke-width="2"/>${dot(24, 16) + dot(30, 21) + dot(36, 26)}${[[24, 40], [36, 40], [24, 50], [36, 50], [30, 45]].map(([x, y]) => dot(x, y)).join('')}${shine('M20 14V24', 2, 0.8)}</g>`;
+  },
+  puzzle(c, L) { // pièce de puzzle
+    const d = 'M14 22H26Q24 12 32 12Q40 12 38 22H50V34Q60 32 60 40Q60 48 50 46V58H38Q40 50 32 50Q24 50 26 58H14V46Q6 48 6 40Q6 32 14 34Z';
+    return `<path d="${d}" fill="${c}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><path d="M14 46V58H26Q24 50 32 50Q40 50 38 58H50V46" fill="${tone(c, -0.15)}" stroke="none"/>` + shine('M18 27V36', 2.4);
+  },
+  pion(c, L) { // pion d'échecs en buis
+    return `<circle cx="32" cy="18" r="7.5" fill="${c}" stroke="${L}" stroke-width="2.8"/><path d="M26 26H38L36 30H28Z" fill="${tone(c, -0.1)}" stroke="${L}" stroke-width="2.4" stroke-linejoin="round"/><path d="M28 30Q27 42 21 48H43Q37 42 36 30Z" fill="${c}" stroke="${L}" stroke-width="2.8" stroke-linejoin="round"/><rect x="15" y="48" width="34" height="8" rx="3" fill="${tone(c, -0.2)}" stroke="${L}" stroke-width="2.8"/>` + shine('M28 15Q29 12 32 11.5', 2) + shine('M29 36 27 44', 2, 0.8);
+  },
+  manette(c, L) { // manette de jeu
+    return `<path d="M14 24H50Q58 24 59 36Q60 50 52 52Q46 53 42 44H22Q18 53 12 52Q4 50 5 36Q6 24 14 24Z" fill="${c}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><path d="M16 31V41M11 36H21" stroke="${L}" stroke-width="3.6" stroke-linecap="round"/>${[[45, 32, '#e0294f'], [51, 37, '#4d96ff'], [45, 42, '#6bcb77'], [39, 37, '#ffd24a']].map(([x, y, f]) => `<circle cx="${x}" cy="${y}" r="3" fill="${f}" stroke="${L}" stroke-width="1.6"/>`).join('')}<rect x="27" y="30" width="4" height="2.6" rx="1" fill="${L}"/><rect x="33" y="30" width="4" height="2.6" rx="1" fill="${L}"/>` + shine('M12 28Q16 26 20 26', 2.2);
+  },
+  gomme(c, L) { // gomme : on efface et on recommence
+    return `<g transform="rotate(-20 32 36)">${poly([[10, 28], [42, 28], [42, 46], [10, 46]], c, L, 3)}${poly([[42, 28], [56, 28], [56, 46], [42, 46]], '#4d96ff', L, 3)}${poly([[10, 28], [16, 22], [62, 22], [56, 28]], tone(c, 0.25), L, 2.4)}${poly([[56, 28], [62, 22], [62, 40], [56, 46]], tone(c, -0.25), L, 2.4)}${shine('M14 32H30', 2, 0.85)}</g><path d="M10 56Q18 52 26 56T42 56" stroke="${tone(c, -0.2)}" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+  },
+  gruyere(c, L) { // part de gruyère pleine de trous
+    return `${poly([[8, 46], [52, 18], [56, 46]], tone(c, -0.12), L, 3)}${poly([[8, 46], [56, 46], [56, 56], [8, 56]], c, L, 3)}${poly([[8, 46], [52, 18], [56, 18], [56, 46]], tone(c, -0.2), L, 0.1)}${[[26, 41, 3.4], [40, 36, 2.6], [46, 42, 2], [20, 51, 2.6], [36, 52, 3], [48, 52, 1.8]].map(([x, y, r]) => `<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r * 0.8}" fill="${tone(c, -0.35)}"/>`).join('')}` + `<path d="M8 46L52 18L56 18" fill="none" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>` + shine('M14 50H22', 2, 0.8);
+  },
+  trefle(c, L) { // trèfle à trois feuilles (pas de chance !)
+    const leaf = a => `<path d="M32 33Q${32 + 22 * Math.cos(a - 0.5)} ${33 + 22 * Math.sin(a - 0.5)} ${32 + 20 * Math.cos(a)} ${33 + 20 * Math.sin(a)}Q${32 + 22 * Math.cos(a + 0.5)} ${33 + 22 * Math.sin(a + 0.5)} 32 33Z" fill="${c}" stroke="${L}" stroke-width="2.6" stroke-linejoin="round"/>`;
+    return `<path d="M32 34Q34 46 42 56" stroke="${L}" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M32 34Q34 46 42 56" stroke="${tone(c, -0.1)}" stroke-width="2.2" fill="none" stroke-linecap="round"/>${[-Math.PI / 2, Math.PI / 6 - 0.2, Math.PI * 5 / 6 + 0.2].map(leaf).join('')}<circle cx="32" cy="33" r="2.4" fill="${tone(c, -0.3)}"/>` + `<path d="M48 16q3-4 6 0M48 16q3 4 6 0" stroke="${L}" stroke-width="1.6" fill="none" opacity=".6"/>`;
+  },
+});
+Object.assign(MATS, {
+  g_jour3: { mat: 'de papier', c: '#ffffff', line: '#4a4a5a', draw: 'calendrier' },
+  g_jour7: { mat: 'de verre soufflé', c: '#8fd8ff', line: '#1f5a80', draw: 'bille' },
+  g_trois: { mat: 'de liège', c: '#d9b07a', line: '#5a3a1a', draw: 'cible' },
+  g_parfait: { mat: 'd’or rose', c: '#f2a6a0', line: '#7a3a34', draw: 'couronne' },
+  g_acharne: { mat: 'de cuir', c: '#e0294f', line: '#5a0a1e', draw: 'gant' },
+  g_marathon: { mat: 'de caoutchouc', c: '#4d96ff', line: '#143a7a', draw: 'basket' },
+  g_p10: { mat: 'de bakélite', c: '#fff4e0', line: '#3a2a1a', draw: 'domino' },
+  g_p25: { mat: 'de carton', c: '#6bcb77', line: '#1f5a2a', draw: 'puzzle' },
+  g_p50: { mat: 'de buis', c: '#e8c88a', line: '#5a3e14', draw: 'pion' },
+  g_p100: { mat: 'de plastique', c: '#9b6bff', line: '#3a1f7a', draw: 'manette' },
+  g_perdu: { mat: 'de gomme', c: '#ff9ec4', line: '#6e2a40', draw: 'gomme' },
+  g_boulette: { mat: 'de gruyère', c: '#ffd45c', line: '#7a5a00', draw: 'gruyere' },
+  de_pire: { mat: 'de trèfle', c: '#5cbf5c', line: '#1f4a1f', draw: 'trefle' },
+});
+
 export const matSVG = m => D[m.draw](m.c, m.line);
 // Pépite pas encore gagnée : une pépite grise avec un point d'interrogation.
 export const mystSVG = () => NUGF.map((d, i) => `<path d="${d}" fill="${['#e9e6e1', '#f3f1ed', '#e2ded8', '#d9d4cd', '#e0dcd5', '#cfc9c1', '#c7c0b7', '#d6d1ca', '#bfb8ae'][i]}" stroke="#a29a8e" stroke-width="1.1" stroke-linejoin="round"/>`).join('') + edge([[6, 40], [14, 24], [30, 15], [46, 17], [58, 30], [56, 46], [42, 55], [20, 54]], '#a29a8e') + '<text x="32" y="43" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="21" fill="#7d7468" stroke="#fff" stroke-width="3" paint-order="stroke">?</text>';
