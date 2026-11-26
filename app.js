@@ -7,7 +7,7 @@ import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
 import { GAMES, LEVELS, levelOfAge, newParty, traySum, isRight, explain, eu, ROUNDS, WIN, PER_DAY } from './games.js';
-const VERSION = '122'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '123'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -242,7 +242,7 @@ function milestone(before, after) {
   for (const m of [1, 0.75, 0.5, 0.25]) if (b < m && a >= m) return m === 1 ? `C’est pépite ! Objectif « ${esc(g.name)} » atteint !` : ({ step: `Étape ${m * 4} sur 4 franchie pour « ${esc(g.name)} » : ta pépite grossit !`, frac: `${cap1(FRAC[m])} du chemin pour « ${esc(g.name)} » : ta pépite grossit !`, pct: `Palier ${m * 100} % atteint pour « ${esc(g.name)} » !` })[msBand(cur)];
   return '';
 }
-function sayMs(before, msg, sub) { markBourse(true); const after = tot(cur).total, ms = milestone(before, after); if (ms) { say(ms, msg); const g = goalOf(cur), c = CAPS.find(x => before < x && after >= x); if (g ? before < g.budget && after >= g.budget : c) queuePush(g ? 'objectif' : 'palier', { kid: cur, amount: g ? r2(g.budget) : c, goal: g ? g.name : null }); } else say(msg, sub); }
+function sayMs(before, msg, sub) { markBourse(true); const after = tot(cur).total, ms = milestone(before, after), gg = goalOf(cur); if (gg && before < gg.budget && after >= gg.budget) { const k = kidOf(cur); if (k) { (k.gx || (k.gx = {})).objectif = 1; saveF(); } } if (ms) { say(ms, msg); const g = goalOf(cur), c = CAPS.find(x => before < x && after >= x); if (g ? before < g.budget && after >= g.budget : c) queuePush(g ? 'objectif' : 'palier', { kid: cur, amount: g ? r2(g.budget) : c, goal: g ? g.name : null }); } else say(msg, sub); }
 function project(id, perWeek, strat) {
   const k = kidOf(id), t = tot(id), m = strat ? POST[strat].faces.reduce((x, y) => x + y, 0) / 6 / 100 : projMean(id), match = F.match / 100, now = new Date(), birth = new Date(k.birth + 'T12:00:00'), share = k.weekly ? Math.min(1, perWeek / k.weekly) : 1;
   let own = t.own, bonus = t.bonus, gains = t.gains, w = 0, pw = perWeek; const pts = [];
@@ -735,7 +735,7 @@ function surveyCard() {
 <div class="row"><button class="btn sm" data-act="svsend" ${form.svnps === undefined || !form.svwtp ? 'disabled' : ''}>Envoyer</button><button class="btn ghost sm" data-act="svlater">Plus tard</button></div></section>`;
 }
 // Outil du créateur (Espace parents, protégé par le code) : retirer une pépite gagnée par un geste ponctuel, qu'on pourra regagner normalement.
-const GX_PEP = { g_trois: 'trois', g_parfait: 'parfait', g_perdu: 'perdu', g_boulette: 'boulette', g_acharne: 'acharne', g_marathon: 'marathon' };
+const GX_PEP = { projet: 'objectif', g_trois: 'trois', g_parfait: 'parfait', g_perdu: 'perdu', g_boulette: 'boulette', g_acharne: 'acharne', g_marathon: 'marathon' };
 function pepAdmin(k) {
   const won = medals(k.id).filter(m => m.ok && GX_PEP[m.id]);
   return won.length ? `<p class="small" style="margin:0 0 8px"><span class="soft">Retirer une pépite :</span> ${won.map(m => `<button class="link" data-act="pepdel" data-k="${k.id}" data-n="${m.id}">${pepArm === k.id + m.id ? `Confirmer « ${m.name} »` : `« ${m.name} »`}</button>`).join(' ')}</p>` : '';
@@ -1323,7 +1323,7 @@ const pepOf = m => `pépite\u00a0${m.mat.replace(' ', '\u00a0')}`;
 function medals(id) {
   const k = kidOf(id); if (!k) return [];
   const E = evs(id), T = tot(id), g = goalOf(id), B = E.filter(e => e.t === 'bourse').sort((a, b) => (a.d < b.d ? -1 : 1));
-  const c = { paid: paidWeeks(id).size, bonus: E.reduce((a, e) => a + ((e.t === 'paie' || (e.t === 'recu' && !e.pending && !e.refused)) ? e.bonus || 0 : 0), 0), best: bestStreak(id), peak: r2(T.peak), rolls: E.filter(e => e.t === 'bourse').length, goalDone: E.some(e => e.t === 'projet') || (g && T.total >= g.budget), lq: Object.keys(k.lq || {}).length, goal: !!g || E.some(e => e.t === 'projet'), recu: E.filter(e => e.t === 'recu' && !e.pending && !e.refused).length, won: B.some(e => e.gain > 0), calm: B.some((e, i) => e.gain < 0 && i < B.length - 1), gains: r2(T.gains || 0), style: E.some(e => e.t === 'posture' && e.p !== 'none'), six: B.some(e => e.face === 6), trois: B.some((e, i) => i >= 2 && e.gain > 0 && B[i - 1].gain > 0 && B[i - 2].gain > 0), tout: E.some(e => e.t === 'paie' && e.inv > 0 && !e.dep) };
+  const c = { paid: paidWeeks(id).size, bonus: E.reduce((a, e) => a + ((e.t === 'paie' || (e.t === 'recu' && !e.pending && !e.refused)) ? e.bonus || 0 : 0), 0), best: bestStreak(id), peak: r2(T.peak), rolls: E.filter(e => e.t === 'bourse').length, goalDone: E.some(e => e.t === 'projet') || !!((kidOf(id) || {}).gx || {}).objectif, lq: Object.keys(k.lq || {}).length, goal: !!g || E.some(e => e.t === 'projet'), recu: E.filter(e => e.t === 'recu' && !e.pending && !e.refused).length, won: B.some(e => e.gain > 0), calm: B.some((e, i) => e.gain < 0 && i < B.length - 1), gains: r2(T.gains || 0), style: E.some(e => e.t === 'posture' && e.p !== 'none'), six: B.some(e => e.face === 6), trois: B.some((e, i) => i >= 2 && e.gain > 0 && B[i - 1].gain > 0 && B[i - 2].gain > 0), tout: E.some(e => e.t === 'paie' && e.inv > 0 && !e.dep) };
   const PW = paidWeeks(id), sw = startWeek(id), cw = wk(new Date()), isP = pausedWeeks(id), sea = new Set(), months = new Set();
   const toutW = new Set(E.filter(e => e.t === 'paie' && e.inv > 0 && !e.dep).map(e => normWk(wk(e.w || e.d))));
   for (const w of PW) {
