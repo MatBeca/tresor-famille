@@ -7,7 +7,7 @@ import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
 import { GAMES, LEVELS, levelOfAge, newParty, traySum, isRight, explain, eu, ROUNDS, WIN, PER_DAY } from './games.js';
-const VERSION = '125'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '126'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -428,7 +428,7 @@ function jeuView(k) {
     const left = r.eggs - r.dist.reduce((a, v) => a + v, 0);
     body = `<section class="card gq"><div class="gitem" aria-hidden="true">🥚</div><p>${r.q}</p></section>
 <p class="small soft" style="text-align:center;margin:6px 0">${A ? '' : left ? `Encore ${left} œuf${left > 1 ? 's' : ''} à ranger` : 'Tous tes œufs sont rangés !'}</p>
-<div class="gbaskets">${r.baskets.map(([ic, name, note], i) => `<div class="gbasket${A && r.res && r.res.hit === i ? ' hit' : ''}"><div class="gbic" aria-hidden="true">${ic}</div><b>${name}</b>${note ? `<small class="soft">${note}</small>` : ''}<div class="geggs" aria-label="${r.dist[i]} œuf${r.dist[i] > 1 ? 's' : ''}">${'🥚'.repeat(r.dist[i]) || '<span class="soft small">vide</span>'}</div>${A ? '' : `<div class="row" style="justify-content:center"><button class="btn ghost sm" data-act="jxeggout" data-n="${i}" ${r.dist[i] ? '' : 'disabled'} aria-label="Retirer un œuf">−</button><button class="btn sm" data-act="jxegg" data-n="${i}" ${left ? '' : 'disabled'} aria-label="Ajouter un œuf">+</button></div>`}</div>`).join('')}</div>
+<div class="gbaskets">${r.baskets.map((bk, i) => { const h = A && r.res && r.res.hits ? r.res.hits[i] : null; return `<div class="gbasket${h ? ' hit' : ''}"><div class="gbic" aria-hidden="true">${bk.ic}</div><b>Panier ${i + 1}</b><small class="soft">${bk.name}${bk.note ? ` · ${bk.note}` : ''}</small><div class="geggs" aria-label="${r.dist[i]} œuf${r.dist[i] > 1 ? 's' : ''}">${'🥚'.repeat(r.dist[i]) || '<span class="soft small">vide</span>'}</div>${h ? `<div class="ghit">${h[0]} ${h[1] > 0 ? `−${h[1]} œuf${h[1] > 1 ? 's' : ''}` : h[1] < 0 ? `+${-h[1]} œuf${h[1] < -1 ? 's' : ''}` : 'rien trouvé !'}</div>` : ''}${A ? '' : `<div class="row" style="justify-content:center"><button class="btn ghost sm" data-act="jxeggout" data-n="${i}" ${r.dist[i] ? '' : 'disabled'} aria-label="Retirer un œuf">−</button><button class="btn sm" data-act="jxegg" data-n="${i}" ${left && r.dist[i] < bk.cap ? '' : 'disabled'} aria-label="Ajouter un œuf">+</button></div>`}</div>`; }).join('')}</div>
 ${A ? '' : `<button class="btn full" data-act="jxpay" ${left ? 'disabled' : ''}>C’est parti !</button>`}`;
   } else if (r.kind === 'pay' || r.kind === 'change') {
     body = `<section class="card gq"><div class="gitem" aria-hidden="true">${r.ic}</div><p>${r.q}</p>${r.kind === 'change' ? `<div class="ggiven"><small class="soft">Le client te donne</small><span class="gm bill">${billSVG(r.given / 100)}</span></div>` : ''}</section>
@@ -462,7 +462,7 @@ function gAnswer(a) {
   if (ok) { P.score++; P.run++; P.best = Math.max(P.best, P.run); } else P.run = 0;
   if (P.id === 'envie' && a && a.startsWith('envie') && a !== r.answer) P.flag = 1; // un achat coup de cœur
   if (P.id === 'guimauve' && a === 'now' && r.answer === 'later') P.flag = 1; // n'a pas attendu alors que ça valait le coup
-  if (P.id === 'paniers' && r.kind === 'basket' && (r.mode === 'storm' ? r.dist.some(v => v === 0) : r.dist[1] > r.dist[0])) P.flag = 1; // œufs mal répartis
+  if (P.id === 'paniers' && r.kind === 'basket' && !(r.res && r.res.ok)) P.flag = 1; // une manche mal rangée
   const good = ['Bravo !', 'Exact !', 'Bien vu !', 'Parfait !'];
   P.ans = { ok, a, msg: ok ? good[Math.floor(Math.random() * good.length)] : 'Pas tout à fait…' };
   sfx(ok ? 'good' : 'bad');
@@ -1318,7 +1318,7 @@ const MEDALS = [
   M('jeux', 'g_envieS', 'Zéro coup de cœur', 'Gagner une partie de Envie ou besoin ? sans jamais choisir une envie à la place d’un besoin.', c => c.gx.zerocdc),
   M('jeux', 'g_pan1', 'Gardien des œufs', 'Gagner une partie des Paniers.', c => c.gw.paniers >= 1),
   M('jeux', 'g_pan3', 'Maître des paniers', 'Gagner les Paniers au niveau Grands.', c => c.gg.paniers),
-  M('jeux', 'g_panS', 'Bien réparti', 'Gagner une partie des Paniers en mettant toujours des œufs dans chaque panier (et jamais plus dans le risqué que dans le sûr).', c => c.gx.reparti),
+  M('jeux', 'g_panS', 'Bien réparti', 'Réussir les 5 manches d’une partie des Paniers.', c => c.gx.reparti),
   M('jeux', 'g_guim1', 'Patient', 'Gagner une partie du Défi de la guimauve.', c => c.gw.guimauve >= 1),
   M('jeux', 'g_guim3', 'Maître du temps', 'Gagner le Défi de la guimauve au niveau Grands.', c => c.gg.guimauve),
   M('jeux', 'g_guimS', 'Patience d’or', 'Gagner une partie du Défi de la guimauve en attendant à chaque fois que ça valait le coup.', c => c.gx.patience),
@@ -1918,7 +1918,7 @@ document.addEventListener('click', ev => {
     case 'jxcoin': if (party && !party.ans && !party.done) { const r = party.rounds[party.i]; if (r.tray && r.tray.length < 16) { r.tray.push(+b.dataset.n); sfx('coin'); } } break;
     case 'jxtake': if (party && !party.ans && !party.done) { const r = party.rounds[party.i]; if (r.tray) { r.tray.splice(+b.dataset.n, 1); sfx('back'); } } break;
     case 'jxpay': gAnswer(null); break;
-    case 'jxegg': if (party && !party.ans && !party.done) { const r = party.rounds[party.i], i = +b.dataset.n; if (r.kind === 'basket' && r.dist.reduce((a, v) => a + v, 0) < r.eggs && r.dist[i] !== undefined) { r.dist[i]++; sfx('coin'); } } break;
+    case 'jxegg': if (party && !party.ans && !party.done) { const r = party.rounds[party.i], i = +b.dataset.n; if (r.kind === 'basket' && r.dist.reduce((a, v) => a + v, 0) < r.eggs && r.dist[i] !== undefined && r.dist[i] < r.baskets[i].cap) { r.dist[i]++; sfx('coin'); } } break;
     case 'jxeggout': if (party && !party.ans && !party.done) { const r = party.rounds[party.i], i = +b.dataset.n; if (r.kind === 'basket' && r.dist[i] > 0) { r.dist[i]--; sfx('back'); } } break;
     case 'jxans': gAnswer(b.dataset.n); break;
     case 'jxnext': gNext(); break;
