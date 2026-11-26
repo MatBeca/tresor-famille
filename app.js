@@ -7,7 +7,7 @@ import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
 import { GAMES, LEVELS, levelOfAge, newParty, traySum, isRight, explain, eu, ROUNDS, WIN, PER_DAY } from './games.js';
-const VERSION = '120'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '121'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -383,20 +383,23 @@ let party = null;
 const todayK = () => ymdL(Date.now());
 const gLevel = k => k.glv || levelOfAge(validBirth(k.birth) ? ageAt(k.birth, new Date()) : '');
 const gameOpen = (k, id) => !!k.test || !GAMES[id].unlock || medals(k.id).some(m => m.id === GAMES[id].unlock && m.ok);
-const gLeft = (k, id) => k.test ? PER_DAY : Math.max(0, PER_DAY - (k.gp && k.gp.d === todayK() ? k.gp[id] || 0 : 0));
+// Parties par jour et par jeu : réglage des parents (0 = illimité), 3 par défaut. Les parents peuvent aussi redonner des parties pour la journée.
+const perDay = () => F && Number.isInteger(F.gpd) ? F.gpd : PER_DAY;
+const gLeft = (k, id) => { if (k.test || perDay() === 0) return 99; const t = k.gp && k.gp.d === todayK() ? k.gp : {}; return Math.max(0, perDay() + (t.bonus || 0) - (t[id] || 0)); };
+const unlimited = k => k.test || perDay() === 0;
 function gameCard(k) {
   const ids = Object.keys(GAMES).filter(id => gameOpen(k, id)), left = ids.reduce((a, id) => a + gLeft(k, id), 0);
-  return `<button class="todo gamecard" data-act="go" data-v="jeux"><span class="ic" aria-hidden="true">🎮</span><span><b>Jeux</b><small>${k.test ? 'Mode test : parties illimitées' : left ? `${left} partie${left > 1 ? 's' : ''} à jouer aujourd’hui` : 'Reviens demain pour rejouer !'}</small></span><span class="end">${I.chev}</span></button>`;
+  return `<button class="todo gamecard" data-act="go" data-v="jeux"><span class="ic" aria-hidden="true">🎮</span><span><b>Jeux</b><small>${k.test ? 'Mode test : parties illimitées' : perDay() === 0 ? 'Parties illimitées' : left ? `${left} partie${left > 1 ? 's' : ''} à jouer aujourd’hui` : 'Reviens demain pour rejouer !'}</small></span><span class="end">${I.chev}</span></button>`;
 }
 function jeuxView(k) {
   const lv = gLevel(k);
   return `<button class="backlink" data-act="go" data-v="home">${I.chev}<span>Ma tirelire</span></button><p class="kicker">Jouer pour apprendre</p><h2 class="title">Jeux</h2>
-<p class="lead">De petits jeux pour devenir un as de l’argent. ${PER_DAY} parties par jour et par jeu.</p>
+<p class="lead">De petits jeux pour devenir un as de l’argent. ${unlimited(k) ? 'Tes parents t’ont donné des parties illimitées.' : `${perDay()} partie${perDay() > 1 ? 's' : ''} par jour et par jeu.`}</p>
 <section class="card"><h3>Ton niveau</h3><div class="pills">${LEVELS.map(([v, l, a]) => `<button class="pill" data-act="jxlevel" data-n="${v}" aria-pressed="${lv === v}">${l} <small>${a}</small></button>`).join('')}</div></section>
 ${Object.entries(GAMES).map(([id, g]) => {
     const open = gameOpen(k, id), left = gLeft(k, id), st = (k.gs || {})[id] || {}, how = (MEDALS.find(m => m.id === g.unlock) || {}).how || '';
     return `<section class="card gcard${open ? '' : ' locked'}"><div class="gic" aria-hidden="true">${open ? g.ic : '🔒'}</div><div><h3>${g.name}</h3><p class="small soft" style="margin:2px 0 8px">${g.idea}</p>${open
-      ? `${st.w ? `<p class="small" style="margin:0 0 8px">${st.w} partie${st.w > 1 ? 's' : ''} gagnée${st.w > 1 ? 's' : ''}</p>` : ''}<button class="btn sm" data-act="jxstart" data-n="${id}" ${left ? '' : 'disabled'}>${k.test ? 'Jouer · illimité' : left ? `Jouer · ${left} partie${left > 1 ? 's' : ''} aujourd’hui` : 'Reviens demain !'}</button>`
+      ? `${st.w ? `<p class="small" style="margin:0 0 8px">${st.w} partie${st.w > 1 ? 's' : ''} gagnée${st.w > 1 ? 's' : ''}</p>` : ''}<button class="btn sm" data-act="jxstart" data-n="${id}" ${left ? '' : 'disabled'}>${unlimited(k) ? 'Jouer' : left ? `Jouer · ${left} partie${left > 1 ? 's' : ''} aujourd’hui` : 'Reviens demain !'}</button>`
       : `<p class="small" style="margin:0">Se débloque quand tu arrives à ceci : ${how.charAt(0).toLowerCase() + how.slice(1)}</p>`}</div></section>`;
   }).join('')}
 <p class="soft small" style="text-align:center">D’autres jeux arrivent bientôt.</p>`;
@@ -414,7 +417,7 @@ function jeuView(k) {
     const win = P.score >= WIN, stars = P.score >= 5 ? 3 : P.score === 4 ? 2 : P.score === 3 ? 1 : 0, left = gLeft(k, P.id);
     return `<section class="card gend"><div class="gstars" aria-label="${stars} étoile${stars > 1 ? 's' : ''}">${[1, 2, 3].map(i => `<span class="${i <= stars ? 'on' : ''}" style="--d:${(i * 0.18).toFixed(2)}s">★</span>`).join('')}</div>
 <h2 class="title">${win ? 'Partie gagnée !' : 'Pas cette fois…'}</h2><p class="lead">${P.score} bonne${P.score > 1 ? 's' : ''} réponse${P.score > 1 ? 's' : ''} sur ${ROUNDS}.${win ? '' : ` Il en faut ${WIN} pour gagner${P.score === WIN - 1 ? ' : tu y es presque' : '. Chaque partie te fait progresser'} !`}</p>
-<div class="row"><button class="btn" data-act="jxstart" data-n="${P.id}" ${left ? '' : 'disabled'}>${k.test ? 'Rejouer' : left ? `Rejouer (${left})` : 'Reviens demain !'}</button><button class="btn ghost" data-act="go" data-v="jeux">Les jeux</button></div></section>`;
+<div class="row"><button class="btn" data-act="jxstart" data-n="${P.id}" ${left ? '' : 'disabled'}>${unlimited(k) ? 'Rejouer' : left ? `Rejouer (${left})` : 'Reviens demain !'}</button><button class="btn ghost" data-act="go" data-v="jeux">Les jeux</button></div></section>`;
   }
   const r = P.rounds[P.i], A = P.ans;
   const head = `<div class="ghead"><button class="backlink" data-act="go" data-v="jeux">${I.chev}<span>Quitter</span></button><span class="gdots" aria-label="Manche ${P.i + 1} sur ${ROUNDS}">${P.rounds.map((_, i) => `<i class="${i < P.i ? 'done' : i === P.i ? 'cur' : ''}"></i>`).join('')}</span></div><h2 class="title">${g.ic} ${g.name}</h2>`;
@@ -440,8 +443,8 @@ function gStart(id) {
   if (F.stats && F.stats.wk && !F.noStats) { const r = F.stats.wk[ymdL(wk(new Date()))]; if (r) r[3] = (r[3] || 0) + 1; }
   const gd = k.gd || (k.gd = []); if (!gd.includes(d)) { gd.push(d); while (gd.length > 120) gd.shift(); }
   const gx = k.gx || (k.gx = {});
-  if (k.gp[id] >= PER_DAY) gx.acharne = 1;
-  const ids = Object.keys(GAMES); if (ids.every(g => (k.gp[g] || 0) >= PER_DAY)) gx.marathon = 1;
+  if (k.gp[id] >= 3) gx.acharne = 1;
+  const ids = Object.keys(GAMES); if (ids.every(g => (k.gp[g] || 0) >= 3)) gx.marathon = 1;
   party = { ...newParty(id, gLevel(k)), kid: k.id, run: 0, best: 0 };
   view = 'jeu'; saveF(); window.scrollTo(0, 0);
 }
@@ -731,6 +734,13 @@ function surveyCard() {
 <label style="margin-top:10px">Un mot pour expliquer ? (facultatif)<textarea data-f="svtxt" rows="3" maxlength="600">${esc(form.svtxt || '')}</textarea></label>
 <div class="row"><button class="btn sm" data-act="svsend" ${form.svnps === undefined || !form.svwtp ? 'disabled' : ''}>Envoyer</button><button class="btn ghost sm" data-act="svlater">Plus tard</button></div></section>`;
 }
+function gamesParentCard() {
+  const pd = perDay(), opts = [[1, '1'], [2, '2'], [3, '3'], [5, '5'], [0, 'Illimité']];
+  const used = kids().filter(k => !k.test && k.gp && k.gp.d === todayK() && Object.keys(GAMES).some(g => (k.gp[g] || 0) > 0));
+  return `<section class="card"><h3>Jeux</h3><p class="soft small" style="margin:0">Nombre de parties par jour et par jeu, pour tous les enfants. Des parties courtes (2 minutes environ) : 3 par jeu, c’est déjà une belle séance.</p>
+<div class="pills">${opts.map(([v, l]) => `<button class="pill" data-act="gpd" data-n="${v}" aria-pressed="${pd === v}">${l}</button>`).join('')}</div>
+${pd !== 0 && used.length ? `<p class="small" style="margin:12px 0 6px">Une bonne raison de jouer encore aujourd’hui ?</p><div class="row">${used.map(k => `<button class="btn ghost sm" data-act="gbonus" data-k="${k.id}">Redonner ${pd} partie${pd > 1 ? 's' : ''} à ${esc(k.name)}</button>`).join('')}</div>` : ''}</section>`;
+}
 function parentsView() {
   if (lock && !pinOk) return pinAsk ? pinView() : lockedView();
   const dis = ready ? '' : 'disabled', K = kidOf(cur), last = evs(cur)[evs(cur).length - 1];
@@ -787,6 +797,7 @@ ${kids().map(k => `<label>${esc(k.name)}<select data-set="kpost:${k.id}">${Objec
 ${last ? `<div class="row" style="margin-top:4px"><button class="btn ghost sm" data-act="undo" ${dis}>${undoArm ? 'Confirmer : annuler ' + lastTxt : 'Annuler la dernière opération ' + de(K.name)}</button></div>
 <div class="row"><button class="btn danger sm" data-act="resetopen" ${dis}>Vider la tirelire et tout remettre à zéro pour ${esc(K.name)}</button></div>` : `<p class="soft">Rien à annuler pour ${esc(K.name)}.</p>`}</section>
 ${standalone() ? '' : `<section class="card"><h3>Installer Pépite sur ce téléphone</h3>${installEv ? `<p class="soft small" style="margin:0">Une icône sur l’écran d’accueil, et l’appli s’ouvre en plein écran comme les autres.</p><div class="row"><button class="btn sm" data-act="install">Installer l’appli</button></div>` : `<p class="soft small" style="margin:0">Dans Chrome, touchez le menu ⋮ en haut à droite, puis « Ajouter à l’écran d’accueil » ou « Installer l’application ». Sur iPhone, dans Safari : bouton Partager, puis « Sur l’écran d’accueil ».</p>`}</section>`}
+${gamesParentCard()}
 <section class="card"><h3>Apparence et sons</h3><p class="soft small" style="margin:0">Réglages propres à cet appareil.</p>
 <div class="pills">${[['light', 'Clair'], ['dark', 'Sombre']].map(([v, l]) => `<button class="pill" data-act="theme" data-n="${v}" aria-pressed="${theme === v}">${l}</button>`).join('')}</div>
 <div class="pills">${[['on', 'Sons activés'], ['off', 'Sons coupés']].map(([v, l]) => `<button class="pill" data-act="sons" data-n="${v}" aria-pressed="${(v === 'on') === sndOn()}">${l}</button>`).join('')}</div></section>
@@ -990,11 +1001,11 @@ function adminDeep() {
       return { n: i + 1, age: validBirth(k.birth) ? ageAt(k.birth, new Date()) : '', start: k.start || '', weekly: k.weekly, paid, kw, rate: Math.min(100, Math.round(100 * paid / kw)), best, first: fp ? Math.max(0, Math.round((new Date(fp.d) - new Date(k.start || created)) / 864e5)) : '',
         keep: inv + dep ? Math.round(100 * inv / (inv + dep)) : '', tot: r2(tot), peak: r2(peak), bonus: r2(bonus), gains: r2(gains), out: r2(out),
         recus: e.filter(z => z.t === 'recu').length, rolls: e.filter(z => z.t === 'bourse').length, post: k.posture || x.diceName || '', goal: K.goal ? 1 : 0, budget: K.goal ? K.goal.budget : '', projets: e.filter(z => z.t === 'projet').length,
-        lq: Object.keys(k.lq || {}).length, peps: Array.isArray(k.ms) ? k.ms.length : '', guided: k.guided ? 1 : 0, gs: k.gs || {}, glv: k.glv || '' };
+        lq: Object.keys(k.lq || {}).length, peps: Array.isArray(k.ms) ? k.ms.length : '', guided: k.guided ? 1 : 0, gs: k.gs || {}, glv: k.glv || '', gbN: k.gbN || 0 };
     });
     return { id: pseudo(x.id), created, sw, weeks, act, wkMap, evW, last: st.seen || '', days: st.days || 0, opens: sum(0), kidOpens: sum(1), parentVisits: sum(2),
       devs: dv.length, os: [...new Set(dv.map(d => d.os))].join('+'), kidDev: dv.some(d => d.k) ? 1 : 0, inst: st.inst ? 1 : 0, push: x.push ? 1 : 0, nc: st.nc || {}, src: st.src || '',
-      sv: x.survey || null, match: x.match, gmatch: x.giftMatch, kids };
+      sv: x.survey || null, match: x.match, gmatch: x.giftMatch, gpd: Number.isInteger(x.gpd) ? (x.gpd || 'illimité') : 3, kids };
   });
 }
 function adminDeepStats(R) {
@@ -1023,10 +1034,10 @@ function adminCsv(kind) {
   const R = adminDeep(), day = ms => ms ? ymdL(ms) : '';
   if (kind === 'enfants') {
     const head = ['famille', 'enfant', 'age', 'inscription_famille', 'semaines_depuis_inscription', 'semaines_actives', 'part_semaines_actives_pct', 'derniere_visite', 'jours_ouverture', 'ouvertures', 'ouvertures_appareil_enfant', 'visites_espace_parents', 'appareils', 'systemes', 'appareil_enfant', 'appli_installee', 'notifications', 'clics_notifications', 'source_lien', 'source_sondage', 'recommandation_0_10', 'prix_accepte', 'commentaire_sondage', 'bonus_paie_pct', 'bonus_cadeaux_pct',
-      'debut_enfant', 'argent_de_poche_hebdo', 'semaines_enfant', 'paies_rangees', 'taux_paie_rangee_pct', 'meilleure_serie', 'jours_avant_premiere_paie', 'part_paie_mise_de_cote_pct', 'tirelire', 'plus_haut', 'bonus_recus', 'gains_bourse', 'depense_projets', 'argent_recu_declare', 'lancers_de', 'style_bourse', 'projet_en_cours', 'budget_projet', 'projets_realises', 'lecons_reussies', 'pepites', 'guide_termine', 'niveau_jeux_choisi', ...Object.keys(GAMES).flatMap(g => ['parties_' + g, 'victoires_' + g])];
+      'debut_enfant', 'argent_de_poche_hebdo', 'semaines_enfant', 'paies_rangees', 'taux_paie_rangee_pct', 'meilleure_serie', 'jours_avant_premiere_paie', 'part_paie_mise_de_cote_pct', 'tirelire', 'plus_haut', 'bonus_recus', 'gains_bourse', 'depense_projets', 'argent_recu_declare', 'lancers_de', 'style_bourse', 'projet_en_cours', 'budget_projet', 'projets_realises', 'lecons_reussies', 'pepites', 'guide_termine', 'niveau_jeux_choisi', 'parties_par_jour_reglage', 'parties_redonnees', ...Object.keys(GAMES).flatMap(g => ['parties_' + g, 'victoires_' + g])];
     const rows = [head];
     for (const r of R) for (const k of r.kids) rows.push([r.id, k.n, k.age, day(r.created), r.weeks, r.act.size, Math.round(100 * Math.min(1, r.act.size / r.weeks)), r.last, r.days, r.opens, r.kidOpens, r.parentVisits, r.devs, r.os, r.kidDev, r.inst, r.push, Object.entries(r.nc).map(([a, b]) => a + ':' + b).join(' '), r.src, r.sv ? r.sv.src : '', r.sv ? r.sv.nps : '', r.sv ? r.sv.wtp : '', r.sv ? r.sv.txt : '', r.match, r.gmatch,
-      (k.start || '').slice(0, 10), k.weekly, k.kw, k.paid, k.rate, k.best, k.first, k.keep, k.tot, k.peak, k.bonus, k.gains, k.out, k.recus, k.rolls, k.post, k.goal, k.budget, k.projets, k.lq, k.peps, k.guided, k.glv, ...Object.keys(GAMES).flatMap(g => [(k.gs[g] || {}).p || 0, (k.gs[g] || {}).w || 0])]);
+      (k.start || '').slice(0, 10), k.weekly, k.kw, k.paid, k.rate, k.best, k.first, k.keep, k.tot, k.peak, k.bonus, k.gains, k.out, k.recus, k.rolls, k.post, k.goal, k.budget, k.projets, k.lq, k.peps, k.guided, k.glv, r.gpd, k.gbN, ...Object.keys(GAMES).flatMap(g => [(k.gs[g] || {}).p || 0, (k.gs[g] || {}).w || 0])]);
     return csvDownload('enfants', rows);
   }
   if (kind === 'semaines') {
@@ -1287,8 +1298,8 @@ const MEDALS = [
   M('jeux', 'g_parfait', 'Sans faute', 'Finir une partie avec 5 bonnes réponses sur 5.', c => c.gx.parfait),
   M('jeux', 'g_perdu', 'Perdre, c’est apprendre', 'Perdre une partie… et comprendre ses erreurs.', c => c.gx.perdu),
   M('jeux', 'g_boulette', 'Champion de la boulette', 'Finir une partie avec 0 bonne réponse. Bravo, c’est un exploit !', c => c.gx.boulette),
-  M('jeux', 'g_acharne', 'Acharné', `Jouer les ${PER_DAY} parties d’un même jeu dans la journée.`, c => c.gx.acharne),
-  M('jeux', 'g_marathon', 'Marathon des jeux', 'Jouer toutes les parties de tous les jeux le même jour.', c => c.gx.marathon),
+  M('jeux', 'g_acharne', 'Acharné', 'Jouer 3 parties d’un même jeu dans la journée.', c => c.gx.acharne),
+  M('jeux', 'g_marathon', 'Marathon des jeux', 'Jouer 3 parties de chaque jeu le même jour.', c => c.gx.marathon),
   M('jeux', 'g_jour3', 'Joueur régulier', 'Jouer 3 jours d’affilée.', c => c.gdays >= 3),
   M('jeux', 'g_jour7', 'Une semaine de jeux', 'Jouer 7 jours d’affilée.', c => c.gdays >= 7),
   ...[[10, 'g_p10', 'Dix parties'], [25, 'g_p25', 'Vingt-cinq parties'], [50, 'g_p50', 'Cinquante parties'], [100, 'g_p100', 'Cent parties !']].map(([n, id, name]) => M('jeux', id, name, `Lancer ${n} parties de jeux en tout.`, c => c.gplays >= n)),
@@ -1867,6 +1878,8 @@ document.addEventListener('click', ev => {
     case 'admcsv': if (adminData) adminCsv(b.dataset.n); return;
     case 'kidtest': { const k = kidOf(b.dataset.k); if (k && ready && isAdmin()) { k.test = !k.test; if (k.test) k.ms = MEDALS.map(m => m.id); else delete k.ms; saveF(); } break; }
     case 'pepreplay': { const k = kidOf(cur); if (k && k.test && MEDALS.some(m => m.id === b.dataset.n)) { medalQ.push({ kid: k.id, id: b.dataset.n }); setTimeout(() => sfx('pep'), 250); } break; }
+    case 'gpd': if (ready && [0, 1, 2, 3, 5].includes(+b.dataset.n)) { F.gpd = +b.dataset.n; saveF(); } break;
+    case 'gbonus': { const k = kidOf(b.dataset.k); if (k && ready) { const d = todayK(); if (!k.gp || k.gp.d !== d) k.gp = { d }; k.gp.bonus = (k.gp.bonus || 0) + perDay(); k.gbN = (k.gbN || 0) + 1; saveF(); say(`${esc(k.name)} a ${perDay()} partie${perDay() > 1 ? 's' : ''} de plus aujourd’hui dans chaque jeu.`); } break; }
     case 'jxlevel': { const k = kidOf(cur); if (k && ready && LEVELS.some(l => l[0] === b.dataset.n)) { k.glv = b.dataset.n; saveF(); } break; }
     case 'jxstart': gStart(b.dataset.n); break;
     case 'jxcoin': if (party && !party.ans && !party.done) { const r = party.rounds[party.i]; if (r.tray && r.tray.length < 16) { r.tray.push(+b.dataset.n); sfx('coin'); } } break;
