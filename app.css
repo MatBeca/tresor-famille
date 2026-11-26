@@ -550,3 +550,8 @@ svg.jar.jup{animation:jpop 3s ease-in-out both;transform-origin:50% 90%}
 @keyframes gbar{from{width:0}}
 @keyframes gpop{from{transform:scale(.6)}}
 @media (prefers-reduced-motion:reduce){.gitem,.gcoin,.gfb,.gbar i,.gstars .on{animation:none}}
+.gbaskets{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.gbasket{background:var(--card);border:2.5px solid var(--line);border-radius:18px;padding:10px;text-align:center;display:grid;gap:4px}
+.gbasket.hit{border-color:#e0294f;background:color-mix(in srgb,#e0294f 10%,var(--card));animation:gshake .5s}
+.gbic{font-size:34px;line-height:1}.geggs{min-height:30px;font-size:20px;letter-spacing:1px;word-break:break-all}
+@keyframes gshake{25%{transform:translateX(-5px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}

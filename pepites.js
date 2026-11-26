@@ -635,6 +635,53 @@ Object.assign(MATS, {
   de_pire: { mat: 'de trèfle', c: '#5cbf5c', line: '#1f4a1f', draw: 'trefle' },
 });
 
+Object.assign(D, {
+  chaussette(c, L) { // chaussette en coton
+    const d = 'M24 10H42V36Q42 44 36 50L30 56Q24 60 18 55Q13 50 18 45L26 38Z';
+    return `<path d="${d}" fill="${c}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><path d="M24 10H42V18H24Z" fill="${tone(c, -0.2)}" stroke="${L}" stroke-width="2.4"/><path d="M24 24H42M24 30H42" stroke="#e0294f" stroke-width="3"/><path d="M18 45Q13 50 18 55Q24 60 30 56L32 54Q24 54 22 47Z" fill="#e0294f" stroke="${L}" stroke-width="2"/>` + shine('M28 34 28 40', 2);
+  },
+  caddie(c, L) { // caddie en osier tressé
+    const weave = [0, 1, 2].map(i => `<path d="M${16 + i * 2} ${26 + i * 7}H${50 - i * 2}" stroke="${tone(c, -0.3)}" stroke-width="1.4"/>`).join('') + [22, 30, 38, 46].map(x => `<path d="M${x} 21L${x - 2} 44" stroke="${tone(c, 0.3)}" stroke-width="1.4"/>`).join('');
+    return `<path d="M4 14H12L16 21" stroke="${L}" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 21H54L48 45H20Z" fill="${c}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>${weave}<path d="M20 45L18 50H50" stroke="${L}" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="22" cy="55" r="3.6" fill="${tone(c, -0.3)}" stroke="${L}" stroke-width="2"/><circle cx="46" cy="55" r="3.6" fill="${tone(c, -0.3)}" stroke="${L}" stroke-width="2"/>`;
+  },
+  dentelle(c, L) { // cœur en dentelle
+    const heart = 'M32 54C20 44 10 36 10 25C10 17 16 12 22 12C27 12 30 15 32 18C34 15 37 12 42 12C48 12 54 17 54 25C54 36 44 44 32 54Z';
+    const holes = [[22, 22], [32, 26], [42, 22], [27, 34], [37, 34], [32, 43], [17, 29], [47, 29]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.4" fill="none" stroke="${tone(c, -0.3)}" stroke-width="1.4"/>`).join('');
+    return `<path d="${heart}" fill="${c}" stroke="${L}" stroke-width="3" stroke-dasharray="4 2.2" stroke-linejoin="round"/>${holes}` + shine('M16 21Q18 16 23 15.5', 2.2);
+  },
+  guimauve(c, L) { // guimauve rose et blanche
+    return `<ellipse cx="32" cy="48" rx="18" ry="6" fill="${tone(c, -0.15)}" stroke="${L}" stroke-width="2.6"/><path d="M14 48V24H50V48" fill="${c}" stroke="${L}" stroke-width="2.6"/><path d="M14 36H50" stroke="#fff" stroke-width="6" opacity=".9"/><ellipse cx="32" cy="24" rx="18" ry="6" fill="${tone(c, 0.35)}" stroke="${L}" stroke-width="2.6"/><path d="M20 30V44" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".8"/>` + spark(52, 14, 3.4, '#fff', L);
+  },
+  gousset(c, L) { // montre à gousset en or
+    return `<rect x="28" y="10" width="8" height="5" rx="1.5" fill="${tone(c, -0.15)}" stroke="${L}" stroke-width="2"/><circle cx="32" cy="36" r="21" fill="${c}" stroke="${L}" stroke-width="3"/><circle cx="32" cy="36" r="16" fill="#fff8e6" stroke="${tone(c, -0.3)}" stroke-width="2"/>${Array.from({ length: 12 }, (_, i) => { const a = i * Math.PI / 6; return `<circle cx="${(32 + 13 * Math.cos(a)).toFixed(1)}" cy="${(36 + 13 * Math.sin(a)).toFixed(1)}" r="${i % 3 ? 0.9 : 1.6}" fill="${L}"/>`; }).join('')}<path d="M32 36V26M32 36L39 39" stroke="${L}" stroke-width="2.4" stroke-linecap="round"/>` + shine('M16 29Q18 22 24 19');
+  },
+  etoilesucre(c, L) { // sablé étoile au sucre glace
+    const o = star(32, 35, 25, 12);
+    return poly(o, '#d9a35a', L, 3) + poly(star(32, 35, 19, 9), c, tone(c, -0.15), 1.4) + [[26, 30], [36, 28], [30, 40], [38, 38], [32, 34]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.2" fill="#fff"/>`).join('') + spark(54, 12, 3.6, '#fff', L);
+  },
+  coquetier(c, L) { // œuf dans son coquetier
+    return `<path d="M20 22Q20 10 32 10Q44 10 44 24Q44 34 32 34Q20 34 20 22Z" fill="${c}" stroke="${L}" stroke-width="3"/><path d="M16 32H48Q48 44 38 46L40 52H24L26 46Q16 44 16 32Z" fill="#4d96ff" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><rect x="20" y="51" width="24" height="6" rx="2" fill="#3a7ad8" stroke="${L}" stroke-width="2.6"/><circle cx="26" cy="39" r="1.6" fill="#fff"/><circle cx="32" cy="40" r="1.6" fill="#fff"/><circle cx="38" cy="39" r="1.6" fill="#fff"/>` + shine('M25 17Q27 13 31 12.5', 2.2);
+  },
+  nid(c, L) { // nid de paille avec ses œufs
+    const straw = Array.from({ length: 9 }, (_, i) => `<path d="M${10 + i * 5} ${40 + (i % 2) * 3}Q${14 + i * 5} ${34 + (i % 3) * 4} ${18 + i * 5} ${42 - (i % 2) * 2}" stroke="${tone(c, i % 2 ? -0.25 : 0.2)}" stroke-width="2" fill="none"/>`).join('');
+    return `<ellipse cx="24" cy="32" rx="7" ry="9" fill="#f3efe6" stroke="${L}" stroke-width="2.2"/><ellipse cx="40" cy="31" rx="7" ry="9" fill="#bfe6f2" stroke="${L}" stroke-width="2.2"/><ellipse cx="32" cy="34" rx="7" ry="9" fill="#fff" stroke="${L}" stroke-width="2.2"/><path d="M6 38Q8 54 32 54Q56 54 58 38Q46 44 32 44Q18 44 6 38Z" fill="${c}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>${straw}`;
+  },
+  oeufor(c, L) { // œuf d'or décoré
+    return `<path d="M32 9Q48 9 50 34Q51 56 32 56Q13 56 14 34Q16 9 32 9Z" fill="${c}" stroke="${L}" stroke-width="3"/><path d="M15 30Q32 36 49 30M14.5 40Q32 46 49.5 40" stroke="${tone(c, -0.3)}" stroke-width="2" fill="none"/>${[[22, 35], [32, 37], [42, 35], [27, 45], [37, 45]].map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="2" fill="${['#e0294f', '#4d96ff', '#6bcb77', '#9b6bff', '#e0294f'][i]}" stroke="${L}" stroke-width="1"/>`).join('')}<path d="M32 14L34 19L39 19.5L35.5 23L36.5 28L32 25.5L27.5 28L28.5 23L25 19.5L30 19Z" fill="#fff8d6" stroke="${L}" stroke-width="1.2"/>` + shine('M20 24Q22 16 27 13') + spark(54, 12, 4, '#fff', L);
+  },
+});
+Object.assign(MATS, {
+  g_envie1: { mat: 'de coton', c: '#f3efe6', line: '#4a4438', draw: 'chaussette' },
+  g_envie3: { mat: 'd’osier tressé', c: '#d9a35a', line: '#5a3a10', draw: 'caddie' },
+  g_envieS: { mat: 'de dentelle', c: '#ffe3ee', line: '#8a2c4c', draw: 'dentelle' },
+  g_pan1: { mat: 'de coquille', c: '#f6f0e4', line: '#5a4a30', draw: 'coquetier' },
+  g_pan3: { mat: 'de paille', c: '#e6c46a', line: '#5a4310', draw: 'nid' },
+  g_panS: { mat: 'de coquille dorée', c: '#f5c542', line: '#6e4a00', draw: 'oeufor' },
+  g_guim1: { mat: 'de guimauve', c: '#ffb3cf', line: '#8a2c4c', draw: 'guimauve' },
+  g_guim3: { mat: 'd’or vieilli', c: '#e0a628', line: '#5a3a00', draw: 'gousset' },
+  g_guimS: { mat: 'de sucre glace', c: '#ffffff', line: '#6e4a20', draw: 'etoilesucre' },
+});
+
 export const matSVG = m => D[m.draw](m.c, m.line);
 // Pépite pas encore gagnée : une pépite grise avec un point d'interrogation.
 export const mystSVG = () => NUGF.map((d, i) => `<path d="${d}" fill="${['#e9e6e1', '#f3f1ed', '#e2ded8', '#d9d4cd', '#e0dcd5', '#cfc9c1', '#c7c0b7', '#d6d1ca', '#bfb8ae'][i]}" stroke="#a29a8e" stroke-width="1.1" stroke-linejoin="round"/>`).join('') + edge([[6, 40], [14, 24], [30, 15], [46, 17], [58, 30], [56, 46], [42, 55], [20, 54]], '#a29a8e') + '<text x="32" y="43" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="21" fill="#7d7468" stroke="#fff" stroke-width="3" paint-order="stroke">?</text>';

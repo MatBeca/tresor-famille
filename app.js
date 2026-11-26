@@ -7,7 +7,7 @@ import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
 import { GAMES, LEVELS, levelOfAge, newParty, traySum, isRight, explain, eu, ROUNDS, WIN, PER_DAY } from './games.js';
-const VERSION = '124'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '125'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -424,7 +424,13 @@ function jeuView(k) {
   const r = P.rounds[P.i], A = P.ans;
   const head = `<div class="ghead"><button class="backlink" data-act="go" data-v="jeux">${I.chev}<span>Quitter</span></button><span class="gdots" aria-label="Manche ${P.i + 1} sur ${ROUNDS}">${P.rounds.map((_, i) => `<i class="${i < P.i ? 'done' : i === P.i ? 'cur' : ''}"></i>`).join('')}</span></div><h2 class="title">${g.ic} ${g.name}</h2>`;
   let body;
-  if (r.kind === 'pay' || r.kind === 'change') {
+  if (r.kind === 'basket') {
+    const left = r.eggs - r.dist.reduce((a, v) => a + v, 0);
+    body = `<section class="card gq"><div class="gitem" aria-hidden="true">🥚</div><p>${r.q}</p></section>
+<p class="small soft" style="text-align:center;margin:6px 0">${A ? '' : left ? `Encore ${left} œuf${left > 1 ? 's' : ''} à ranger` : 'Tous tes œufs sont rangés !'}</p>
+<div class="gbaskets">${r.baskets.map(([ic, name, note], i) => `<div class="gbasket${A && r.res && r.res.hit === i ? ' hit' : ''}"><div class="gbic" aria-hidden="true">${ic}</div><b>${name}</b>${note ? `<small class="soft">${note}</small>` : ''}<div class="geggs" aria-label="${r.dist[i]} œuf${r.dist[i] > 1 ? 's' : ''}">${'🥚'.repeat(r.dist[i]) || '<span class="soft small">vide</span>'}</div>${A ? '' : `<div class="row" style="justify-content:center"><button class="btn ghost sm" data-act="jxeggout" data-n="${i}" ${r.dist[i] ? '' : 'disabled'} aria-label="Retirer un œuf">−</button><button class="btn sm" data-act="jxegg" data-n="${i}" ${left ? '' : 'disabled'} aria-label="Ajouter un œuf">+</button></div>`}</div>`).join('')}</div>
+${A ? '' : `<button class="btn full" data-act="jxpay" ${left ? 'disabled' : ''}>C’est parti !</button>`}`;
+  } else if (r.kind === 'pay' || r.kind === 'change') {
     body = `<section class="card gq"><div class="gitem" aria-hidden="true">${r.ic}</div><p>${r.q}</p>${r.kind === 'change' ? `<div class="ggiven"><small class="soft">Le client te donne</small><span class="gm bill">${billSVG(r.given / 100)}</span></div>` : ''}</section>
 <section class="card gcounter"><p class="small soft" style="margin:0 0 6px">Sur le comptoir : <b>${eu(traySum(r))}</b></p><div class="gtray">${r.tray.map((c, i) => coinH(c, 'jxtake', i, A)).join('') || '<span class="soft small">Touche les pièces pour les poser ici.</span>'}</div></section>
 ${A ? '' : `<div class="gcoins">${r.coins.map(c => coinH(c, 'jxcoin', c)).join('')}</div><button class="btn full" data-act="jxpay" ${r.tray.length ? '' : 'disabled'}>${r.kind === 'pay' ? 'Payer' : 'Rendre la monnaie'}</button>`}`;
@@ -454,6 +460,9 @@ function gAnswer(a) {
   const P = party; if (!P || P.done || P.ans) return;
   const r = P.rounds[P.i], ok = isRight(r, a);
   if (ok) { P.score++; P.run++; P.best = Math.max(P.best, P.run); } else P.run = 0;
+  if (P.id === 'envie' && a && a.startsWith('envie') && a !== r.answer) P.flag = 1; // un achat coup de cœur
+  if (P.id === 'guimauve' && a === 'now' && r.answer === 'later') P.flag = 1; // n'a pas attendu alors que ça valait le coup
+  if (P.id === 'paniers' && r.kind === 'basket' && (r.mode === 'storm' ? r.dist.some(v => v === 0) : r.dist[1] > r.dist[0])) P.flag = 1; // œufs mal répartis
   const good = ['Bravo !', 'Exact !', 'Bien vu !', 'Parfait !'];
   P.ans = { ok, a, msg: ok ? good[Math.floor(Math.random() * good.length)] : 'Pas tout à fait…' };
   sfx(ok ? 'good' : 'bad');
@@ -470,6 +479,7 @@ function gNext() {
     if (P.score === ROUNDS) gx.parfait = 1;
     if (!win) gx.perdu = 1;
     if (P.score === 0) gx.boulette = 1;
+    if (win && !P.flag) { const sp = { envie: 'zerocdc', guimauve: 'patience', paniers: 'reparti' }[P.id]; if (sp) gx[sp] = 1; }
     if (win) { const st = (k.gs || (k.gs = {}))[P.id] || (k.gs[P.id] = { p: 1, w: 0 }); st.w++; if (P.lv === 'g') st.g = 1; }
     saveF();
   }
@@ -737,7 +747,7 @@ function surveyCard() {
 <div class="row"><button class="btn sm" data-act="svsend" ${form.svnps === undefined || !form.svwtp ? 'disabled' : ''}>Envoyer</button><button class="btn ghost sm" data-act="svlater">Plus tard</button></div></section>`;
 }
 // Outil du créateur (Espace parents, protégé par le code) : retirer une pépite gagnée par un geste ponctuel, qu'on pourra regagner normalement.
-const GX_PEP = { projet: 'objectif', g_trois: 'trois', g_parfait: 'parfait', g_perdu: 'perdu', g_boulette: 'boulette', g_acharne: 'acharne', g_marathon: 'marathon' };
+const GX_PEP = { projet: 'objectif', g_envieS: 'zerocdc', g_panS: 'reparti', g_guimS: 'patience', g_trois: 'trois', g_parfait: 'parfait', g_perdu: 'perdu', g_boulette: 'boulette', g_acharne: 'acharne', g_marathon: 'marathon' };
 function pepAdmin(k) {
   const won = medals(k.id).filter(m => m.ok && GX_PEP[m.id]);
   return won.length ? `<p class="small" style="margin:0 0 8px"><span class="soft">Retirer une pépite :</span> ${won.map(m => `<button class="link" data-act="pepdel" data-k="${k.id}" data-n="${m.id}">${pepArm === k.id + m.id ? `Confirmer « ${m.name} »` : `« ${m.name} »`}</button>`).join(' ')}</p>` : '';
@@ -1303,6 +1313,15 @@ const MEDALS = [
   M('jeux', 'g_kilo3', 'Expert des étiquettes', 'Gagner le Prix au kilo au niveau Grands.', c => c.gg.kilo),
   M('jeux', 'g_course1', 'Sur la ligne de départ', 'Gagner une partie de la Course des tirelires.', c => c.gw.course >= 1),
   M('jeux', 'g_course3', 'Champion de la course', 'Gagner la Course des tirelires au niveau Grands.', c => c.gg.course),
+  M('jeux', 'g_envie1', 'Acheteur malin', 'Gagner une partie de Envie ou besoin ?', c => c.gw.envie >= 1),
+  M('jeux', 'g_envie3', 'Pro des courses', 'Gagner Envie ou besoin ? au niveau Grands.', c => c.gg.envie),
+  M('jeux', 'g_envieS', 'Zéro coup de cœur', 'Gagner une partie de Envie ou besoin ? sans jamais choisir une envie à la place d’un besoin.', c => c.gx.zerocdc),
+  M('jeux', 'g_pan1', 'Gardien des œufs', 'Gagner une partie des Paniers.', c => c.gw.paniers >= 1),
+  M('jeux', 'g_pan3', 'Maître des paniers', 'Gagner les Paniers au niveau Grands.', c => c.gg.paniers),
+  M('jeux', 'g_panS', 'Bien réparti', 'Gagner une partie des Paniers en mettant toujours des œufs dans chaque panier (et jamais plus dans le risqué que dans le sûr).', c => c.gx.reparti),
+  M('jeux', 'g_guim1', 'Patient', 'Gagner une partie du Défi de la guimauve.', c => c.gw.guimauve >= 1),
+  M('jeux', 'g_guim3', 'Maître du temps', 'Gagner le Défi de la guimauve au niveau Grands.', c => c.gg.guimauve),
+  M('jeux', 'g_guimS', 'Patience d’or', 'Gagner une partie du Défi de la guimauve en attendant à chaque fois que ça valait le coup.', c => c.gx.patience),
   M('jeux', 'g_trois', 'Trois d’affilée', 'Donner 3 bonnes réponses de suite dans une partie.', c => c.gx.trois),
   M('jeux', 'g_parfait', 'Sans faute', 'Finir une partie avec 5 bonnes réponses sur 5.', c => c.gx.parfait),
   M('jeux', 'g_perdu', 'Perdre, c’est apprendre', 'Perdre une partie… et comprendre ses erreurs.', c => c.gx.perdu),
@@ -1899,6 +1918,8 @@ document.addEventListener('click', ev => {
     case 'jxcoin': if (party && !party.ans && !party.done) { const r = party.rounds[party.i]; if (r.tray && r.tray.length < 16) { r.tray.push(+b.dataset.n); sfx('coin'); } } break;
     case 'jxtake': if (party && !party.ans && !party.done) { const r = party.rounds[party.i]; if (r.tray) { r.tray.splice(+b.dataset.n, 1); sfx('back'); } } break;
     case 'jxpay': gAnswer(null); break;
+    case 'jxegg': if (party && !party.ans && !party.done) { const r = party.rounds[party.i], i = +b.dataset.n; if (r.kind === 'basket' && r.dist.reduce((a, v) => a + v, 0) < r.eggs && r.dist[i] !== undefined) { r.dist[i]++; sfx('coin'); } } break;
+    case 'jxeggout': if (party && !party.ans && !party.done) { const r = party.rounds[party.i], i = +b.dataset.n; if (r.kind === 'basket' && r.dist[i] > 0) { r.dist[i]--; sfx('back'); } } break;
     case 'jxans': gAnswer(b.dataset.n); break;
     case 'jxnext': gNext(); break;
     case 'svnps': form.svnps = +b.dataset.n; break;

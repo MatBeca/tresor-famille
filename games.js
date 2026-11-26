@@ -113,13 +113,81 @@ function kiloRound(lv) {
     why: `${qty(s1, u)} à ${eu(p1)}, ça fait ${eu(Math.round(k1))} ${le}. ${qty(s2, u)} à ${eu(p2)}, ça fait ${eu(Math.round(k2))} ${le}. Le prix ${u === 'kg' ? 'au kilo' : 'au litre'} est écrit en petit sur les étiquettes : regarde la prochaine fois !` };
 }
 
+// ---------- Envie ou besoin ? ----------
+const BESOINS = [['🪥', 'une brosse à dents'], ['🧼', 'du savon'], ['🧥', 'un manteau pour l’hiver'], ['📓', 'un cahier pour l’école'], ['🍞', 'du pain'], ['👓', 'des lunettes pour bien voir'], ['🧦', 'des chaussettes à ta taille'], ['☂️', 'un parapluie quand il pleut']];
+const ENVIES = [['🍬', 'des bonbons'], ['🎮', 'un nouveau jeu vidéo'], ['🧸', 'une peluche de plus'], ['🍭', 'une sucette'], ['🃏', 'des cartes à collectionner'], ['🦖', 'une figurine'], ['✨', 'des autocollants brillants'], ['🎈', 'un ballon de baudruche']];
+function envieRound(lv) {
+  if (lv === 'p') {
+    const b = Math.random() < 0.5, [ic, name] = pick(b ? BESOINS : ENVIES);
+    return { kind: 'deal', ic, q: `${name[0].toUpperCase() + name.slice(1)} : c’est un besoin ou une envie ?`, opts: [['besoin', 'Un besoin'], ['envie', 'Une envie']], answer: b ? 'besoin' : 'envie',
+      why: b ? 'C’est un besoin : on en a vraiment besoin pour vivre, être propre, au chaud ou apprendre.' : 'C’est une envie : ça fait plaisir, mais on peut s’en passer. Les envies, on les achète quand il reste de l’argent !' };
+  }
+  if (lv === 'm') {
+    const [bi, bn, pb] = pick([['🪥', 'une brosse à dents', 2], ['🧼', 'du savon', 2], ['📓', 'un cahier pour l’école', 3], ['🍞', 'du pain', 1], ['🧦', 'des chaussettes', 4], ['✏️', 'des crayons pour l’école', 3]]), e = shuffle([['🍬', 'des bonbons', 2], ['🍭', 'une sucette', 1], ['🃏', 'des cartes à collectionner', 3], ['🦖', 'une figurine', 6], ['✨', 'des autocollants brillants', 3], ['🎈', 'un ballon de baudruche', 2], ['🧸', 'une petite peluche', 8]]).slice(0, 2), pe = [e[0][2], e[1][2]];
+    return { kind: 'deal', ic: '👛', q: `Il te reste 10 € pour la semaine. Qu’achètes-tu en premier ?`, opts: shuffle([['besoin', `${bi} ${bn} (${pb} €)`], ['envie1', `${e[0][0]} ${e[0][1]} (${pe[0]} €)`], ['envie2', `${e[1][0]} ${e[1][1]} (${pe[1]} €)`]]), answer: 'besoin',
+      why: `D’abord le besoin : ${bn}. Il reste ensuite ${10 - pb} € pour une envie, si tu veux. Dans l’autre sens, tu risques de ne plus avoir assez pour l’essentiel.` };
+  }
+  const t = R(0, 3);
+  if (t === 0) { const m = pick([2, 3, 5]), y = m * 12; return { kind: 'mcq', ic: '📱', q: `Un jeu sur tablette coûte ${m} € par mois. Combien ça fait sur une année ?`, opts: shuffle([[String(y), `${y} €`], [String(m), `${m} €`], [String(m * 4), `${m * 4} €`]]), answer: String(y), why: `12 mois × ${m} € = ${y} €. Un petit prix chaque mois, ça finit par faire beaucoup : c’est le piège des abonnements !` }; }
+  if (t === 1) return { kind: 'mcq', ic: '🧸', q: 'Tu vois un jouet à 20 € qui te fait très envie. Que fais-tu ?', opts: shuffle([['envie', 'Je l’achète tout de suite'], ['attendre', 'J’attends une semaine et je vois si j’en ai toujours envie'], ['envie2', 'J’emprunte de l’argent pour l’acheter']]), answer: 'attendre', why: 'Attendre une semaine, c’est l’astuce des pros : souvent, l’envie passe toute seule. Et si elle est toujours là, tu achèteras sans regret.' };
+  if (t === 2) return { kind: 'mcq', ic: '📢', q: 'Une pub crie : « Dernière chance, plus que 2 heures ! » Qu’en penses-tu ?', opts: shuffle([['envie', 'Il faut vite acheter'], ['ruse', 'C’est une astuce pour me faire acheter sans réfléchir'], ['envie2', 'C’est forcément une bonne affaire']]), answer: 'ruse', why: 'Les pubs pressées veulent t’empêcher de réfléchir. Une vraie bonne affaire supporte bien une nuit de réflexion !' };
+  return { kind: 'mcq', ic: '💶', q: 'Tu reçois 10 € d’argent de poche. Quel plan est le plus malin ?', opts: shuffle([['envie', 'Tout dépenser le jour même'], ['plan', 'En mettre une partie de côté et garder le reste pour se faire plaisir'], ['envie2', 'Tout dépenser, et emprunter si ça ne suffit pas']]), answer: 'plan', why: 'Un peu de côté, un peu pour le plaisir : c’est l’équilibre qui marche, et c’est exactement ce que tu fais avec ta paie !' };
+}
+
+// ---------- Le Défi de la guimauve ----------
+const TREATS = [['🍬', 'bonbon', 'bonbons'], ['🍪', 'biscuit', 'biscuits'], ['⭐', 'autocollant', 'autocollants'], ['🧁', 'petit gâteau', 'petits gâteaux']];
+const plural = (n, a, b) => `${n} ${n > 1 ? b : a}`;
+function guimRound(lv) {
+  if (lv === 'p') {
+    const [ic, one, many] = pick(TREATS), d = pick(['dans 5 minutes', 'après le goûter', 'demain']), later = Math.random() < 0.65, n = R(1, 2), m = later ? n + R(1, 2) : pick([n, Math.max(1, n - 1)]);
+    return { kind: 'deal', ic, q: `${plural(n, one, many)} maintenant, ou ${plural(m, one, many)} ${d} ?`, opts: [['now', `Maintenant : ${plural(n, one, many)}`], ['later', `J’attends : ${plural(m, one, many)}`]], answer: m > n ? 'later' : 'now',
+      why: m > n ? `En attendant un peu, tu en as ${m} au lieu de ${n}. La patience rapporte !` : `Attendre pour avoir ${m === n ? 'pareil' : 'moins'} ? Pas la peine : ici, autant le prendre tout de suite.` };
+  }
+  if (lv === 'm') {
+    const x = pick([5, 10, 20]), good = Math.random() < 0.6;
+    const [y, d] = good ? pick([[x * 1.2, 'dans une semaine'], [x * 1.5, 'dans un mois'], [x * 2, 'dans un mois']]) : pick([[x, 'dans un mois'], [x + 0.1, 'dans un an'], [x * 0.9, 'dans une semaine']]);
+    const yv = Math.round(y * 100) / 100, ys = eu(Math.round(yv * 100));
+    return { kind: 'deal', ic: '⏳', q: `${x} € maintenant, ou ${ys} ${d} ?`, opts: [['now', `${x} € maintenant`], ['later', `${ys} ${d}`]], answer: good ? 'later' : 'now',
+      why: good ? `Attendre ${d.replace('dans ', '')} pour gagner ${eu(Math.round((yv - x) * 100))} de plus : ça vaut le coup !` : `Attendre ${d.replace('dans ', '')} pour ${yv > x ? 'quelques centimes' : yv === x ? 'la même chose' : 'moins'} ? Ça ne vaut pas la peine.` };
+  }
+  // grands : comparer l'offre à ce que rapporterait un livret
+  const r = pick([2, 3]), n = pick([1, 2]), x = 100, good = Math.random() < 0.55, k = good ? pick([10, 15, 20]) * n / 1 : pick([1, 2]) * n / 2;
+  const y = Math.round(x * (1 + k / 100)), liv = Math.round(x * (1 + r * n / 100));
+  return { kind: 'deal', ic: '🏦', q: `On te propose ${x} € aujourd’hui, ou ${y} € dans ${n} an${n > 1 ? 's' : ''}. Ton livret rapporte ${r} % par an. Que choisis-tu ?`, opts: [['now', `${x} € aujourd’hui, que je place sur mon livret`], ['later', `${y} € dans ${n} an${n > 1 ? 's' : ''}`]], answer: y > liv ? 'later' : 'now',
+    why: `Sur le livret, ${x} € deviennent environ ${liv} € en ${n} an${n > 1 ? 's' : ''}. ${y > liv ? `L’offre de ${y} € est meilleure : attendre rapporte plus.` : `L’offre de ${y} € rapporte moins : mieux vaut prendre l’argent et le placer.`}` };
+}
+
+// ---------- Les Paniers : ne pas mettre tous ses œufs dans le même panier ----------
+function panierRound(lv) {
+  if (lv === 'g') return { kind: 'basket', mode: 'risk', eggs: 6, baskets: [['🧺', 'Panier sûr', '+1 œuf à la fin'], ['🎲', 'Panier risqué', '2 fois sur 3 : double ! 1 fois sur 3 : tout perdu']], dist: [0, 0],
+    q: 'Répartis tes 6 œufs. Le panier sûr rapporte toujours 1 œuf. Le risqué peut doubler… ou tout perdre. Garde au moins 6 œufs pour réussir !' };
+  const n = lv === 'p' ? 4 : 6, b = lv === 'p' ? 2 : 3, thr = lv === 'p' ? 2 : 3, ev = pick([['🦊', 'Un renard'], ['⛈️', 'Un orage'], ['🦝', 'Un raton laveur']]);
+  return { kind: 'basket', mode: 'storm', eggs: n, thr, ev, baskets: Array.from({ length: b }, (_, i) => ['🧺', `Panier ${i + 1}`, '']), dist: Array(b).fill(0),
+    q: `Range tes ${n} œufs dans les paniers. Attention : ${ev[1].toLowerCase()} va passer et casser les œufs d’un panier au hasard ! Sauve au moins ${thr} œufs.` };
+}
+export function resolveBasket(r) {
+  if (r.res) return r.res;
+  const N = r.eggs;
+  if (r.mode === 'storm') {
+    const hit = Math.floor(Math.random() * r.dist.length), lost = r.dist[hit], saved = N - lost, ok = saved >= r.thr;
+    return (r.res = { ok, lost, hit, msg: `${r.ev[0]} ${r.ev[1]} a visité le panier ${hit + 1} : ${lost ? `${plural(lost, 'œuf cassé', 'œufs cassés')}.` : 'il était vide !'} Tu sauves ${saved} œuf${saved > 1 ? 's' : ''} sur ${N}.`,
+      why: r.dist.some(v => v === N) ? 'Tout dans le même panier, c’est tout ou rien ! En répartissant, tu es sûr d’en sauver.' : 'En répartissant tes œufs, un seul coup du sort ne peut pas tout casser. C’est pareil avec l’argent !' });
+  }
+  const [safe, risky] = r.dist, win = Math.random() < 2 / 3, hit = win ? -1 : 1, fin = safe + (safe > 0 ? 1 : 0) + (win ? risky * 2 : 0), ok = fin >= N, lost = win ? 0 : risky;
+  return (r.res = { ok, lost, hit, msg: `${win ? 'Le panier risqué a doublé !' : 'Aïe, le panier risqué a tout perdu.'} Tu finis avec ${fin} œuf${fin > 1 ? 's' : ''}.`,
+    why: 'Beaucoup dans le sûr et un peu de risque, c’est la recette des investisseurs prudents : tu ne perds jamais gros, et parfois tu gagnes plus.' });
+}
+
 export const GAMES = {
   marche: { name: 'Le Marché', ic: '🏪', idea: 'Payer, rendre la monnaie, trouver la bonne affaire.', round: marcheRound },
   kilo: { name: 'Le Prix au kilo', ic: '⚖️', idea: 'Le gros paquet est-il vraiment moins cher ? Compare avant d’acheter.', round: kiloRound, unlock: 's2' },
   course: { name: 'La Course des tirelires', ic: '🏁', idea: 'Qui gagne : celui qui commence tôt ou celui qui met plus ?', round: courseRound, unlock: 's3' },
+  envie: { name: 'Envie ou besoin ?', ic: '🛍️', idea: 'D’abord l’essentiel, ensuite le plaisir.', round: envieRound, unlock: 's5' },
+  paniers: { name: 'Les Paniers', ic: '🧺', idea: 'Ne mets pas tous tes œufs dans le même panier !', round: panierRound, unlock: 'bourse' },
+  guimauve: { name: 'Le Défi de la guimauve', ic: '🍡', idea: 'Maintenant, ou plus tard mais plus ? Sais-tu attendre quand ça vaut le coup ?', round: guimRound, unlock: 's10' },
 };
 export const newParty = (id, lv) => ({ id, lv, i: 0, score: 0, rounds: Array.from({ length: ROUNDS }, () => GAMES[id].round(lv)), ans: null, done: false });
 export const traySum = r => r.tray.reduce((a, c) => a + c, 0);
 export const target = r => r.kind === 'pay' ? r.price : r.kind === 'change' ? r.given - r.price : null;
-export const isRight = (r, a) => (r.kind === 'pay' || r.kind === 'change') ? traySum(r) === target(r) : a === r.answer;
-export const explain = r => r.kind === 'pay' ? `Il fallait ${eu(r.price)}.` : r.kind === 'change' ? `${eu(r.given)} − ${eu(r.price)} = ${eu(r.given - r.price)} à rendre.` : r.why;
+export const isRight = (r, a) => r.kind === 'basket' ? resolveBasket(r).ok : (r.kind === 'pay' || r.kind === 'change') ? traySum(r) === target(r) : a === r.answer;
+export const explain = r => r.kind === 'basket' ? `${r.res.msg} ${r.res.why}` : r.kind === 'pay' ? `Il fallait ${eu(r.price)}.` : r.kind === 'change' ? `${eu(r.given)} − ${eu(r.price)} = ${eu(r.given - r.price)} à rendre.` : r.why;
