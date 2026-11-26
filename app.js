@@ -7,7 +7,7 @@ import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
 import { GAMES, LEVELS, levelOfAge, newParty, traySum, isRight, explain, eu, ROUNDS, WIN, PER_DAY } from './games.js';
-const VERSION = '117'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '118'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -189,7 +189,7 @@ function streakOf(id) {
   return n;
 }
 // Leçons : une de plus à chaque semaine de paie rangée (toutes visibles côté parent).
-const lessonsOpen = id => lessonFrom === 'parents' ? 99 : Math.min(99, 1 + paidWeeks(id).size);
+const lessonsOpen = id => lessonFrom === 'parents' || (kidOf(id) || {}).test ? 99 : Math.min(99, 1 + paidWeeks(id).size);
 const weekTxt = w => w === wk(new Date()) ? 'de cette semaine' : 'de la semaine du ' + new Date(w).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
 function tot(id) {
@@ -382,11 +382,11 @@ function growNug(prog) {
 let party = null;
 const todayK = () => ymdL(Date.now());
 const gLevel = k => k.glv || levelOfAge(validBirth(k.birth) ? ageAt(k.birth, new Date()) : '');
-const gameOpen = (k, id) => !GAMES[id].unlock || medals(k.id).some(m => m.id === GAMES[id].unlock && m.ok);
-const gLeft = (k, id) => Math.max(0, PER_DAY - (k.gp && k.gp.d === todayK() ? k.gp[id] || 0 : 0));
+const gameOpen = (k, id) => !!k.test || !GAMES[id].unlock || medals(k.id).some(m => m.id === GAMES[id].unlock && m.ok);
+const gLeft = (k, id) => k.test ? PER_DAY : Math.max(0, PER_DAY - (k.gp && k.gp.d === todayK() ? k.gp[id] || 0 : 0));
 function gameCard(k) {
   const ids = Object.keys(GAMES).filter(id => gameOpen(k, id)), left = ids.reduce((a, id) => a + gLeft(k, id), 0);
-  return `<button class="todo gamecard" data-act="go" data-v="jeux"><span class="ic" aria-hidden="true">🎮</span><span><b>Jeux</b><small>${left ? `${left} partie${left > 1 ? 's' : ''} à jouer aujourd’hui` : 'Reviens demain pour rejouer !'}</small></span><span class="end">${I.chev}</span></button>`;
+  return `<button class="todo gamecard" data-act="go" data-v="jeux"><span class="ic" aria-hidden="true">🎮</span><span><b>Jeux</b><small>${k.test ? 'Mode test : parties illimitées' : left ? `${left} partie${left > 1 ? 's' : ''} à jouer aujourd’hui` : 'Reviens demain pour rejouer !'}</small></span><span class="end">${I.chev}</span></button>`;
 }
 function jeuxView(k) {
   const lv = gLevel(k);
@@ -396,7 +396,7 @@ function jeuxView(k) {
 ${Object.entries(GAMES).map(([id, g]) => {
     const open = gameOpen(k, id), left = gLeft(k, id), st = (k.gs || {})[id] || {}, how = (MEDALS.find(m => m.id === g.unlock) || {}).how || '';
     return `<section class="card gcard${open ? '' : ' locked'}"><div class="gic" aria-hidden="true">${open ? g.ic : '🔒'}</div><div><h3>${g.name}</h3><p class="small soft" style="margin:2px 0 8px">${g.idea}</p>${open
-      ? `${st.w ? `<p class="small" style="margin:0 0 8px">${st.w} partie${st.w > 1 ? 's' : ''} gagnée${st.w > 1 ? 's' : ''}</p>` : ''}<button class="btn sm" data-act="jxstart" data-n="${id}" ${left ? '' : 'disabled'}>${left ? `Jouer · ${left} partie${left > 1 ? 's' : ''} aujourd’hui` : 'Reviens demain !'}</button>`
+      ? `${st.w ? `<p class="small" style="margin:0 0 8px">${st.w} partie${st.w > 1 ? 's' : ''} gagnée${st.w > 1 ? 's' : ''}</p>` : ''}<button class="btn sm" data-act="jxstart" data-n="${id}" ${left ? '' : 'disabled'}>${k.test ? 'Jouer · illimité' : left ? `Jouer · ${left} partie${left > 1 ? 's' : ''} aujourd’hui` : 'Reviens demain !'}</button>`
       : `<p class="small" style="margin:0">Se débloque quand tu arrives à ceci : ${how.charAt(0).toLowerCase() + how.slice(1)}</p>`}</div></section>`;
   }).join('')}
 <p class="soft small" style="text-align:center">D’autres jeux arrivent bientôt.</p>`;
@@ -414,7 +414,7 @@ function jeuView(k) {
     const win = P.score >= WIN, stars = P.score >= 5 ? 3 : P.score === 4 ? 2 : P.score === 3 ? 1 : 0, left = gLeft(k, P.id);
     return `<section class="card gend"><div class="gstars" aria-label="${stars} étoile${stars > 1 ? 's' : ''}">${[1, 2, 3].map(i => `<span class="${i <= stars ? 'on' : ''}" style="--d:${(i * 0.18).toFixed(2)}s">★</span>`).join('')}</div>
 <h2 class="title">${win ? 'Partie gagnée !' : 'Pas cette fois…'}</h2><p class="lead">${P.score} bonne${P.score > 1 ? 's' : ''} réponse${P.score > 1 ? 's' : ''} sur ${ROUNDS}.${win ? '' : ` Il en faut ${WIN} pour gagner${P.score === WIN - 1 ? ' : tu y es presque' : '. Chaque partie te fait progresser'} !`}</p>
-<div class="row"><button class="btn" data-act="jxstart" data-n="${P.id}" ${left ? '' : 'disabled'}>${left ? `Rejouer (${left})` : 'Reviens demain !'}</button><button class="btn ghost" data-act="go" data-v="jeux">Les jeux</button></div></section>`;
+<div class="row"><button class="btn" data-act="jxstart" data-n="${P.id}" ${left ? '' : 'disabled'}>${k.test ? 'Rejouer' : left ? `Rejouer (${left})` : 'Reviens demain !'}</button><button class="btn ghost" data-act="go" data-v="jeux">Les jeux</button></div></section>`;
   }
   const r = P.rounds[P.i], A = P.ans;
   const head = `<div class="ghead"><button class="backlink" data-act="go" data-v="jeux">${I.chev}<span>Quitter</span></button><span class="gdots" aria-label="Manche ${P.i + 1} sur ${ROUNDS}">${P.rounds.map((_, i) => `<i class="${i < P.i ? 'done' : i === P.i ? 'cur' : ''}"></i>`).join('')}</span></div><h2 class="title">${g.ic} ${g.name}</h2>`;
@@ -750,7 +750,7 @@ ${kids().map(k => { const pz = pauseOf(k.id); return `<div style="padding:12px 0
 <label>Le projet présenté<input id="p-label" type="text" autocomplete="off" maxlength="60" data-f="plabel" value="${esc(form.plabel)}" placeholder="Un vélo, un cadeau, une sortie…"></label>
 <label>Montant (€)<input id="p-amount" type="text" inputmode="decimal" autocomplete="off" data-f="pamount" value="${esc(form.pamount)}"></label>
 <div class="row"><button class="btn" data-act="project" ${dis}>Débloquer le montant</button></div></section>
-<section class="card"><h3>Les enfants</h3>${kids().map(k => `<div class="kidform"><header><h3 style="font-size:19px">${esc(k.name)}</h3><button class="link" data-act="gstart" data-k="${k.id}">Lancer le guide</button>${kids().length > 1 ? `<button class="link" data-act="kdel" data-k="${k.id}">${delArm === k.id ? 'Confirmer la suppression' : 'Supprimer'}</button>` : ''}</header>
+<section class="card"><h3>Les enfants</h3>${kids().map(k => `<div class="kidform"><header><h3 style="font-size:19px">${esc(k.name)}</h3><button class="link" data-act="gstart" data-k="${k.id}">Lancer le guide</button>${kids().length > 1 ? `<button class="link" data-act="kdel" data-k="${k.id}">${delArm === k.id ? 'Confirmer la suppression' : 'Supprimer'}</button>` : ''}</header>${isAdmin() ? `<p class="small" style="margin:0 0 8px"><button class="link" data-act="kidtest" data-k="${k.id}">${k.test ? 'Quitter le mode test' : 'Mode test : tout débloquer'}</button>${k.test ? ' <span class="soft">Toutes les pépites, tous les jeux et toutes les leçons sont ouverts, parties illimitées, aucune notification.</span>' : ''}</p>` : ''}
 <label>Prénom<input id="k-n-${k.id}" type="text" autocomplete="off" maxlength="20" value="${esc(k.name)}" data-set="kname:${k.id}"></label>
 <div class="grid2"><label>Naissance<input id="k-b-${k.id}" type="date" value="${esc(k.birth)}" data-set="kbirth:${k.id}"></label>
 <label>Par semaine (€)<input id="k-w-${k.id}" type="number" inputmode="decimal" min="1" max="50" step="0.5" value="${k.weekly}" data-set="kweekly:${k.id}"></label></div>
@@ -1134,6 +1134,7 @@ async function pushOff() {
 function queuePush(type, data) {
   if (!ready || !F || !F.push || !user) return;
   const k = data.kid ? kidOf(data.kid) : null;
+  if (k && k.test) return; // enfant de test : jamais de notification
   setDoc(doc(fdb, 'push_queue', `${user.uid.slice(0, 10)}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`), { uid: user.uid, type, d: iso(), ...data, ...(k ? { kidName: k.name } : {}) }).catch(() => {});
 }
 // Ce que les parents doivent encore, gardé dans la fiche famille pour le récap du lundi.
@@ -1143,7 +1144,7 @@ function syncDue() {
   const d = Object.fromEntries(kids().map(k => {
     const T = tot(k.id), pw = [...paidWeeks(k.id)], nx = nextSerie(k.id);
     // Pour le rappel du mercredi : dernière semaine rangée, série en cours, paies restantes avant la prochaine pépite de série.
-    return [k.id, { name: k.name, give: T.purseDue, keep: r2(Math.max(0, T.due)), lw: pw.length ? ymd(Math.max(...pw)) : '', st: streakOf(k.id), left: nx ? nx.left : 0, pz: !!pauseOf(k.id) }];
+    return [k.id, { name: k.name, give: T.purseDue, keep: r2(Math.max(0, T.due)), lw: pw.length ? ymd(Math.max(...pw)) : '', st: streakOf(k.id), left: nx ? nx.left : 0, pz: !!pauseOf(k.id) || !!k.test }];
   }));
   if (JSON.stringify(d) !== JSON.stringify(F.due || {})) { F.due = d; saveF(); }
 }
@@ -1296,7 +1297,7 @@ function medals(id) {
   const gs = (kidOf(id) || {}).gs || {};
   Object.assign(c, { sea, months, run: best, proj: E.filter(e => e.t === 'projet').length, gw: Object.fromEntries(Object.keys(GAMES).map(g => [g, (gs[g] || {}).w || 0])), gg: Object.fromEntries(Object.keys(GAMES).map(g => [g, !!(gs[g] || {}).g])) });
   // Une pépite gagnée reste gagnée, même si sa condition n'est plus vraie (projet supprimé, tirelire redescendue…).
-  const kk = kidOf(id), got = new Set(kk && Array.isArray(kk.ms) ? kk.ms : []), has = m => got.has(m.id) || !!m.test(c);
+  const kk = kidOf(id), got = new Set(kk && Array.isArray(kk.ms) ? kk.ms : []), has = m => !!(kk && kk.test) || got.has(m.id) || !!m.test(c);
   c.n = MEDALS.filter(m => !COLLEC.includes(m.id) && has(m)).length;
   return MEDALS.map(m => ({ ...m, ok: has(m) }));
 }
@@ -1364,9 +1365,10 @@ function medalModal() {
 function nextSerie(id) { const st = streakOf(id), m = MEDALS.find(x => x.serie && x.serie > st && x.serie > bestStreak(id)); return m ? { m, left: m.serie - st } : null; }
 function pepitesView() {
   const L = medals(cur), n = L.filter(m => m.ok).length, st = streakOf(cur), nx = nextSerie(cur);
-  const card = m => `<div class="medal ${m.ok ? 'on' : ''}" style="--m:${m.c}">${m.ok ? matNug(m) : `<svg class="mnug" viewBox="2 8 60 52" aria-hidden="true">${mystSVG()}</svg>`}${m.ok ? `<b>${m.name}</b>` : ''}<em>${m.ok ? `Pépite ${m.mat}` : 'Pépite mystère'}</em><small>${m.how}</small></div>`;
+  const tk = !!(kidOf(cur) || {}).test;
+  const card = m => `<div class="medal ${m.ok ? 'on' : ''}" style="--m:${m.c}"${tk ? ` data-act="pepreplay" data-n="${m.id}" role="button" tabindex="0"` : ''}>${m.ok ? matNug(m) : `<svg class="mnug" viewBox="2 8 60 52" aria-hidden="true">${mystSVG()}</svg>`}${m.ok ? `<b>${m.name}</b>` : ''}<em>${m.ok ? `Pépite ${m.mat}` : 'Pépite mystère'}</em><small>${m.how}</small></div>`;
   return `<button class="backlink" data-act="go" data-v="home">${I.chev}<span>Ma tirelire</span></button><h2 class="title">Mes pépites</h2>
-<p class="lead">Chaque pépite récompense un réflexe de bon épargnant. Tu en as ${n} sur ${L.length}.</p>
+<p class="lead">Chaque pépite récompense un réflexe de bon épargnant. Tu en as ${n} sur ${L.length}.</p>${tk ? '<p class="small soft">Mode test : touche une pépite pour revoir son animation.</p>' : ''}
 ${st >= 1 ? `<section class="card serie"><b>${st} semaine${st > 1 ? 's' : ''} d’affilée</b><span>${nx ? `Encore ${nx.left} paie${nx.left > 1 ? 's' : ''} rangée${nx.left > 1 ? 's' : ''} pour gagner une nouvelle pépite.` : 'Tu as toutes les pépites de régularité. Respect !'}</span></section>` : ''}
 ${MEDAL_GROUPS.map(([g, t]) => { const G = L.filter(m => m.g === g); return `<h3 class="sec mgroup">${t}<span>${G.filter(m => m.ok).length}/${G.length}</span></h3><div class="medals">${G.map(card).join('')}</div>`; }).join('')}`;
 }
@@ -1448,7 +1450,7 @@ ${T.livret > 0 ? `<p class="msg">Vous avez déjà mis ${f(T.livret)} de côté p
 
 /* ---------- Première paie guidée (onboarding de l'enfant) ---------- */
 // La bourse s'ouvre quand la tirelire atteint 15 € et reste ouverte ensuite, même si elle redescend (perte au dé, achat d'un projet).
-const bourseOpen = id => r2(tot(id).peak) >= BOURSE_MIN;
+const bourseOpen = id => !!(kidOf(id) || {}).test || r2(tot(id).peak) >= BOURSE_MIN;
 function bonusTxt() { const m = F.match, n = 100 / m; return Number.isInteger(n) && n > 1 ? `pour ${n} pièces placées dans ta tirelire, ${P().aj} 1 pièce` : `${P().aj} ${m} % de ce que tu places dans ta tirelire`; }
 function planOf() { const t = tot(cur); return { pay: owed(cur).length > 0 && !pauseOf(cur), paused: !!pauseOf(cur), open: bourseOpen(cur), rolled: sameWeek(t.bourse && t.bourse.d), goal: !!goalOf(cur) }; }
 function guideSteps(k) {
@@ -1839,6 +1841,8 @@ document.addEventListener('click', ev => {
     case 'pushask': pushAsked(false); pushOn(); return;
     case 'pushlater': pushAsked(true); break;
     case 'admcsv': if (adminData) adminCsv(b.dataset.n); return;
+    case 'kidtest': { const k = kidOf(b.dataset.k); if (k && ready && isAdmin()) { k.test = !k.test; if (k.test) k.ms = MEDALS.map(m => m.id); else delete k.ms; saveF(); } break; }
+    case 'pepreplay': { const k = kidOf(cur); if (k && k.test && MEDALS.some(m => m.id === b.dataset.n)) { medalQ.push({ kid: k.id, id: b.dataset.n }); setTimeout(() => sfx('pep'), 250); } break; }
     case 'jxlevel': { const k = kidOf(cur); if (k && ready && LEVELS.some(l => l[0] === b.dataset.n)) { k.glv = b.dataset.n; saveF(); } break; }
     case 'jxstart': gStart(b.dataset.n); break;
     case 'jxcoin': if (party && !party.ans && !party.done) { const r = party.rounds[party.i]; if (r.tray && r.tray.length < 16) { r.tray.push(+b.dataset.n); sfx('coin'); } } break;
