@@ -6,7 +6,8 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
-const VERSION = '115'; // à garder égal au cache du service worker (sw.js)
+import { GAMES, LEVELS, levelOfAge, newParty, traySum, isRight, explain, eu, ROUNDS, WIN, PER_DAY } from './games.js';
+const VERSION = '116'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -371,6 +372,84 @@ function growNug(prog) {
   const lbl = st === 4 ? 'Ta pépite est complète : c’est pépite !' : `Ta pépite : taille ${st + 1} sur 5`;
   return `<svg class="gnug${st === 4 ? ' full' : ''}" viewBox="2 8 60 52" role="img" aria-label="${lbl}"><g transform="translate(${(32 - 32 * sc).toFixed(1)} ${(57 - 55 * sc).toFixed(1)}) scale(${sc})">${st === 4 ? NUGB : NUGP}</g></svg>`;
 }
+// ---------- Jeux : un espace pour apprendre en jouant, 3 parties par jour et par jeu ----------
+let party = null;
+const todayK = () => ymdL(Date.now());
+const gLevel = k => k.glv || levelOfAge(validBirth(k.birth) ? ageAt(k.birth, new Date()) : '');
+const gameOpen = (k, id) => !GAMES[id].unlock || medals(k.id).some(m => m.id === GAMES[id].unlock && m.ok);
+const gLeft = (k, id) => Math.max(0, PER_DAY - (k.gp && k.gp.d === todayK() ? k.gp[id] || 0 : 0));
+function gameCard(k) {
+  const ids = Object.keys(GAMES).filter(id => gameOpen(k, id)), left = ids.reduce((a, id) => a + gLeft(k, id), 0);
+  return `<button class="todo gamecard" data-act="go" data-v="jeux"><span class="ic" aria-hidden="true">🎮</span><span><b>Jeux</b><small>${left ? `${left} partie${left > 1 ? 's' : ''} à jouer aujourd’hui` : 'Reviens demain pour rejouer !'}</small></span><span class="end">${I.chev}</span></button>`;
+}
+function jeuxView(k) {
+  const lv = gLevel(k);
+  return `<button class="backlink" data-act="go" data-v="home">${I.chev}<span>Ma tirelire</span></button><p class="kicker">Jouer pour apprendre</p><h2 class="title">Jeux</h2>
+<p class="lead">De petits jeux pour devenir un as de l’argent. ${PER_DAY} parties par jour et par jeu.</p>
+<section class="card"><h3>Ton niveau</h3><div class="pills">${LEVELS.map(([v, l, a]) => `<button class="pill" data-act="jxlevel" data-n="${v}" aria-pressed="${lv === v}">${l} <small>${a}</small></button>`).join('')}</div></section>
+${Object.entries(GAMES).map(([id, g]) => {
+    const open = gameOpen(k, id), left = gLeft(k, id), st = (k.gs || {})[id] || {}, how = (MEDALS.find(m => m.id === g.unlock) || {}).how || '';
+    return `<section class="card gcard${open ? '' : ' locked'}"><div class="gic" aria-hidden="true">${open ? g.ic : '🔒'}</div><div><h3>${g.name}</h3><p class="small soft" style="margin:2px 0 8px">${g.idea}</p>${open
+      ? `${st.w ? `<p class="small" style="margin:0 0 8px">${st.w} partie${st.w > 1 ? 's' : ''} gagnée${st.w > 1 ? 's' : ''}</p>` : ''}<button class="btn sm" data-act="jxstart" data-n="${id}" ${left ? '' : 'disabled'}>${left ? `Jouer · ${left} partie${left > 1 ? 's' : ''} aujourd’hui` : 'Reviens demain !'}</button>`
+      : `<p class="small" style="margin:0">Se débloque quand tu arrives à ceci : ${how.charAt(0).toLowerCase() + how.slice(1)}</p>`}</div></section>`;
+  }).join('')}
+<p class="soft small" style="text-align:center">D’autres jeux arrivent bientôt.</p>`;
+}
+const coinH = (c, act, n, dis) => `<button class="gcoin${c >= 500 ? ' bill' : c < 100 ? ' small' : ''}" data-act="${act}" data-n="${n}" ${dis ? 'disabled' : ''} aria-label="${eu(c)}">${eu(c)}</button>`;
+function raceBars(r) {
+  const max = Math.max(...r.bars.map(b => b[1]), 1);
+  return `<div class="grace">${r.bars.map(([n, v], i) => `<div class="grow"><span>${n}</span><div class="gbar"><i class="r${i}" style="--w:${Math.max(3, Math.round(100 * v / max))}%;--d:${(i * 0.3).toFixed(1)}s"></i></div><b>${v} €</b></div>`).join('')}</div>`;
+}
+function jeuView(k) {
+  const P = party;
+  if (!P || P.kid !== k.id) return jeuxView(k);
+  const g = GAMES[P.id];
+  if (P.done) {
+    const win = P.score >= WIN, stars = P.score >= 5 ? 3 : P.score === 4 ? 2 : P.score === 3 ? 1 : 0, left = gLeft(k, P.id);
+    return `<section class="card gend"><div class="gstars" aria-label="${stars} étoile${stars > 1 ? 's' : ''}">${[1, 2, 3].map(i => `<span class="${i <= stars ? 'on' : ''}" style="--d:${(i * 0.18).toFixed(2)}s">★</span>`).join('')}</div>
+<h2 class="title">${win ? 'Partie gagnée !' : 'Pas cette fois…'}</h2><p class="lead">${P.score} bonne${P.score > 1 ? 's' : ''} réponse${P.score > 1 ? 's' : ''} sur ${ROUNDS}.${win ? '' : ` Il en faut ${WIN} pour gagner${P.score === WIN - 1 ? ' : tu y es presque' : '. Chaque partie te fait progresser'} !`}</p>
+<div class="row"><button class="btn" data-act="jxstart" data-n="${P.id}" ${left ? '' : 'disabled'}>${left ? `Rejouer (${left})` : 'Reviens demain !'}</button><button class="btn ghost" data-act="go" data-v="jeux">Les jeux</button></div></section>`;
+  }
+  const r = P.rounds[P.i], A = P.ans;
+  const head = `<div class="ghead"><button class="backlink" data-act="go" data-v="jeux">${I.chev}<span>Quitter</span></button><span class="gdots" aria-label="Manche ${P.i + 1} sur ${ROUNDS}">${P.rounds.map((_, i) => `<i class="${i < P.i ? 'done' : i === P.i ? 'cur' : ''}"></i>`).join('')}</span></div><h2 class="title">${g.ic} ${g.name}</h2>`;
+  let body;
+  if (r.kind === 'pay' || r.kind === 'change') {
+    body = `<section class="card gq"><div class="gitem" aria-hidden="true">${r.ic}</div><p>${r.q}</p></section>
+<section class="card gcounter"><p class="small soft" style="margin:0 0 6px">Sur le comptoir : <b>${eu(traySum(r))}</b></p><div class="gtray">${r.tray.map((c, i) => coinH(c, 'jxtake', i, A)).join('') || '<span class="soft small">Touche les pièces pour les poser ici.</span>'}</div></section>
+${A ? '' : `<div class="gcoins">${r.coins.map(c => coinH(c, 'jxcoin', c)).join('')}</div><button class="btn full" data-act="jxpay" ${r.tray.length ? '' : 'disabled'}>${r.kind === 'pay' ? 'Payer' : 'Rendre la monnaie'}</button>`}`;
+  } else {
+    body = `<section class="card gq">${r.ic ? `<div class="gitem" aria-hidden="true">${r.ic}</div>` : ''}<p>${r.q}</p></section><div class="gopts">${r.opts.map(([v, l]) => `<button class="gopt${A ? (v === r.answer ? ' good' : v === A.a ? ' bad' : '') : ''}" data-act="jxans" data-n="${v}" ${A ? 'disabled' : ''}>${l}</button>`).join('')}</div>`;
+  }
+  const fb = A ? `<section class="card gfb ${A.ok ? 'ok' : 'ko'}"><b>${A.msg}</b><p>${explain(r)}</p>${r.kind === 'race' ? raceBars(r) : ''}<button class="btn full" data-act="jxnext">${P.i + 1 < ROUNDS ? 'Manche suivante' : 'Voir le résultat'}</button></section>` : '';
+  return head + body + fb;
+}
+function gStart(id) {
+  const k = kidOf(cur);
+  if (!k || !ready || !GAMES[id] || !gameOpen(k, id) || !gLeft(k, id)) return;
+  const d = todayK(); if (!k.gp || k.gp.d !== d) k.gp = { d };
+  k.gp[id] = (k.gp[id] || 0) + 1;
+  const gs = k.gs || (k.gs = {}), st = gs[id] || (gs[id] = { p: 0, w: 0 }); st.p++;
+  if (F.stats && F.stats.wk && !F.noStats) { const r = F.stats.wk[ymdL(wk(new Date()))]; if (r) r[3] = (r[3] || 0) + 1; }
+  party = { ...newParty(id, gLevel(k)), kid: k.id };
+  view = 'jeu'; saveF(); window.scrollTo(0, 0);
+}
+function gAnswer(a) {
+  const P = party; if (!P || P.done || P.ans) return;
+  const r = P.rounds[P.i], ok = isRight(r, a);
+  if (ok) P.score++;
+  const good = ['Bravo !', 'Exact !', 'Bien vu !', 'Parfait !'];
+  P.ans = { ok, a, msg: ok ? good[Math.floor(Math.random() * good.length)] : 'Pas tout à fait…' };
+  sfx(ok ? 'good' : 'bad');
+}
+function gNext() {
+  const P = party; if (!P || !P.ans) return;
+  P.i++; P.ans = null; window.scrollTo(0, 0);
+  if (P.i < ROUNDS) return;
+  P.done = true;
+  const k = kidOf(P.kid), win = P.score >= WIN;
+  if (k && win) { const st = (k.gs || (k.gs = {}))[P.id] || (k.gs[P.id] = { p: 1, w: 0 }); st.w++; if (P.lv === 'g') st.g = 1; saveF(); }
+  sfx(win ? 'pay' : 'flat');
+}
 function pepCard() {
   const ms = medals(cur), won = ms.filter(m => m.ok), k = kidOf(cur), last = won.find(m => m.id === (k && k.pm)) || won[won.length - 1];
   const ic = last ? matNug(last, 'pnug') : `<svg class="pnug" viewBox="2 8 60 52" aria-hidden="true">${mystSVG()}</svg>`;
@@ -389,6 +468,7 @@ ${!paid && !pauseOf(cur) ? `<button class="todo" data-act="go" data-v="paie"><sp
 <div class="tile"><small><i style="background:var(--purse)"></i>Porte-monnaie à recevoir</small><b>${f(t.purseDue)}</b></div></div>
 ${t.out > 0 ? `<p class="soft small" style="margin:8px 4px 0">Projets réalisés : ${f(t.out)}</p>` : ''}
 ${pepCard()}
+${gameCard(k)}
 <h3 class="sec">Mon projet</h3><div class="list"><button class="item" data-act="go" data-v="projet"><span class="ic" style="background:var(--kidt);color:var(--kidtxt)">${I.flag}</span><span>${g ? `<b>${esc(g.name)}${msBand(cur) === 'pct' ? ` : ${Math.floor(Math.min(1, Math.max(0, t.total) / g.budget) * 100)} %` : ''}</b><small>${t.total >= g.budget ? 'Atteint : prépare ta présentation !' : `${f(Math.max(0, t.total))} sur ${f(g.budget)}`}</small>` : '<b>Choisis un projet</b><small>Un vélo, un jeu, ton futur permis ? Pas obligatoire, mais motivant.</small>'}</span><span class="end">${I.chev}</span></button></div>
 <h3 class="sec">Cette semaine</h3><div class="list">
 <button class="item" data-act="go" data-v="paie"><span class="ic" style="background:#fff3c4;color:#a87300">${I.coin}</span><span><b>Ma paie</b><small>${pauseOf(cur) ? 'En pause ' + untilTxt(pauseOf(cur)) : paid ? 'Rangée, bravo !' : due > 1 ? `${due} paies t’attendent` : `${f(k.weekly)} t’attendent`}</small></span><span class="end ${paid && !pauseOf(cur) ? 'done' : ''}">${paid && !pauseOf(cur) ? I.check : I.chev}</span></button>
@@ -890,7 +970,7 @@ function adminDeep() {
       return { n: i + 1, age: validBirth(k.birth) ? ageAt(k.birth, new Date()) : '', start: k.start || '', weekly: k.weekly, paid, kw, rate: Math.min(100, Math.round(100 * paid / kw)), best, first: fp ? Math.max(0, Math.round((new Date(fp.d) - new Date(k.start || created)) / 864e5)) : '',
         keep: inv + dep ? Math.round(100 * inv / (inv + dep)) : '', tot: r2(tot), peak: r2(peak), bonus: r2(bonus), gains: r2(gains), out: r2(out),
         recus: e.filter(z => z.t === 'recu').length, rolls: e.filter(z => z.t === 'bourse').length, post: k.posture || x.diceName || '', goal: K.goal ? 1 : 0, budget: K.goal ? K.goal.budget : '', projets: e.filter(z => z.t === 'projet').length,
-        lq: Object.keys(k.lq || {}).length, peps: Array.isArray(k.ms) ? k.ms.length : '', guided: k.guided ? 1 : 0 };
+        lq: Object.keys(k.lq || {}).length, peps: Array.isArray(k.ms) ? k.ms.length : '', guided: k.guided ? 1 : 0, gs: k.gs || {}, glv: k.glv || '' };
     });
     return { id: pseudo(x.id), created, sw, weeks, act, wkMap, evW, last: st.seen || '', days: st.days || 0, opens: sum(0), kidOpens: sum(1), parentVisits: sum(2),
       devs: dv.length, os: [...new Set(dv.map(d => d.os))].join('+'), kidDev: dv.some(d => d.k) ? 1 : 0, inst: st.inst ? 1 : 0, push: x.push ? 1 : 0, nc: st.nc || {}, src: st.src || '',
@@ -908,6 +988,7 @@ function adminDeepStats(R) {
   return { coh, actRatio: R.length ? Math.round(100 * R.reduce((a, r) => a + Math.min(1, r.act.size / r.weeks), 0) / R.length) + ' %' : '–',
     rate: K.length ? Math.round(K.reduce((a, k) => a + k.rate, 0) / K.length) + ' %' : '–', firstPay: med(K.map(k => k.first)), keep: K.filter(k => k.keep !== '').length ? Math.round(K.filter(k => k.keep !== '').reduce((a, k) => a + k.keep, 0) / K.filter(k => k.keep !== '').length) + ' %' : '–',
     kidDev: P(R.filter(r => r.kidDev).length, R.length), push: P(R.filter(r => r.push).length, R.length), nc, os, parentPerWeek: R.length ? (R.reduce((a, r) => a + r.parentVisits / Math.max(1, r.act.size), 0) / R.length).toFixed(1).replace('.', ',') : '–',
+    players: P(K.filter(k => Object.values(k.gs).some(g => g.p)).length, K.length), games: K.reduce((a, k) => a + Object.values(k.gs).reduce((x, g) => x + (g.p || 0), 0), 0),
     peps: K.filter(k => k.peps !== '').length ? (K.filter(k => k.peps !== '').reduce((a, k) => a + k.peps, 0) / K.filter(k => k.peps !== '').length).toFixed(1).replace('.', ',') : '–',
     saved: f(K.reduce((a, k) => a + k.tot, 0)), bonus: f(K.reduce((a, k) => a + k.bonus, 0)), spent: f(K.reduce((a, k) => a + k.out, 0)),
     nSv: sv.length, nps, wtp: dist(sv.map(v => v.wtp), SV_WTP), svSrc: dist(sv.map(v => v.src), SV_SRC) };
@@ -922,16 +1003,16 @@ function adminCsv(kind) {
   const R = adminDeep(), day = ms => ms ? ymdL(ms) : '';
   if (kind === 'enfants') {
     const head = ['famille', 'enfant', 'age', 'inscription_famille', 'semaines_depuis_inscription', 'semaines_actives', 'part_semaines_actives_pct', 'derniere_visite', 'jours_ouverture', 'ouvertures', 'ouvertures_appareil_enfant', 'visites_espace_parents', 'appareils', 'systemes', 'appareil_enfant', 'appli_installee', 'notifications', 'clics_notifications', 'source_lien', 'source_sondage', 'recommandation_0_10', 'prix_accepte', 'commentaire_sondage', 'bonus_paie_pct', 'bonus_cadeaux_pct',
-      'debut_enfant', 'argent_de_poche_hebdo', 'semaines_enfant', 'paies_rangees', 'taux_paie_rangee_pct', 'meilleure_serie', 'jours_avant_premiere_paie', 'part_paie_mise_de_cote_pct', 'tirelire', 'plus_haut', 'bonus_recus', 'gains_bourse', 'depense_projets', 'argent_recu_declare', 'lancers_de', 'style_bourse', 'projet_en_cours', 'budget_projet', 'projets_realises', 'lecons_reussies', 'pepites', 'guide_termine'];
+      'debut_enfant', 'argent_de_poche_hebdo', 'semaines_enfant', 'paies_rangees', 'taux_paie_rangee_pct', 'meilleure_serie', 'jours_avant_premiere_paie', 'part_paie_mise_de_cote_pct', 'tirelire', 'plus_haut', 'bonus_recus', 'gains_bourse', 'depense_projets', 'argent_recu_declare', 'lancers_de', 'style_bourse', 'projet_en_cours', 'budget_projet', 'projets_realises', 'lecons_reussies', 'pepites', 'guide_termine', 'niveau_jeux_choisi', 'parties_marche', 'victoires_marche', 'parties_course', 'victoires_course'];
     const rows = [head];
     for (const r of R) for (const k of r.kids) rows.push([r.id, k.n, k.age, day(r.created), r.weeks, r.act.size, Math.round(100 * Math.min(1, r.act.size / r.weeks)), r.last, r.days, r.opens, r.kidOpens, r.parentVisits, r.devs, r.os, r.kidDev, r.inst, r.push, Object.entries(r.nc).map(([a, b]) => a + ':' + b).join(' '), r.src, r.sv ? r.sv.src : '', r.sv ? r.sv.nps : '', r.sv ? r.sv.wtp : '', r.sv ? r.sv.txt : '', r.match, r.gmatch,
-      (k.start || '').slice(0, 10), k.weekly, k.kw, k.paid, k.rate, k.best, k.first, k.keep, k.tot, k.peak, k.bonus, k.gains, k.out, k.recus, k.rolls, k.post, k.goal, k.budget, k.projets, k.lq, k.peps, k.guided]);
+      (k.start || '').slice(0, 10), k.weekly, k.kw, k.paid, k.rate, k.best, k.first, k.keep, k.tot, k.peak, k.bonus, k.gains, k.out, k.recus, k.rolls, k.post, k.goal, k.budget, k.projets, k.lq, k.peps, k.guided, k.glv, (k.gs.marche || {}).p || 0, (k.gs.marche || {}).w || 0, (k.gs.course || {}).p || 0, (k.gs.course || {}).w || 0]);
     return csvDownload('enfants', rows);
   }
   if (kind === 'semaines') {
-    const rows = [['famille', 'semaine_du', 'semaine_n', 'ouvertures', 'ouvertures_appareil_enfant', 'visites_espace_parents', 'paies_rangees', 'lancers_de', 'argent_recu_declare', 'active']];
+    const rows = [['famille', 'semaine_du', 'semaine_n', 'ouvertures', 'ouvertures_appareil_enfant', 'visites_espace_parents', 'paies_rangees', 'lancers_de', 'argent_recu_declare', 'parties_jeux', 'active']];
     const cw = wk(new Date());
-    for (const r of R) for (let w = r.sw, i = 0; w <= cw; w = normWk(w + W7), i++) { const o = r.wkMap[w] || [], e = r.evW[w] || {}; rows.push([r.id, day(w), i, o[0] || 0, o[1] || 0, o[2] || 0, e.paie || 0, e.de || 0, e.recu || 0, r.act.has(w) ? 1 : 0]); }
+    for (const r of R) for (let w = r.sw, i = 0; w <= cw; w = normWk(w + W7), i++) { const o = r.wkMap[w] || [], e = r.evW[w] || {}; rows.push([r.id, day(w), i, o[0] || 0, o[1] || 0, o[2] || 0, e.paie || 0, e.de || 0, e.recu || 0, o[3] || 0, r.act.has(w) ? 1 : 0]); }
     return csvDownload('semaines', rows);
   }
   const rows = [['date', 'type', 'famille', 'humeur', 'recommandation_0_10', 'prix_accepte', 'source', 'texte', 'version', 'enfants']];
@@ -943,7 +1024,7 @@ function adminDeepView() {
   const R = adminDeep(), d = adminDeepStats(R), line = (l, v) => `<li><span>${l}</span><b>${v}</b></li>`;
   const lab = { cadeau: 'Argent reçu à valider', palier: 'Palier', objectif: 'Projet atteint', serie: 'Série', bourse: 'Bourse ouverte', lundi: 'Récap du lundi', mercredi: 'Rappel du mercredi', test: 'Test' };
   return `<section class="card"><h3>Rétention par semaine</h3><p class="soft small" style="margin:0 0 6px">Part des familles revenues pendant la Ne semaine après leur inscription (parmi celles assez anciennes).</p><ul class="kv">${d.coh.map(([i, v, n]) => line(`Semaine ${i}`, `${v} <small class="soft">(${n})</small>`)).join('')}${line('Semaines actives sur semaines écoulées', d.actRatio)}</ul></section>
-<section class="card"><h3>Habitude et usage</h3><ul class="kv">${line('Paies rangées sur semaines écoulées', d.rate)}${line('Délai médian avant la première paie', d.firstPay === '–' ? '–' : d.firstPay + ' j')}${line('Part de la paie mise de côté', d.keep)}${line('Familles où l’enfant a son propre appareil', d.kidDev)}${line('Visites de l’Espace parents par semaine active', d.parentPerWeek)}${line('Pépites par enfant', d.peps)}</ul></section>
+<section class="card"><h3>Habitude et usage</h3><ul class="kv">${line('Paies rangées sur semaines écoulées', d.rate)}${line('Délai médian avant la première paie', d.firstPay === '–' ? '–' : d.firstPay + ' j')}${line('Part de la paie mise de côté', d.keep)}${line('Familles où l’enfant a son propre appareil', d.kidDev)}${line('Visites de l’Espace parents par semaine active', d.parentPerWeek)}${line('Pépites par enfant', d.peps)}${line('Enfants qui ont joué', d.players)}${line('Parties jouées en tout', d.games)}</ul></section>
 <section class="card"><h3>Notifications</h3><ul class="kv">${line('Familles abonnées', d.push)}${Object.entries(d.nc).map(([k, v]) => line('Ouvertures · ' + esc(lab[k] || k), v)).join('') || line('Ouvertures depuis une notification', 0)}</ul></section>
 <section class="card"><h3>Valeur</h3><ul class="kv">${line('Argent dans les tirelires', d.saved)}${line('Bonus versés par les parents', d.bonus)}${line('Dépensé pour des projets', d.spent)}${line('Score de recommandation (NPS)', d.nSv ? `${d.nps} <small class="soft">(${d.nSv} réponses)</small>` : '–')}${d.wtp.map(([l, v]) => line('Prix · ' + l, v)).join('')}${d.svSrc.map(([l, v]) => line('Connu par · ' + l, v)).join('')}</ul></section>
 <section class="card"><h3>Appareils</h3><ul class="kv">${Object.entries(d.os).map(([k, v]) => line(esc(k), v)).join('') || line('Aucune donnée', '')}</ul></section>
@@ -1144,7 +1225,7 @@ const SEASONS = [
 ];
 const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 const COLLEC = ['collec', 'collec40', 'collec60', 'collec80', 'legende'];
-const MEDAL_GROUPS = [['debut', 'Tes débuts'], ['regul', 'Régularité'], ['tirelire', 'Ta tirelire'], ['bourse', 'La bourse'], ['savoir', 'Savoir et projets'], ['saison', 'Fêtes et saisons'], ['mois', 'Mois complets'], ['collec', 'Collection']];
+const MEDAL_GROUPS = [['debut', 'Tes débuts'], ['regul', 'Régularité'], ['tirelire', 'Ta tirelire'], ['bourse', 'La bourse'], ['savoir', 'Savoir et projets'], ['saison', 'Fêtes et saisons'], ['mois', 'Mois complets'], ['jeux', 'Jeux'], ['collec', 'Collection']];
 const MEDALS = [
   M('debut', 'paie1', 'Premier pas', 'Ranger ta toute première paie.', c => c.paid >= 1),
   M('debut', 'projet0', 'Un rêve en tête', 'Choisir le projet pour lequel tu mets de côté.', c => c.goal),
@@ -1174,11 +1255,15 @@ const MEDALS = [
   ...SEASONS.map(([id, name, when, , tout]) => M('saison', id, name, tout ? `Ranger toute ta paie dans ta tirelire ${when}, sans rien garder pour dépenser.` : `Ranger ta paie de ${when}.`, c => c.sea.has(id))),
   M('saison', 'unan', 'Un an avec Pépite', 'Ranger ta paie de la semaine où tu fêtes un an avec Pépite.', c => c.sea.has('unan')),
   ...MOIS.map((mo, i) => M('mois', 'm' + i, `${mo[0].toUpperCase() + mo.slice(1)} au complet`, `Ranger toutes tes paies du mois de ${mo}.`, c => c.months.has(i))),
+  M('jeux', 'g_marche1', 'Petit marchand', 'Gagner une partie du Marché.', c => c.gw.marche >= 1),
+  M('jeux', 'g_marche3', 'Roi du marché', 'Gagner une partie du Marché au niveau Grands.', c => c.gg.marche),
+  M('jeux', 'g_course1', 'Sur la ligne de départ', 'Gagner une partie de la Course des tirelires.', c => c.gw.course >= 1),
+  M('jeux', 'g_course3', 'Champion de la course', 'Gagner la Course des tirelires au niveau Grands.', c => c.gg.course),
   M('collec', 'collec', 'Collectionneur', 'Gagner 20 autres pépites.', c => c.n >= 20),
   M('collec', 'collec40', 'Grand collectionneur', 'Gagner 40 autres pépites.', c => c.n >= 40),
   M('collec', 'collec60', 'Chasseur de pépites', 'Gagner 60 autres pépites.', c => c.n >= 60),
   M('collec', 'collec80', 'Maître des pépites', 'Gagner 80 autres pépites.', c => c.n >= 80),
-  M('collec', 'legende', 'Légende de Pépite', 'Gagner toutes les autres pépites.', c => c.n >= 95),
+  M('collec', 'legende', 'Légende de Pépite', 'Gagner toutes les autres pépites.', c => c.n >= MEDALS.length - COLLEC.length),
 ];
 
 MEDALS.forEach(m => Object.assign(m, MATS[m.id]));
@@ -1200,7 +1285,8 @@ function medals(id) {
     if (mons[0] >= sw && mons[mons.length - 1] <= cw && mons.every(w => PW.has(w) || isP(w)) && mons.some(w => PW.has(w))) months.add(m);
   }
   let run = 0, best = 0; for (const e of B) { run = e.gain > 0 ? run + 1 : 0; best = Math.max(best, run); }
-  Object.assign(c, { sea, months, run: best, proj: E.filter(e => e.t === 'projet').length });
+  const gs = (kidOf(id) || {}).gs || {};
+  Object.assign(c, { sea, months, run: best, proj: E.filter(e => e.t === 'projet').length, gw: { marche: (gs.marche || {}).w || 0, course: (gs.course || {}).w || 0 }, gg: { marche: !!(gs.marche || {}).g, course: !!(gs.course || {}).g } });
   // Une pépite gagnée reste gagnée, même si sa condition n'est plus vraie (projet supprimé, tirelire redescendue…).
   const kk = kidOf(id), got = new Set(kk && Array.isArray(kk.ms) ? kk.ms : []), has = m => got.has(m.id) || !!m.test(c);
   c.n = MEDALS.filter(m => !COLLEC.includes(m.id) && has(m)).length;
@@ -1216,9 +1302,9 @@ function newMedal(id, before) {
 }
 // Pépites gagnées depuis la dernière fois : on les met en file pour l'animation, une par une.
 let medalQ = [], medalSeq = 0;
-const KID_VIEWS = ['home', 'paie', 'bourse', 'projet', 'futur', 'pepites', 'lecons', 'lecon', 'recu', 'carnet'];
+const KID_VIEWS = ['home', 'paie', 'bourse', 'projet', 'futur', 'pepites', 'lecons', 'lecon', 'recu', 'carnet', 'jeux'];
 function checkMedals(k) {
-  if (!ready || !F || !k || guide !== null || tour !== null || !KID_VIEWS.includes(view) || lessonFrom === 'parents' || (jarAnim && Date.now() < jarAnim.until)) return;
+  if (!ready || !F || !k || guide !== null || tour !== null || !(KID_VIEWS.includes(view) || (view === 'jeu' && party && party.done)) || lessonFrom === 'parents' || (jarAnim && Date.now() < jarAnim.until)) return;
   const ids = medals(k.id).filter(m => m.ok).map(m => m.id);
   if (!Array.isArray(k.ms)) { k.ms = ids; saveF(); return; } // première fois : pas d'avalanche pour les pépites déjà gagnées
   const nw = ids.filter(x => !k.ms.includes(x) && !medalQ.some(q => q.kid === k.id && q.id === x));
@@ -1426,7 +1512,7 @@ function mainView() {
     else if (!k.bguided && view === 'bourse' && bourseOpen(cur) && !evs(cur).some(e => e.t === 'bourse')) { guideKind = 'bourse'; guide = 0; guideHold = null; guideViews = []; }
   }
   const t = tot(cur);
-  const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : view === 'lire' ? lireView() : view === 'art' ? artView() : view === 'apropos' ? aproposView() : view === 'lecons' ? leconsView() : view === 'lecon' ? leconView() : view === 'confidentialite' ? privacyView() : view === 'pepites' ? pepitesView() : view === 'avis' ? (lock && !pinOk ? lockedView() : avisView()) : view === 'admin' ? (lock && !pinOk ? lockedView() : adminView()) : homeView(k, t);
+  const content = view === 'paie' ? payView(k, t) : view === 'recu' ? giftView(k) : view === 'bourse' ? bourseView(k, t) : view === 'futur' ? futurView(k, t) : view === 'carnet' ? carnetView(k) : view === 'projet' ? projetView(k, t) : view === 'parents' ? parentsView() : view === 'lire' ? lireView() : view === 'art' ? artView() : view === 'apropos' ? aproposView() : view === 'lecons' ? leconsView() : view === 'lecon' ? leconView() : view === 'confidentialite' ? privacyView() : view === 'pepites' ? pepitesView() : view === 'jeux' ? jeuxView(k) : view === 'jeu' ? jeuView(k) : view === 'avis' ? (lock && !pinOk ? lockedView() : avisView()) : view === 'admin' ? (lock && !pinOk ? lockedView() : adminView()) : homeView(k, t);
   checkMedals(k); // après le rendu de l'écran : laisse passer l'animation du bocal avant celle des pépites
   return `${topbar()}${status ? `<div style="padding:0 16px"><div class="status">${esc(status)}</div></div>` : ''}<main class="view${guide !== null ? ' guided' : ''}">${content}</main>${guide !== null && (guideKind === 'bourse' ? view === 'bourse' : ['home', 'paie', 'bourse', 'projet'].includes(view)) ? guideView(k) : ''}${tabbar()}${resetFor ? resetModal() : ''}${!resetFor && !medalQ.length && pushAskShow() ? pushAskModal() : ''}${!resetFor && medalQ.length ? medalModal() : ''}${toast ? `<div class="toast" role="status">${toast.msg}${toast.sub ? `<small>${toast.sub}</small>` : ''}</div>` : ''}`;
 }
@@ -1745,6 +1831,13 @@ document.addEventListener('click', ev => {
     case 'pushask': pushAsked(false); pushOn(); return;
     case 'pushlater': pushAsked(true); break;
     case 'admcsv': if (adminData) adminCsv(b.dataset.n); return;
+    case 'jxlevel': { const k = kidOf(cur); if (k && ready && LEVELS.some(l => l[0] === b.dataset.n)) { k.glv = b.dataset.n; saveF(); } break; }
+    case 'jxstart': gStart(b.dataset.n); break;
+    case 'jxcoin': if (party && !party.ans && !party.done) { const r = party.rounds[party.i]; if (r.tray && r.tray.length < 16) { r.tray.push(+b.dataset.n); sfx('coin'); } } break;
+    case 'jxtake': if (party && !party.ans && !party.done) { const r = party.rounds[party.i]; if (r.tray) { r.tray.splice(+b.dataset.n, 1); sfx('back'); } } break;
+    case 'jxpay': gAnswer(null); break;
+    case 'jxans': gAnswer(b.dataset.n); break;
+    case 'jxnext': gNext(); break;
     case 'svnps': form.svnps = +b.dataset.n; break;
     case 'svwtp': form.svwtp = b.dataset.n; break;
     case 'svsrc': form.svsrc = b.dataset.n; break;

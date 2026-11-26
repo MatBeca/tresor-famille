@@ -535,6 +535,30 @@ Object.assign(MATS, {
   legende: { mat: 'de galaxie', c: '#7fb0ff', line: '#0c0830', draw: 'galaxie' },
 });
 
+// ——— Pépites des jeux ———
+Object.assign(D, {
+  balance(c, L) { // balance du marchand
+    const pan = x => `<path d="M${x - 11} 36H${x + 11}Q${x + 9} 45 ${x} 45Q${x - 9} 45 ${x - 11} 36Z" fill="${c}" stroke="${L}" stroke-width="2.4" stroke-linejoin="round"/><path d="M${x - 10} 36L${x} 22L${x + 10} 36" stroke="${L}" stroke-width="1.6" fill="none"/>`;
+    return `<path d="M32 16V52" stroke="${L}" stroke-width="6" stroke-linecap="round"/><path d="M32 16V52" stroke="${tone(c, 0.2)}" stroke-width="2.6" stroke-linecap="round"/><path d="M14 22H50" stroke="${L}" stroke-width="5" stroke-linecap="round"/><path d="M14 22H50" stroke="${c}" stroke-width="2" stroke-linecap="round"/>${pan(15)}${pan(49)}<path d="M20 55Q32 48 44 55Z" fill="${tone(c, -0.15)}" stroke="${L}" stroke-width="2.4" stroke-linejoin="round"/><circle cx="32" cy="15" r="3.6" fill="${tone(c, 0.3)}" stroke="${L}" stroke-width="2"/><circle cx="15" cy="34" r="3" fill="#ffd24a" stroke="${L}" stroke-width="1.2"/><circle cx="49" cy="34" r="3" fill="#ffd24a" stroke="${L}" stroke-width="1.2"/>` + spark(56, 12, 3.6, '#fff', L);
+  },
+  panier(c, L) { // panier d'osier du marché
+    const weave = [0, 1, 2, 3].map(i => `<path d="M${12 + i * 1.5} ${36 + i * 5}H${52 - i * 1.5}" stroke="${tone(c, -0.3)}" stroke-width="1.4"/>`).join('') + [18, 25, 32, 39, 46].map(x => `<path d="M${x} 33V${54}" stroke="${tone(c, 0.25)}" stroke-width="1.6"/>`).join('');
+    return `<path d="M18 33Q18 12 32 12Q46 12 46 33" stroke="${L}" stroke-width="6.5" fill="none"/><path d="M18 33Q18 12 32 12Q46 12 46 33" stroke="${c}" stroke-width="3" fill="none"/><circle cx="25" cy="29" r="5" fill="#e0294f" stroke="${L}" stroke-width="1.8"/><circle cx="36" cy="28" r="5" fill="#6bcb77" stroke="${L}" stroke-width="1.8"/><path d="M9 33H55L50 56H14Z" fill="${c}" stroke="${L}" stroke-width="2.8" stroke-linejoin="round"/>${weave}<rect x="8" y="30" width="48" height="6" rx="3" fill="${tone(c, 0.15)}" stroke="${L}" stroke-width="2.4"/>`;
+  },
+  chrono(c, L) { // chronomètre
+    return `<rect x="28" y="9" width="8" height="6" rx="2" fill="${tone(c, -0.1)}" stroke="${L}" stroke-width="2.2"/><path d="M45 17L49 13" stroke="${L}" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="36" r="20" fill="${c}" stroke="${L}" stroke-width="3"/><circle cx="32" cy="36" r="15" fill="#fff" stroke="${L}" stroke-width="1.6"/>${Array.from({ length: 12 }, (_, i) => { const a = i * Math.PI / 6; return `<path d="M${(32 + 12.5 * Math.cos(a)).toFixed(1)} ${(36 + 12.5 * Math.sin(a)).toFixed(1)}L${(32 + 14.5 * Math.cos(a)).toFixed(1)} ${(36 + 14.5 * Math.sin(a)).toFixed(1)}" stroke="${L}" stroke-width="1.4"/>`; }).join('')}<path d="M32 36L32 25M32 36L39 40" stroke="#e0294f" stroke-width="2.4" stroke-linecap="round"/><circle cx="32" cy="36" r="2" fill="${L}"/>` + shine('M17 28Q19 22 24 19', 2.2);
+  },
+  trophee(c, L) { // trophée du champion
+    return `<path d="M19 18H45V28Q45 44 32 44Q19 44 19 28Z" fill="${c}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><path d="M19 22H11Q10 34 22 36M45 22H53Q54 34 42 36" stroke="${L}" stroke-width="2.6" fill="none"/><path d="M28 44H36V50H28Z" fill="${tone(c, -0.15)}" stroke="${L}" stroke-width="2.2"/><rect x="20" y="50" width="24" height="7" rx="2" fill="${tone(c, -0.3)}" stroke="${L}" stroke-width="2.4"/>${poly(star(32, 29, 6.5, 2.8), '#fff8d6', L, 1.4)}` + shine('M23 23V31', 2.4) + spark(53, 12, 4, '#fff', L) + spark(10, 46, 3, '#fff', L);
+  },
+});
+Object.assign(MATS, {
+  g_marche1: { mat: 'de laiton', c: '#d4a937', line: '#5a4310', draw: 'balance' },
+  g_marche3: { mat: 'd’osier', c: '#c8955a', line: '#4a2c10', draw: 'panier' },
+  g_course1: { mat: 'de chrome', c: '#c3ced9', line: '#3d4a58', draw: 'chrono' },
+  g_course3: { mat: 'de vermeil', c: '#f0b53a', line: '#6e3f00', draw: 'trophee' },
+});
+
 export const matSVG = m => D[m.draw](m.c, m.line);
 // Pépite pas encore gagnée : une pépite grise avec un point d'interrogation.
 export const mystSVG = () => NUGF.map((d, i) => `<path d="${d}" fill="${['#e9e6e1', '#f3f1ed', '#e2ded8', '#d9d4cd', '#e0dcd5', '#cfc9c1', '#c7c0b7', '#d6d1ca', '#bfb8ae'][i]}" stroke="#a29a8e" stroke-width="1.1" stroke-linejoin="round"/>`).join('') + edge([[6, 40], [14, 24], [30, 15], [46, 17], [58, 30], [56, 46], [42, 55], [20, 54]], '#a29a8e') + '<text x="32" y="43" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="21" fill="#7d7468" stroke="#fff" stroke-width="3" paint-order="stroke">?</text>';
