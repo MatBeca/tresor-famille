@@ -43,89 +43,79 @@ function marcheRound(lv) {
 }
 
 // ---------- La Course des tirelires ----------
+// Petits : la régularité, avec de tout petits nombres. Moyens : commencer tôt. Grands : les intérêts, avec des nombres ronds.
 const NAMES = [['Inès', 'Hugo'], ['Léa', 'Sami'], ['Jade', 'Noé'], ['Lina', 'Tom']];
+const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin'];
 function courseRound(lv) {
-  const [A, B] = pick(NAMES);
-  if (lv === 'p') { // régularité et temps, sans intérêts
+  const [A, B] = pick(NAMES), sw = Math.random() < 0.5; // qui est en tête change d'une manche à l'autre
+  if (lv === 'p') {
     let pa, wa, pb, wb;
-    do { pa = R(1, 3); wa = R(6, 12); pb = R(pa + 1, 6); wb = R(2, 5); } while (pa * wa === pb * wb && Math.random() < 0.7 || Math.abs(pa * wa - pb * wb) === 1 && Math.random() < 0.5);
-    const va = pa * wa, vb = pb * wb, ans = va > vb ? 'a' : vb > va ? 'b' : 'e';
-    return { kind: 'race', q: `${A} met ${pa} € de côté chaque semaine pendant ${wa} semaines. ${B} met ${pb} € par semaine, mais seulement pendant ${wb} semaines. Qui aura la plus grosse tirelire ?`, opts: [['a', A], ['b', B], ['e', 'Égalité']], answer: ans,
-      bars: [[A, va], [B, vb]], unit: 'semaines', why: `${A} : ${wa} × ${pa} € = ${va} €. ${B} : ${wb} × ${pb} € = ${vb} €.` };
+    do { pa = R(1, 2); wa = R(3, 6); pb = R(1, 3); wb = R(1, 2); } while (pa * wa - pb * wb < 2);
+    const [X, Y, px, wx, py, wy] = sw ? [A, B, pa, wa, pb, wb] : [B, A, pb, wb, pa, wa], vx = px * wx, vy = py * wy;
+    const t = (n, p, w) => `${n} met ${p} € ${w === 1 ? 'une seule fois' : `chaque semaine, pendant ${w} semaines`}`;
+    return { kind: 'race', q: `${t(X, px, wx)}. ${t(Y, py, wy)}. Qui a le plus d’argent à la fin ?`, opts: [['a', X], ['b', Y]], answer: vx > vy ? 'a' : 'b',
+      bars: [[X, vx], [Y, vy]], why: `${X} : ${vx} €. ${Y} : ${vy} €. Mettre un peu de côté souvent, ça finit par faire beaucoup !` };
   }
-  if (lv === 'm') { // commencer tôt avec des intérêts
-    const r = pick([5, 8, 10]), ya = R(10, 16), yb = R(3, Math.max(4, ya - 6)), sa = pick([100, 200]), sb = sa + pick([50, 100, 150]);
-    const va = sa * (1 + r / 100) ** ya, vb = sb * (1 + r / 100) ** yb;
-    if (Math.abs(va - vb) / Math.max(va, vb) < 0.06) return courseRound(lv);
-    return { kind: 'race', q: `Leur argent rapporte ${r} % par an. ${A} place ${sa} € pendant ${ya} ans. ${B} place ${sb} €, mais seulement pendant ${yb} ans. Qui aura le plus à la fin ?`, opts: [['a', A], ['b', B]], answer: va > vb ? 'a' : 'b',
-      bars: [[A, Math.round(va)], [B, Math.round(vb)]], unit: 'ans', why: `${A} finit avec environ ${Math.round(va)} €, ${B} avec environ ${Math.round(vb)} €. ${va > vb ? 'Le temps a fait la différence : c’est ça, les intérêts composés.' : 'Cette fois, la plus grosse mise l’emporte.'}` };
+  if (lv === 'm') {
+    const p = R(1, 3), m1 = R(0, 1), m2 = R(m1 + 2, 4), end = 5, w1 = (end - m1 + 1) * 4, w2 = (end - m2 + 1) * 4;
+    const [X, Y, mx, my, wx, wy] = sw ? [A, B, m1, m2, w1, w2] : [B, A, m2, m1, w2, w1];
+    return { kind: 'race', q: `${X} et ${Y} mettent chacun ${p} € de côté chaque semaine. ${X} commence en ${MOIS[mx]}, ${Y} en ${MOIS[my]}. En juin, qui a la plus grosse tirelire ?`, opts: [['a', X], ['b', Y]], answer: mx < my ? 'a' : 'b',
+      bars: [[X, p * wx], [Y, p * wy]], why: `Même argent chaque semaine, mais ${mx < my ? X : Y} a commencé plus tôt : environ ${p * Math.max(wx, wy)} € contre ${p * Math.min(wx, wy)} €. Commencer tôt, c’est le secret !` };
   }
-  // g : calculer
   const t = R(0, 2);
-  if (t === 0) { // intérêts composés
-    const r = pick([5, 6, 8, 10]), n = pick([5, 8, 10]), v = 100 * (1 + r / 100) ** n, simple = 100 + 100 * r / 100 * n, big = v * 1.25;
-    const ok = Math.round(v), opts = shuffle([[String(ok), `${ok} €`], [String(Math.round(simple)), `${Math.round(simple)} €`], [String(Math.round(big)), `${Math.round(big)} €`]]);
-    return { kind: 'mcq', q: `${A} place 100 € à ${r} % par an, et laisse les intérêts dans sa tirelire. Combien aura-t-elle au bout de ${n} ans ?`, opts, answer: String(ok),
-      why: `Chaque année, les intérêts s’ajoutent et rapportent à leur tour : 100 × ${(1 + r / 100).toFixed(2).replace('.', ',')}^${n} ≈ ${ok} €. Sans cet effet boule de neige, on n’aurait que ${Math.round(simple)} €.` };
+  if (t === 0) { // les intérêts de la première année
+    const s0 = pick([100, 200, 500]), r = pick([5, 10]), g = s0 * r / 100;
+    const opts = shuffle([[String(g), `${g} €`], [String(g * 10), `${g * 10} €`], [String(r), `${r} €`]].filter((o, i, x) => x.findIndex(y => y[0] === o[0]) === i));
+    if (opts.length < 3) return courseRound(lv);
+    return { kind: 'mcq', q: `${A} a ${s0} € qui rapportent ${r} % par an. Combien gagne-t-elle la première année ?`, opts, answer: String(g), why: `${r} %, c’est ${r} € pour chaque 100 €. Avec ${s0} €, ça fait ${g} € en un an, sans rien faire !` };
   }
-  if (t === 1) { // règle de 72
-    const r = pick([4, 6, 8, 9, 12]), y = 72 / r, opts = shuffle([[String(y), `${y} ans`], [String(y * 2), `${y * 2} ans`], [String(Math.round(100 / r)), `${Math.round(100 / r)} ans`]].filter((o, i, a) => a.findIndex(x => x[0] === o[0]) === i));
-    return { kind: 'mcq', q: `À ${r} % par an, en combien de temps ton argent double-t-il ?`, opts, answer: String(y), why: `La règle de 72 : 72 ÷ ${r} = ${y} ans. Une astuce de pro pour calculer de tête !` };
+  if (t === 1) { // l'effet boule de neige
+    const r = 10;
+    return { kind: 'mcq', q: `${A} a 100 € à ${r} % par an. La première année, elle gagne 10 €. Et la deuxième année, si elle laisse tout dans sa tirelire ?`, opts: shuffle([['plus', 'Un peu plus que 10 €'], ['pareil', 'Pareil : 10 €'], ['moins', 'Moins que 10 €']]), answer: 'plus',
+      why: `La deuxième année, les intérêts se calculent sur 110 € : elle gagne 11 €. Les intérêts rapportent à leur tour : c’est l’effet boule de neige !` };
   }
-  const m = pick([5, 10, 20]), n = pick([12, 24, 36]), tot = m * n; // épargne régulière
-  const opts = shuffle([[String(tot), `${tot} €`], [String(tot + m * 6), `${tot + m * 6} €`], [String(Math.round(tot * 0.75)), `${Math.round(tot * 0.75)} €`]]);
-  return { kind: 'mcq', q: `${B} met ${m} € de côté chaque mois, sans y toucher, pendant ${n} mois. Combien a-t-il, sans compter les intérêts ?`, opts, answer: String(tot), why: `${n} mois × ${m} € = ${tot} €. Petit à petit, ça finit par faire beaucoup !` };
+  // commencer tôt avec des intérêts, écarts nets
+  const ya = pick([15, 20]), yb = pick([5, 8]), sa = 100, sb = 200, va = Math.round(sa * 1.1 ** ya), vb = Math.round(sb * 1.1 ** yb);
+  const [X, Y, x, y, vx, vy, sx, sy] = sw ? [A, B, ya, yb, va, vb, sa, sb] : [B, A, yb, ya, vb, va, sb, sa];
+  return { kind: 'race', q: `Leur argent rapporte 10 % par an. ${X} place ${sx} € pendant ${x} ans. ${Y} place ${sy} € pendant ${y} ans. Qui a le plus à la fin ?`, opts: [['a', X], ['b', Y]], answer: vx > vy ? 'a' : 'b',
+    bars: [[X, vx], [Y, vy]], why: `${va > vb ? A : B} a mis moins d’argent mais l’a laissé plus longtemps : environ ${Math.max(va, vb)} € contre ${Math.min(va, vb)} €. Le temps est ton super pouvoir !` };
 }
 
-// ---------- Le Prix au kilo : comparer au kilo ou au litre ----------
-// [icône, partitif, « de … », unité, tailles en g ou ml, prix réaliste au kilo ou au litre en centimes (min, max)]
-const KPROD = [['🥣', 'des céréales', 'de céréales', 'kg', [375, 500, 750, 1000], [400, 900]], ['🍝', 'des pâtes', 'de pâtes', 'kg', [500, 1000, 2000], [120, 400]], ['🍚', 'du riz', 'de riz', 'kg', [500, 1000, 2000], [150, 500]],
-  ['🍫', 'du chocolat', 'de chocolat', 'kg', [100, 200, 400], [800, 2000]], ['🍪', 'des biscuits', 'de biscuits', 'kg', [150, 300, 450, 600], [500, 1200]], ['🧃', 'du jus d’orange', 'de jus d’orange', 'L', [1000, 1500, 2000], [120, 350]],
-  ['🥛', 'du lait', 'de lait', 'L', [500, 1000, 2000], [90, 180]], ['💧', 'de l’eau', 'd’eau', 'L', [500, 1500, 3000], [25, 90]]];
+// ---------- Le Prix au kilo : comparer pour la même quantité ----------
+// Petits : même prix ou même taille, il suffit de regarder. Moyens : 2 petits ou 1 grand, en euros ronds. Grands : comparer au kilo avec des formats simples.
+// [icône, partitif, contenant, unité, prix réaliste au kilo ou au litre en centimes (min, max)]
+const KPROD = [['🥣', 'des céréales', 'paquet', 'kg', [400, 800]], ['🍝', 'des pâtes', 'paquet', 'kg', [200, 400]], ['🍚', 'du riz', 'paquet', 'kg', [200, 500]], ['🍪', 'des biscuits', 'paquet', 'kg', [600, 1000]], ['🧃', 'du jus d’orange', 'bouteille', 'L', [200, 300]], ['🥛', 'du lait', 'bouteille', 'L', [100, 200]], ['💧', 'de l’eau', 'bouteille', 'L', [50, 100]]];
 const qty = (g, u) => u === 'kg' ? (g < 1000 ? `${g} g` : `${String(g / 1000).replace('.', ',')} kg`) : (g < 1000 ? `${g / 10} cl` : `${String(g / 1000).replace('.', ',')} L`);
-const perU = (price, g) => Math.round(price * 1000 / g); // centimes par kilo ou par litre
-const priceOf = (base, g, f = 1) => Math.max(10, Math.round(base * g / 1000 * f / 10) * 10);
 const cap = t => t[0].toUpperCase() + t.slice(1);
 function kiloRound(lv) {
-  const [ic, part, de, u, sizes, [lo, hi]] = pick(KPROD), base = R(lo, hi), au = u === 'kg' ? 'au kilo' : 'au litre', le = u === 'kg' ? 'le kilo' : 'le litre';
-  if (lv === 'p') { // un paquet deux fois plus grand : est-il deux fois plus cher ?
-    const s1 = sizes[0], s2 = s1 * 2, p1 = Math.max(100, Math.round(base * s1 / 1000 / 50) * 50), p2 = p1 * 2 + pick([-1, 1]) * Math.min(R(1, 2) * 50, p1 - 50), best = p2 < 2 * p1 ? 'b' : 'a';
-    return { kind: 'deal', ic, q: `${cap(part)} : quel achat est le moins cher pour la même quantité ?`, opts: [['a', `2 ${u === 'kg' ? 'petits paquets' : 'petites bouteilles'} de ${qty(s1, u)} à ${eu(p1)} ${u === 'kg' ? 'chacun' : 'chacune'}`], ['b', `1 ${u === 'kg' ? 'grand paquet' : 'grande bouteille'} de ${qty(s2, u)} à ${eu(p2)}`]], answer: best,
-      why: `${u === 'kg' ? '2 petits paquets' : '2 petites bouteilles'}, c’est ${qty(s2, u)} pour ${eu(2 * p1)}. ${u === 'kg' ? 'Le grand' : 'La grande'} : ${qty(s2, u)} pour ${eu(p2)}. ${best === 'b' ? (u === 'kg' ? 'Le grand gagne !' : 'La grande gagne !') : (u === 'kg' ? 'Cette fois, le grand paquet n’est pas une bonne affaire.' : 'Cette fois, la grande bouteille n’est pas une bonne affaire.')}` };
+  const [ic, part, box, u, [lo, hi]] = pick(KPROD), fem = box === 'bouteille', small = fem ? 'petite bouteille' : 'petit paquet', big = fem ? 'grande bouteille' : 'grand paquet';
+  const s1 = u === 'kg' ? 500 : 1000, s2 = s1 * 2;
+  if (lv === 'p') {
+    if (Math.random() < 0.5) { // même prix : on prend le plus grand
+      const p = R(2, 4) * 100;
+      return { kind: 'deal', ic, q: `${cap(part)} : les deux coûtent ${eu(p)}. Lequel te donne le plus pour ton argent ?`, opts: shuffle([['a', `${cap(small)} de ${qty(s1, u)}`], ['b', `${cap(big)} de ${qty(s2, u)}`]]), answer: 'b',
+        why: `Même prix, mais ${fem ? 'la grande bouteille' : 'le grand paquet'} contient deux fois plus. Pour ${eu(p)}, tu en as plus !` };
+    }
+    const p1 = R(1, 3) * 100, p2 = p1 + R(1, 2) * 100; // même taille : on prend le moins cher
+    return { kind: 'deal', ic, q: `${cap(part)} : ${fem ? 'deux bouteilles' : 'deux paquets'} de ${qty(s1, u)}, exactement ${fem ? 'les mêmes' : 'les mêmes'}. Lequel choisis-tu ?`, opts: shuffle([['a', `Celui à ${eu(p1)}`], ['b', `Celui à ${eu(p2)}`]]), answer: 'a',
+      why: `Même quantité : le moins cher, c’est celui à ${eu(p1)}. Tu gardes ${eu(p2 - p1)} pour ta tirelire !` };
   }
-  if (lv === 'm') { // comparer au kilo ou au litre
-    let s1, s2, p1, p2, k1, k2, n = 0;
-    do { [s1, s2] = shuffle(sizes).slice(0, 2).sort((x, y) => x - y); p1 = priceOf(base, s1); p2 = priceOf(base, s2, R(75, 120) / 100); k1 = perU(p1, s1); k2 = perU(p2, s2); } while ((Math.abs(k1 - k2) / Math.max(k1, k2) < 0.06) && ++n < 50);
-    if (n >= 50) return kiloRound(lv);
-    return { kind: 'deal', ic, q: `${cap(part)} : lequel coûte le moins cher ${au} ?`, opts: shuffle([['a', `${qty(s1, u)} à ${eu(p1)}`], ['b', `${qty(s2, u)} à ${eu(p2)}`]]), answer: k1 < k2 ? 'a' : 'b',
-      why: `${qty(s1, u)} à ${eu(p1)}, ça fait ${eu(k1)} ${le}. ${qty(s2, u)} à ${eu(p2)}, ça fait ${eu(k2)} ${le}. Le prix ${au} est écrit en petit sur l’étiquette des magasins : il sert à ça !` };
+  if (lv === 'm') { // 2 petits ou 1 grand, euros ronds
+    const p1 = R(1, 3) * 100, p2 = 2 * p1 + pick([-1, 1]) * 100, best = p2 < 2 * p1 ? 'b' : 'a';
+    return { kind: 'deal', ic, q: `${cap(part)} : pour avoir ${qty(s2, u)}, que vaut-il mieux acheter ?`, opts: [['a', `2 ${fem ? 'petites bouteilles' : 'petits paquets'} de ${qty(s1, u)} à ${eu(p1)} ${fem ? 'chacune' : 'chacun'}`], ['b', `1 ${big} de ${qty(s2, u)} à ${eu(p2)}`]], answer: best,
+      why: `2 × ${eu(p1)} = ${eu(2 * p1)}, contre ${eu(p2)} pour ${fem ? 'la grande' : 'le grand'}. ${best === 'b' ? (fem ? 'La grande bouteille gagne !' : 'Le grand paquet gagne !') : (fem ? 'Ici, la grande bouteille coûte plus cher !' : 'Ici, le grand paquet coûte plus cher !')}` };
   }
-  const t = R(0, 2);
-  if (t === 0) { // calculer le prix au kilo
-    const g = pick(sizes.filter(x => x < 1000).concat(u === 'kg' ? [250, 500] : [250, 500])), p = priceOf(base, g), k = perU(p, g), w1 = Math.round(p * g / 1000), w2 = Math.round(k / 10);
-    const opts = shuffle([[String(k), `${eu(k)} ${le}`], [String(w1), `${eu(w1)} ${le}`], [String(w2), `${eu(w2)} ${le}`]].filter((o, i, a) => a.findIndex(x => x[0] === o[0]) === i));
-    if (opts.length < 3 || w1 < 1 || w2 < 1) return kiloRound(lv);
-    const x = +(1000 / g).toFixed(2);
-    return { kind: 'mcq', ic, q: `${u === 'kg' ? 'Un paquet' : 'Une bouteille'} ${de} de ${qty(g, u)} coûte ${eu(p)}. Combien coûte ${le} ?`, opts, answer: String(k),
-      why: `Dans ${u === 'kg' ? '1 kg' : '1 L'}, il y a ${String(x).replace('.', ',')} fois ${qty(g, u)} : ${eu(p)} × ${String(x).replace('.', ',')} ≈ ${eu(k)}.` };
-  }
-  if (t === 1) { // le piège du lot
-    const g = sizes[0], n = R(3, 4), big = sizes[sizes.length - 1] > g * n ? sizes[sizes.length - 1] : g * n * 2, lot = priceOf(base, g * n, R(90, 120) / 100), pb = priceOf(base, big, R(80, 115) / 100);
-    const k1 = perU(lot, g * n), k2 = perU(pb, big);
-    if (Math.abs(k1 - k2) / Math.max(k1, k2) < 0.06) return kiloRound(lv);
-    return { kind: 'deal', ic, q: `${cap(part)} en promo ! Lequel est vraiment le plus intéressant ?`, opts: shuffle([['a', `Le lot de ${n} × ${qty(g, u)} à ${eu(lot)}`], ['b', `${qty(big, u)} à ${eu(pb)}`]]), answer: k1 < k2 ? 'a' : 'b',
-      why: `Le lot fait ${qty(g * n, u)} pour ${eu(lot)} : ${eu(k1)} ${le}. L’autre : ${eu(k2)} ${le}. Un lot n’est pas toujours une bonne affaire !` };
-  }
-  let s1, s2, p1, p2, k1, k2, n = 0; // deux marques, tailles peu pratiques
-  do { s1 = pick(sizes); s2 = pick(sizes.filter(x => x !== s1)); p1 = priceOf(base, s1); p2 = priceOf(base, s2, R(88, 112) / 100); k1 = perU(p1, s1); k2 = perU(p2, s2); } while (Math.abs(k1 - k2) / Math.max(k1, k2) < 0.04 && ++n < 50);
-  if (n >= 50) return kiloRound(lv);
-  return { kind: 'deal', ic, q: `Deux marques ${de}. Laquelle coûte le moins cher ${au} ?`, opts: [['a', `Marque A : ${qty(s1, u)} à ${eu(p1)}`], ['b', `Marque B : ${qty(s2, u)} à ${eu(p2)}`]], answer: k1 < k2 ? 'a' : 'b',
-    why: `A : ${eu(k1)} ${le}. B : ${eu(k2)} ${le}. L’écart paraît petit, mais sur une année de courses, ça compte !` };
+  // grands : prix au kilo avec des formats simples (500 g et 1 kg, 1 L et 2 L)
+  const p1 = Math.max(30, Math.round(R(lo, hi) * s1 / 1000 / 10) * 10), k1 = p1 * 1000 / s1, f = pick([0.75, 0.85, 1.2, 1.3]), p2 = Math.round(k1 * s2 / 1000 * f / 10) * 10, k2 = p2 * 1000 / s2;
+  if (Math.abs(k1 - k2) / Math.max(k1, k2) < 0.1) return kiloRound(lv);
+  const le = u === 'kg' ? 'le kilo' : 'le litre';
+  return { kind: 'deal', ic, q: `${cap(part)} : lequel coûte le moins cher ${u === 'kg' ? 'au kilo' : 'au litre'} ?`, opts: shuffle([['a', `${qty(s1, u)} à ${eu(p1)}`], ['b', `${qty(s2, u)} à ${eu(p2)}`]]), answer: k1 < k2 ? 'a' : 'b',
+    why: `${qty(s1, u)} à ${eu(p1)}, ça fait ${eu(Math.round(k1))} ${le}. ${qty(s2, u)} à ${eu(p2)}, ça fait ${eu(Math.round(k2))} ${le}. Le prix ${u === 'kg' ? 'au kilo' : 'au litre'} est écrit en petit sur les étiquettes : regarde la prochaine fois !` };
 }
 
 export const GAMES = {
   marche: { name: 'Le Marché', ic: '🏪', idea: 'Payer, rendre la monnaie, trouver la bonne affaire.', round: marcheRound },
-  kilo: { name: 'Le Prix au kilo', ic: '⚖️', idea: 'Le gros paquet est-il vraiment moins cher ? Compare au kilo et au litre.', round: kiloRound, unlock: 's2' },
+  kilo: { name: 'Le Prix au kilo', ic: '⚖️', idea: 'Le gros paquet est-il vraiment moins cher ? Compare avant d’acheter.', round: kiloRound, unlock: 's2' },
   course: { name: 'La Course des tirelires', ic: '🏁', idea: 'Qui gagne : celui qui commence tôt ou celui qui met plus ?', round: courseRound, unlock: 's3' },
 };
 export const newParty = (id, lv) => ({ id, lv, i: 0, score: 0, rounds: Array.from({ length: ROUNDS }, () => GAMES[id].round(lv)), ans: null, done: false });
