@@ -7,7 +7,7 @@ import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
 import { GAMES, LEVELS, levelOfAge, newParty, traySum, isRight, explain, eu, ROUNDS, WIN, PER_DAY } from './games.js';
-const VERSION = '121'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '122'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -734,6 +734,13 @@ function surveyCard() {
 <label style="margin-top:10px">Un mot pour expliquer ? (facultatif)<textarea data-f="svtxt" rows="3" maxlength="600">${esc(form.svtxt || '')}</textarea></label>
 <div class="row"><button class="btn sm" data-act="svsend" ${form.svnps === undefined || !form.svwtp ? 'disabled' : ''}>Envoyer</button><button class="btn ghost sm" data-act="svlater">Plus tard</button></div></section>`;
 }
+// Outil du créateur (Espace parents, protégé par le code) : retirer une pépite gagnée par un geste ponctuel, qu'on pourra regagner normalement.
+const GX_PEP = { g_trois: 'trois', g_parfait: 'parfait', g_perdu: 'perdu', g_boulette: 'boulette', g_acharne: 'acharne', g_marathon: 'marathon' };
+function pepAdmin(k) {
+  const won = medals(k.id).filter(m => m.ok && GX_PEP[m.id]);
+  return won.length ? `<p class="small" style="margin:0 0 8px"><span class="soft">Retirer une pépite :</span> ${won.map(m => `<button class="link" data-act="pepdel" data-k="${k.id}" data-n="${m.id}">${pepArm === k.id + m.id ? `Confirmer « ${m.name} »` : `« ${m.name} »`}</button>`).join(' ')}</p>` : '';
+}
+let pepArm = '';
 function gamesParentCard() {
   const pd = perDay(), opts = [[1, '1'], [2, '2'], [3, '3'], [5, '5'], [0, 'Illimité']];
   const used = kids().filter(k => !k.test && k.gp && k.gp.d === todayK() && Object.keys(GAMES).some(g => (k.gp[g] || 0) > 0));
@@ -774,7 +781,7 @@ ${kids().map(k => { const pz = pauseOf(k.id); return `<div style="padding:12px 0
 <label>Le projet présenté<input id="p-label" type="text" autocomplete="off" maxlength="60" data-f="plabel" value="${esc(form.plabel)}" placeholder="Un vélo, un cadeau, une sortie…"></label>
 <label>Montant (€)<input id="p-amount" type="text" inputmode="decimal" autocomplete="off" data-f="pamount" value="${esc(form.pamount)}"></label>
 <div class="row"><button class="btn" data-act="project" ${dis}>Débloquer le montant</button></div></section>
-<section class="card"><h3>Les enfants</h3>${kids().map(k => `<div class="kidform"><header><h3 style="font-size:19px">${esc(k.name)}</h3><button class="link" data-act="gstart" data-k="${k.id}">Lancer le guide</button>${kids().length > 1 ? `<button class="link" data-act="kdel" data-k="${k.id}">${delArm === k.id ? 'Confirmer la suppression' : 'Supprimer'}</button>` : ''}</header>${isAdmin() ? `<p class="small" style="margin:0 0 8px"><button class="link" data-act="kidtest" data-k="${k.id}">${k.test ? 'Quitter le mode test' : 'Mode test : tout débloquer'}</button>${k.test ? ' <span class="soft">Toutes les pépites, tous les jeux et toutes les leçons sont ouverts, parties illimitées, aucune notification.</span>' : ''}</p>` : ''}
+<section class="card"><h3>Les enfants</h3>${kids().map(k => `<div class="kidform"><header><h3 style="font-size:19px">${esc(k.name)}</h3><button class="link" data-act="gstart" data-k="${k.id}">Lancer le guide</button>${kids().length > 1 ? `<button class="link" data-act="kdel" data-k="${k.id}">${delArm === k.id ? 'Confirmer la suppression' : 'Supprimer'}</button>` : ''}</header>${isAdmin() ? `<p class="small" style="margin:0 0 8px"><button class="link" data-act="kidtest" data-k="${k.id}">${k.test ? 'Quitter le mode test' : 'Mode test : tout débloquer'}</button>${k.test ? ' <span class="soft">Toutes les pépites, tous les jeux et toutes les leçons sont ouverts, parties illimitées, aucune notification.</span>' : ''}</p>` : ''}${isAdmin() && !k.test ? pepAdmin(k) : ''}
 <label>Prénom<input id="k-n-${k.id}" type="text" autocomplete="off" maxlength="20" value="${esc(k.name)}" data-set="kname:${k.id}"></label>
 <div class="grid2"><label>Naissance<input id="k-b-${k.id}" type="date" value="${esc(k.birth)}" data-set="kbirth:${k.id}"></label>
 <label>Par semaine (€)<input id="k-w-${k.id}" type="number" inputmode="decimal" min="1" max="50" step="0.5" value="${k.weekly}" data-set="kweekly:${k.id}"></label></div>
@@ -1878,6 +1885,10 @@ document.addEventListener('click', ev => {
     case 'admcsv': if (adminData) adminCsv(b.dataset.n); return;
     case 'kidtest': { const k = kidOf(b.dataset.k); if (k && ready && isAdmin()) { k.test = !k.test; if (k.test) k.ms = MEDALS.map(m => m.id); else delete k.ms; saveF(); } break; }
     case 'pepreplay': { const k = kidOf(cur); if (k && k.test && MEDALS.some(m => m.id === b.dataset.n)) { medalQ.push({ kid: k.id, id: b.dataset.n }); setTimeout(() => sfx('pep'), 250); } break; }
+    case 'pepdel': { const k = kidOf(b.dataset.k), id = b.dataset.n; if (!k || !ready || !isAdmin() || !GX_PEP[id]) break;
+      if (pepArm !== k.id + id) { pepArm = k.id + id; break; }
+      pepArm = ''; if (k.gx) delete k.gx[GX_PEP[id]]; if (Array.isArray(k.ms)) k.ms = k.ms.filter(x => x !== id); if (k.pm === id) delete k.pm;
+      saveF(); say(`Pépite « ${(MEDALS.find(m => m.id === id) || {}).name} » retirée à ${esc(k.name)}.`); break; }
     case 'gpd': if (ready && [0, 1, 2, 3, 5].includes(+b.dataset.n)) { F.gpd = +b.dataset.n; saveF(); } break;
     case 'gbonus': { const k = kidOf(b.dataset.k); if (k && ready) { const d = todayK(); if (!k.gp || k.gp.d !== d) k.gp = { d }; k.gp.bonus = (k.gp.bonus || 0) + perDay(); k.gbN = (k.gbN || 0) + 1; saveF(); say(`${esc(k.name)} a ${perDay()} partie${perDay() > 1 ? 's' : ''} de plus aujourd’hui dans chaque jeu.`); } break; }
     case 'jxlevel': { const k = kidOf(cur); if (k && ready && LEVELS.some(l => l[0] === b.dataset.n)) { k.glv = b.dataset.n; saveF(); } break; }
