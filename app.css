@@ -571,3 +571,6 @@ svg.jar.jup{animation:jpop 3s ease-in-out both;transform-origin:50% 90%}
 .geg.gold{filter:sepia(1) saturate(6) hue-rotate(-8deg) brightness(1.05) drop-shadow(0 0 3px #f2b01e)}
 .gcap{font:700 11px Nunito,sans-serif;color:#b0562a}.gval{font:800 12px Nunito,sans-serif;color:var(--soft)}
 .gbtns{flex-wrap:nowrap}.gbtns .btn.ghost{flex:none;width:56px;font-size:22px;padding-inline:0}
+.wbars div{grid-template-rows:1fr auto 16px}.wbars small{height:16px;line-height:16px;overflow:visible;position:relative;z-index:1}
+.wbars i.z{min-height:0;height:2px!important;opacity:.3;border-radius:1px}
+.wbars.dense b{display:none}.wbars.dense div{grid-template-rows:1fr 16px}

@@ -7,7 +7,7 @@ import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
 import { GAMES, LEVELS, levelOfAge, newParty, traySum, isRight, explain, eu, ROUNDS, WIN, PER_DAY, GOLD } from './games.js';
-const VERSION = '130'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '131'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -1118,7 +1118,7 @@ function activityCard() {
 <div class="pills admpills">${[['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année']].map(([v, l]) => pill('admg', v, l, g === v)).join('')}</div>
 <div class="pills admpills">${[[7, '7 j'], [30, '30 j'], [90, '3 mois'], [365, '12 mois'], [0, 'Tout']].map(([v, l]) => pill('admrange', v, l, !adm.from && !adm.to && adm.days === v)).join('')}</div>
 <div class="row admdates"><label>Du<input type="date" data-f="admfrom" value="${form.admfrom || from}"></label><label>au<input type="date" data-f="admto" value="${form.admto || to}"></label><button class="btn sm ghost" data-act="admapply">Appliquer</button></div>
-<div class="wbars${dense ? ' dense' : ''}" style="grid-template-columns:repeat(${rows.length},1fr)">${rows.map((r, i) => `<div title="${bucketLabel(r.k, g)} : ${r.v} famille${r.v > 1 ? 's' : ''} active${r.v > 1 ? 's' : ''}${r.n ? `, dont ${r.n} nouvelle${r.n > 1 ? 's' : ''}` : ''}"><i style="height:${Math.round(100 * r.v / max)}%">${r.n ? `<u style="height:${Math.round(100 * Math.min(r.n, r.v) / Math.max(1, r.v))}%"></u>` : ''}</i><b>${dense ? '' : r.v}</b><small>${!dense || i % step === 0 ? bucketLabel(r.k, g) : ''}</small></div>`).join('')}</div>
+<div class="wbars${dense ? ' dense' : ''}" style="grid-template-columns:repeat(${rows.length},1fr)">${rows.map((r, i) => `<div title="${bucketLabel(r.k, g)} : ${r.v} famille${r.v > 1 ? 's' : ''} active${r.v > 1 ? 's' : ''}${r.n ? `, dont ${r.n} nouvelle${r.n > 1 ? 's' : ''}` : ''}"><i class="${r.v ? '' : 'z'}" style="height:${Math.round(100 * r.v / max)}%">${r.n ? `<u style="height:${Math.round(100 * Math.min(r.n, r.v) / Math.max(1, r.v))}%"></u>` : ''}</i><b>${dense ? '' : r.v}</b><small>${!dense || i % step === 0 ? bucketLabel(r.k, g) : ''}</small></div>`).join('')}</div>
 <p class="small soft" style="margin:8px 0 0">En moyenne ${avg.toFixed(1).replace('.', ',')} famille${avg >= 2 ? 's' : ''} active${avg >= 2 ? 's' : ''} par ${unit} · pic : ${peak.v} ${peak.k ? `(${bucketLabel(peak.k, g)})` : ''} · ${uniq} famille${uniq > 1 ? 's' : ''} différente${uniq > 1 ? 's' : ''} sur la période. En foncé : les nouvelles familles.</p></section>`;
 }
 function adminView() {
