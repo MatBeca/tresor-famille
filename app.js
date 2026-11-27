@@ -7,7 +7,7 @@ import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
 import { GAMES, LEVELS, levelOfAge, newParty, traySum, isRight, explain, eu, ROUNDS, WIN, PER_DAY } from './games.js';
-const VERSION = '128'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '129'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -867,6 +867,7 @@ function touchSession() {
   if (!F || F.noStats || !ready || !F.stats) return;
   const st = F.stats, w = st.wk || (st.wk = {}), key = ymdL(wk(new Date())), r = w[key] || (w[key] = [0, 0, 0]);
   r[0]++; if (lock) r[1]++;
+  const dy = st.dy || (st.dy = []), today = ymdL(Date.now()); if (!dy.includes(today)) { dy.push(today); dy.sort(); while (dy.length > 800) dy.shift(); }
   const ks = Object.keys(w).sort(); while (ks.length > 104) delete w[ks.shift()];
   const dv = st.dv || (st.dv = {}); dv[devLocal()] = { os: osOf(), k: lock ? 1 : 0, i: standalone() ? 1 : 0, l: iso().slice(0, 10) };
   const dk = Object.keys(dv).sort((a, b) => (dv[a].l || '').localeCompare(dv[b].l || '')); while (dk.length > 12) delete dv[dk.shift()];
@@ -1081,6 +1082,44 @@ function adminDeepView() {
 <section class="card"><h3>Télécharger les données</h3><p class="soft small" style="margin:0">Fichiers pour Excel ou Google Sheets, sans nom ni e-mail : chaque famille a un code (F…). Les familles qui ont désactivé les statistiques sont exclues.</p>
 <div class="row"><button class="btn sm" data-act="admcsv" data-n="enfants">Une ligne par enfant</button><button class="btn sm ghost" data-act="admcsv" data-n="semaines">Activité semaine par semaine</button><button class="btn sm ghost" data-act="admcsv" data-n="avis">Avis et sondages</button></div></section>`;
 }
+// ---------- Familles actives : par jour, semaine, mois ou année, sur la période choisie ----------
+const adm = { g: 'jour', days: 30, from: '', to: '' };
+const MOIS_C = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+function bucketOf(day, g) { // day : AAAA-MM-JJ
+  if (g === 'jour') return day;
+  if (g === 'semaine') return ymdL(wk(new Date(day + 'T12:00:00')));
+  return g === 'mois' ? day.slice(0, 7) : day.slice(0, 4);
+}
+function bucketLabel(k, g) {
+  if (g === 'jour' || g === 'semaine') return `${k.slice(8, 10)}/${k.slice(5, 7)}`;
+  return g === 'mois' ? `${MOIS_C[+k.slice(5, 7) - 1]} ${k.slice(2, 4)}` : k;
+}
+function activityCard() {
+  const fams = adminData.fams.filter(x => x.id !== user.uid && Array.isArray(x.kids) && !x.noStats), g = adm.g;
+  const created = x => { const st = x.stats || {}; return ymdL(new Date(st.created || x.created || Date.now())); };
+  const first = fams.map(created).sort()[0] || ymdL(Date.now());
+  const to = adm.to || ymdL(Date.now()), from = adm.from || (adm.days ? ymdL(new Date(to + 'T12:00:00').getTime() - (adm.days - 1) * 864e5) : first);
+  // jours d'activité de chaque famille : jours enregistrés, dates des actions, dernière visite, semaines d'ouverture
+  const act = fams.map(x => {
+    const st = x.stats || {}, kd = adminData.kd[x.id] || {}, set = new Set();
+    for (const d of st.dy || []) set.add(bucketOf(d, g));
+    for (const k of Object.values(kd)) for (const e of k.events || []) if (e.d) set.add(bucketOf(ymdL(new Date(e.d)), g));
+    if (st.seen) set.add(bucketOf(st.seen, g));
+    if (g !== 'jour') for (const w of Object.keys(st.wk || {})) set.add(bucketOf(w, g));
+    return { set, born: bucketOf(created(x), g) };
+  });
+  const keys = []; for (let t = new Date(from + 'T12:00:00').getTime(), end = new Date(to + 'T12:00:00').getTime(); t <= end; t += 864e5) { const k = bucketOf(ymdL(t), g); if (keys[keys.length - 1] !== k) keys.push(k); }
+  const rows = keys.map(k => ({ k, v: act.filter(a => a.set.has(k)).length, n: act.filter(a => a.born === k).length })), max = Math.max(1, ...rows.map(r => r.v)), dense = rows.length > 10, step = Math.ceil(rows.length / 6);
+  const uniq = act.filter(a => keys.some(k => a.set.has(k))).length, avg = rows.length ? rows.reduce((a, r) => a + r.v, 0) / rows.length : 0, peak = rows.reduce((b, r) => r.v > b.v ? r : b, { v: 0, k: '' });
+  const unit = { jour: 'jour', semaine: 'semaine', mois: 'mois', annee: 'an' }[g];
+  const pill = (act2, v, l, on) => `<button class="pill" data-act="${act2}" data-n="${v}" aria-pressed="${on}">${l}</button>`;
+  return `<section class="card"><h3>Familles actives</h3>
+<div class="pills admpills">${[['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année']].map(([v, l]) => pill('admg', v, l, g === v)).join('')}</div>
+<div class="pills admpills">${[[7, '7 j'], [30, '30 j'], [90, '3 mois'], [365, '12 mois'], [0, 'Tout']].map(([v, l]) => pill('admrange', v, l, !adm.from && !adm.to && adm.days === v)).join('')}</div>
+<div class="row admdates"><label>Du<input type="date" data-f="admfrom" value="${form.admfrom || from}"></label><label>au<input type="date" data-f="admto" value="${form.admto || to}"></label><button class="btn sm ghost" data-act="admapply">Appliquer</button></div>
+<div class="wbars${dense ? ' dense' : ''}" style="grid-template-columns:repeat(${rows.length},1fr)">${rows.map((r, i) => `<div title="${bucketLabel(r.k, g)} : ${r.v} famille${r.v > 1 ? 's' : ''} active${r.v > 1 ? 's' : ''}${r.n ? `, dont ${r.n} nouvelle${r.n > 1 ? 's' : ''}` : ''}"><i style="height:${Math.round(100 * r.v / max)}%">${r.n ? `<u style="height:${Math.round(100 * Math.min(r.n, r.v) / Math.max(1, r.v))}%"></u>` : ''}</i><b>${dense ? '' : r.v}</b><small>${!dense || i % step === 0 ? bucketLabel(r.k, g) : ''}</small></div>`).join('')}</div>
+<p class="small soft" style="margin:8px 0 0">En moyenne ${avg.toFixed(1).replace('.', ',')} famille${avg >= 2 ? 's' : ''} active${avg >= 2 ? 's' : ''} par ${unit} · pic : ${peak.v} ${peak.k ? `(${bucketLabel(peak.k, g)})` : ''} · ${uniq} famille${uniq > 1 ? 's' : ''} différente${uniq > 1 ? 's' : ''} sur la période. En foncé : les nouvelles familles.</p></section>`;
+}
 function adminView() {
   if (!isAdmin()) return '<p>Accès réservé.</p>';
   const head = `<button class="backlink" data-act="go" data-v="parents">${I.chev}<span>Espace parents</span></button><p class="kicker">Réservé au créateur</p><h2 class="title">Tableau de bord d’usage</h2>`;
@@ -1091,7 +1130,7 @@ function adminView() {
   const line = (l, v) => `<li><span>${l}</span><b>${v}</b></li>`;
   return head + `<p class="lead">Toutes les familles, hors la tienne. Mis à jour le ${new Date(adminData.at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}. <button class="link" data-act="adminreload">Actualiser</button></p>
 <div class="kpis">${kpi(s.n, 'familles inscrites', `+${s.new7} en 7 j · +${s.new30} en 30 j`)}${kpi(s.act7, 'actives cette semaine', `${s.act30} sur 30 jours`)}${kpi(s.ret4, 'encore là après 4 semaines', `sur ${s.old28} familles assez anciennes`)}${kpi(s.inst, 'ont installé l’appli', '')}</div>
-<section class="card"><h3>Familles actives par semaine</h3><div class="wbars">${s.weeks.map(w => `<div><i style="height:${Math.round(100 * w.v / max)}%"></i><b>${w.v}</b><small>${w.label}</small></div>`).join('')}</div></section>
+${activityCard()}
 ${adminDeepView()}
 <section class="card"><h3>Rétention</h3><ul class="kv">${line('Encore actives après 1 semaine', `${s.ret1} <small class="soft">(${s.old7} familles)</small>`)}${line('Encore actives après 4 semaines', `${s.ret4} <small class="soft">(${s.old28} familles)</small>`)}${line('Enfants qui ont rangé leur paie 3 semaines de suite', s.habit)}</ul></section>
 <section class="card"><h3>Ce qui est utilisé</h3><ul class="kv">${line('Enfants inscrits', `${s.kids} <small class="soft">(${s.perFam} par famille)</small>`)}${s.ages.map(([l, v]) => line('· ' + l, v)).join('')}${line('Guide terminé', s.guided)}${line('Au moins un quiz réussi', s.lq)}${line('Un projet en cours', s.goal)}${line('Projets achetés', s.bought)}${line('Bourse ouverte (15 € atteints)', s.open)}${line('Dé lancé, parmi les bourses ouvertes', s.rolled)}${s.posts.map(([p, v]) => line('· ' + (POST[p] ? POST[p].name : p), v)).join('')}${line('Tirelire moyenne', s.avg)}${line('Bonus moyen des parents', s.match)}</ul></section>
@@ -1922,6 +1961,9 @@ document.addEventListener('click', ev => {
     case 'jxeggreset': if (party && !party.ans && !party.done) { const r = party.rounds[party.i]; if (r.kind === 'basket') { r.dist = r.dist.map(() => 0); sfx('back'); } } break;
     case 'jxans': gAnswer(b.dataset.n); break;
     case 'jxnext': gNext(); break;
+    case 'admg': adm.g = b.dataset.n; break;
+    case 'admrange': adm.days = +b.dataset.n; adm.from = adm.to = ''; form.admfrom = form.admto = ''; break;
+    case 'admapply': if (form.admfrom && form.admto && form.admfrom <= form.admto) { adm.from = form.admfrom; adm.to = form.admto; } else say('Choisis une date de début avant la date de fin.'); break;
     case 'svnps': form.svnps = +b.dataset.n; break;
     case 'svwtp': form.svwtp = b.dataset.n; break;
     case 'svsrc': form.svsrc = b.dataset.n; break;

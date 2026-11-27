@@ -442,7 +442,7 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
 .kpi{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:12px;display:grid;gap:2px}
 .kpi b{font:700 28px Fredoka,sans-serif}.kpi span{font-weight:800;font-size:14px}.kpi small{color:var(--soft);font-size:12px}
-.wbars{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;align-items:end;height:150px;margin-top:8px}
+.wbars{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;align-items:end;height:150px;margin-top:8px}
 .wbars div{display:grid;grid-template-rows:1fr auto auto;height:100%;text-align:center;gap:2px}
 .wbars i{align-self:end;display:block;background:var(--kid);border-radius:6px 6px 2px 2px;min-height:3px}
 .wbars b{font-size:13px}.wbars small{font-size:10px;color:var(--soft);white-space:nowrap}
@@ -561,3 +561,8 @@ svg.jar.jup{animation:jpop 3s ease-in-out both;transform-origin:50% 90%}
 @keyframes gshake{25%{transform:translateX(-5px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
 .gbaskets + .row .btn{white-space:nowrap}
 .gnew{display:inline-block;vertical-align:middle;margin-left:6px;padding:2px 8px;border-radius:999px;background:#e0294f;color:#fff;font:700 11px Nunito,sans-serif;animation:gpop .4s ease-out}
+.wbars i{position:relative;overflow:hidden}.wbars i u{position:absolute;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--kid) 55%,#000)}
+.wbars.dense{gap:1px}.wbars.dense i{border-radius:2px 2px 0 0}.wbars.dense small{overflow:visible;font-size:9.5px}
+.admdates{align-items:end;flex-wrap:wrap;gap:8px;margin:6px 0}.admdates label{font-size:13px}.admdates input{padding:6px 8px;border-radius:10px;border:2px solid var(--line);background:var(--card);color:var(--ink)}
+.admpills{gap:6px;margin:6px 0}.admpills .pill{padding:6px 12px;font-size:14px;min-height:0}
+.admdates label{display:flex;align-items:center;gap:6px}
