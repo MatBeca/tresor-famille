@@ -6,8 +6,8 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
-import { GAMES, LEVELS, levelOfAge, newParty, traySum, isRight, explain, eu, ROUNDS, WIN, PER_DAY } from './games.js';
-const VERSION = '129'; // à garder égal au cache du service worker (sw.js)
+import { GAMES, LEVELS, levelOfAge, newParty, traySum, isRight, explain, eu, ROUNDS, WIN, PER_DAY, GOLD } from './games.js';
+const VERSION = '130'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -425,11 +425,12 @@ function jeuView(k) {
   const head = `<div class="ghead"><button class="backlink" data-act="go" data-v="jeux">${I.chev}<span>Quitter</span></button><span class="gdots" aria-label="Manche ${P.i + 1} sur ${ROUNDS}">${P.rounds.map((_, i) => `<i class="${i < P.i ? 'done' : i === P.i ? 'cur' : ''}"></i>`).join('')}</span></div><h2 class="title">${g.ic} ${g.name}</h2>`;
   let body;
   if (r.kind === 'basket') {
-    const left = r.eggs - r.dist.reduce((a, v) => a + v, 0), h = A && r.res ? r.res.hits : {};
+    const ln = r.eggs - r.dist.reduce((a, v) => a + v, 0), lg = r.gold - r.gdist.reduce((a, v) => a + v, 0), left = ln + lg, h = A && r.res ? r.res.hits : {};
+    const pk = r.pick === 'g' && lg ? 'g' : ln ? 'n' : 'g', egg = gd => `<span class="geg${gd ? ' gold' : ''}">🥚</span>`;
     body = `<section class="card gq"><p>${r.q}</p></section>
-${A ? '' : `<div class="gpool" aria-label="${left} œuf${left > 1 ? 's' : ''} à ranger">${'🥚'.repeat(left) || '<span class="soft small">Tous rangés !</span>'}</div>`}
-<div class="gbaskets">${r.dist.map((n, i) => `<button class="gbasket${h[i] ? ' stolen' : ''}" data-act="jxegg" data-n="${i}" ${A || !left ? 'disabled' : ''} aria-label="Panier ${i + 1}, ${n} œuf${n > 1 ? 's' : ''}">${h[i] ? '<span class="gfox" aria-hidden="true">🦊</span>' : ''}<span class="gbic" aria-hidden="true">🧺</span><span class="geggs">${'🥚'.repeat(n) || '&nbsp;'}</span></button>`).join('')}</div>
-${A ? '' : `<div class="row"><button class="btn ghost" data-act="jxeggreset" ${left === r.eggs ? 'disabled' : ''}>Recommencer</button><button class="btn" style="flex:1" data-act="jxpay" ${left ? 'disabled' : ''}>C’est parti !</button></div>`}`;
+${A ? '' : `<div class="gpool">${ln ? `<button class="gpick${pk === 'n' ? ' on' : ''}" data-act="jxpick" data-n="n" aria-label="Œufs simples : ${ln}">${egg(0).repeat(ln)}<small>1 pt</small></button>` : ''}${lg ? `<button class="gpick${pk === 'g' ? ' on' : ''}" data-act="jxpick" data-n="g" aria-label="Œufs d’or : ${lg}">${egg(1).repeat(lg)}<small>${GOLD} pts</small></button>` : ''}${left ? '' : '<span class="soft small">Tous rangés !</span>'}</div>`}
+<div class="gbaskets">${r.dist.map((n, i) => { const g = r.gdist[i], full = n + g >= r.caps[i]; return `<button class="gbasket${h[i] ? ' stolen' : ''}" data-act="jxegg" data-n="${i}" ${A || !left || full ? 'disabled' : ''} aria-label="Panier ${i + 1}">${h[i] ? '<span class="gfox" aria-hidden="true">🦊</span>' : ''}<span class="gbic" aria-hidden="true">🧺</span>${r.caps[i] < 99 ? `<small class="gcap">${r.caps[i]} œuf${r.caps[i] > 1 ? 's' : ''} max</small>` : ''}<span class="geggs">${egg(1).repeat(g)}${egg(0).repeat(n)}${n + g ? '' : '&nbsp;'}</span>${r.gold && n + g ? `<small class="gval">${n + GOLD * g} pt${n + GOLD * g > 1 ? 's' : ''}</small>` : ''}</button>`; }).join('')}</div>
+${A ? '' : `<div class="row gbtns"><button class="btn ghost" data-act="jxeggreset" ${left === r.eggs + r.gold ? 'disabled' : ''} aria-label="Recommencer">↺</button><button class="btn" style="flex:1" data-act="jxpay" ${left ? 'disabled' : ''}>C’est parti !</button></div>`}`;
   } else if (r.kind === 'pay' || r.kind === 'change') {
     body = `<section class="card gq"><div class="gitem" aria-hidden="true">${r.ic}</div><p>${r.q}</p>${r.kind === 'change' ? `<div class="ggiven"><small class="soft">Le client te donne</small><span class="gm bill">${billSVG(r.given / 100)}</span></div>` : ''}</section>
 <section class="card gcounter"><p class="small soft" style="margin:0 0 6px">Sur le comptoir : <b>${eu(traySum(r))}</b></p><div class="gtray">${r.tray.map((c, i) => coinH(c, 'jxtake', i, A)).join('') || '<span class="soft small">Touche les pièces pour les poser ici.</span>'}</div></section>
@@ -1957,8 +1958,11 @@ document.addEventListener('click', ev => {
     case 'jxcoin': if (party && !party.ans && !party.done) { const r = party.rounds[party.i]; if (r.tray && r.tray.length < 16) { r.tray.push(+b.dataset.n); sfx('coin'); } } break;
     case 'jxtake': if (party && !party.ans && !party.done) { const r = party.rounds[party.i]; if (r.tray) { r.tray.splice(+b.dataset.n, 1); sfx('back'); } } break;
     case 'jxpay': gAnswer(null); break;
-    case 'jxegg': if (party && !party.ans && !party.done) { const r = party.rounds[party.i], i = +b.dataset.n; if (r.kind === 'basket' && r.dist.reduce((a, v) => a + v, 0) < r.eggs && r.dist[i] !== undefined) { r.dist[i]++; sfx('coin'); } } break;
-    case 'jxeggreset': if (party && !party.ans && !party.done) { const r = party.rounds[party.i]; if (r.kind === 'basket') { r.dist = r.dist.map(() => 0); sfx('back'); } } break;
+    case 'jxegg': if (party && !party.ans && !party.done) { const r = party.rounds[party.i], i = +b.dataset.n; if (r.kind === 'basket' && r.dist[i] !== undefined && r.dist[i] + r.gdist[i] < r.caps[i]) {
+      const ln = r.eggs - r.dist.reduce((a, v) => a + v, 0), lg = r.gold - r.gdist.reduce((a, v) => a + v, 0), pk = r.pick === 'g' && lg ? 'g' : ln ? 'n' : lg ? 'g' : '';
+      if (pk === 'n') { r.dist[i]++; sfx('coin'); } else if (pk === 'g') { r.gdist[i]++; sfx('coin'); } if (pk === 'g' && lg === 1) r.pick = 'n'; } } break;
+    case 'jxpick': if (party && !party.ans && !party.done) { const r = party.rounds[party.i]; if (r.kind === 'basket') r.pick = b.dataset.n === 'g' ? 'g' : 'n'; } break;
+    case 'jxeggreset': if (party && !party.ans && !party.done) { const r = party.rounds[party.i]; if (r.kind === 'basket') { r.dist = r.dist.map(() => 0); r.gdist = r.gdist.map(() => 0); r.pick = 'n'; sfx('back'); } } break;
     case 'jxans': gAnswer(b.dataset.n); break;
     case 'jxnext': gNext(); break;
     case 'admg': adm.g = b.dataset.n; break;

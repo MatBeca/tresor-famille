@@ -158,20 +158,43 @@ function guimRound(lv) {
 }
 
 // ---------- Les Paniers : ne pas mettre tous ses œufs dans le même panier ----------
-// Simple et visuel : on range ses œufs, le renard vole un panier (deux chez les Grands). Il faut garder au moins un certain nombre d'œufs.
-// Ranger équitablement garantit toujours de réussir ; tout mettre dans un panier, c'est jouer à pile ou face.
-function panierRound(lv) {
-  const nb = lv === 'p' ? R(2, 3) : lv === 'm' ? R(3, 4) : R(4, 5), foxes = lv === 'g' ? 2 : 1, eggs = lv === 'p' ? R(4, 6) : lv === 'm' ? R(6, 9) : R(8, 12);
-  const per = Math.ceil(eggs / nb), need = eggs - per * foxes; // ce que garantit le rangement le plus équilibré
-  if (need < 1) return panierRound(lv);
-  return { kind: 'basket', eggs, nb, foxes, need, dist: Array(nb).fill(0), q: `Range tes ${eggs} œufs. Le renard va voler ${foxes === 1 ? '1 panier' : '2 paniers'}. Garde au moins ${need} œuf${need > 1 ? 's' : ''} !` };
+// Règle simple : on range ses œufs, le renard vole un ou plusieurs paniers, il faut garder assez de points.
+// Ça se corse au fil des 5 manches : œufs d'or (3 points), petits paniers, et chez les Grands un renard malin qui vole toujours le panier qui vaut le plus.
+export const GOLD = 3;
+function splitsCap(n, caps) { // façons de ranger n œufs dans des paniers aux places restantes données
+  if (!caps.length) return n === 0 ? [[]] : [];
+  const out = []; for (let x = Math.min(n, caps[0]); x >= 0; x--) for (const rest of splitsCap(n - x, caps.slice(1))) out.push([x, ...rest]);
+  return out;
+}
+const bVal = (d, g, i) => d[i] + GOLD * g[i];
+const worstKept = (r, d, g) => { const v = d.map((_, i) => bVal(d, g, i)).sort((x, y) => y - x); return r.total - v.slice(0, r.foxes).reduce((a, x) => a + x, 0); };
+function panierRound(lv, i = 0) {
+  for (let tries = 0; tries < 60; tries++) {
+    const nb = lv === 'p' ? R(2, 3) : lv === 'm' ? R(3, 4) : R(4, 5), foxes = lv === 'g' ? 2 : 1;
+    const gold = lv === 'p' ? (i >= 2 ? 1 : 0) : lv === 'm' ? (i >= 1 ? R(1, 2) : 0) : (i >= 1 ? R(2, 3) : 1);
+    const eggs = lv === 'p' ? R(3, 5) : lv === 'm' ? R(4, 7) : R(5, 8);
+    const caps = Array.from({ length: nb }, (_, k) => ((lv === 'm' && i >= 3) || (lv === 'g' && i >= 2)) && k === 0 ? R(1, 2) : 99);
+    const smart = lv === 'g' && i >= 2, total = eggs + GOLD * gold;
+    if (caps.reduce((a, c) => a + Math.min(c, eggs + gold), 0) < eggs + gold) continue;
+    const r = { kind: 'basket', eggs, gold, nb, foxes, caps, smart, total, dist: Array(nb).fill(0), gdist: Array(nb).fill(0), pick: 'n' };
+    let best = -1, nGood = 0, nAll = 0;
+    for (const g of splitsCap(gold, caps)) for (const d of splitsCap(eggs, caps.map((c, k) => c - g[k]))) { const w = worstKept(r, d, g); nAll++; if (w > best) { best = w; nGood = 1; } else if (w === best) nGood++; }
+    if (best < 1 || nGood === nAll) continue;
+    r.need = best;
+    const qn = [`Range tes œufs${gold ? ` (un œuf d’or vaut ${GOLD} points)` : ''}.`, smart ? `Le renard malin vole les ${foxes} paniers qui valent le plus !` : `Le renard va voler ${foxes === 1 ? '1 panier' : '2 paniers'} au hasard.`, `Garde au moins ${best} point${best > 1 ? 's' : ''} !`];
+    r.q = qn.join(' ');
+    return r;
+  }
+  return panierRound(lv === 'g' ? 'm' : 'p', i);
 }
 export function resolveBasket(r) {
   if (r.res) return r.res;
-  const stolen = shuffle(r.dist.map((_, i) => i)).slice(0, r.foxes), lost = stolen.reduce((a, i) => a + r.dist[i], 0), saved = r.eggs - lost, ok = saved >= r.need;
-  const hits = Object.fromEntries(stolen.map(i => [i, ['🦊', r.dist[i]]]));
-  return (r.res = { ok, lost, saved, hits, msg: `🦊 a volé ${stolen.length > 1 ? `les paniers ${stolen.map(i => i + 1).sort().join(' et ')}` : `le panier ${stolen[0] + 1}`}. Il te reste ${plural(saved, 'œuf', 'œufs')}.`,
-    why: ok ? '' : 'Astuce : mets des œufs dans chaque panier, le renard ne peut pas tous les prendre.' });
+  const d = r.dist, g = r.gdist, idx = d.map((_, i) => i);
+  const stolen = r.smart ? shuffle(idx).sort((x, y) => bVal(d, g, y) - bVal(d, g, x)).slice(0, r.foxes) : shuffle(idx).slice(0, r.foxes);
+  const lost = stolen.reduce((a, i) => a + bVal(d, g, i), 0), kept = r.total - lost, ok = kept >= r.need;
+  const hits = Object.fromEntries(stolen.map(i => [i, ['🦊', bVal(d, g, i)]]));
+  return (r.res = { ok, lost, saved: kept, hits, msg: `🦊 a volé ${stolen.length > 1 ? `les paniers ${stolen.map(i => i + 1).sort().join(' et ')}` : `le panier ${stolen[0] + 1}`}. Il te reste ${plural(kept, 'point', 'points')}.`,
+    why: ok ? '' : r.smart ? 'Le renard malin prend toujours ce qui vaut le plus : équilibre la valeur de tes paniers, œufs d’or compris !' : r.gold ? 'Astuce : sépare aussi tes œufs d’or, pour ne pas tout perdre d’un coup.' : 'Astuce : mets des œufs dans chaque panier, le renard ne peut pas tous les prendre.' });
 }
 
 export const GAMES = {
@@ -182,7 +205,7 @@ export const GAMES = {
   paniers: { name: 'Les Paniers', ic: '🧺', idea: 'Range tes œufs avant que le renard passe !', round: panierRound, unlock: 'bourse' },
   guimauve: { name: 'Le Défi de la guimauve', ic: '🍡', idea: 'Maintenant, ou plus tard mais plus ? Sais-tu attendre quand ça vaut le coup ?', round: guimRound, unlock: 's10' },
 };
-export const newParty = (id, lv) => ({ id, lv, i: 0, score: 0, rounds: Array.from({ length: ROUNDS }, () => GAMES[id].round(lv)), ans: null, done: false });
+export const newParty = (id, lv) => ({ id, lv, i: 0, score: 0, rounds: Array.from({ length: ROUNDS }, (_, i) => GAMES[id].round(lv, i)), ans: null, done: false });
 export const traySum = r => r.tray.reduce((a, c) => a + c, 0);
 export const target = r => r.kind === 'pay' ? r.price : r.kind === 'change' ? r.given - r.price : null;
 export const isRight = (r, a) => r.kind === 'basket' ? resolveBasket(r).ok : (r.kind === 'pay' || r.kind === 'change') ? traySum(r) === target(r) : a === r.answer;

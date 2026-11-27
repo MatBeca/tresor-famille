@@ -556,7 +556,7 @@ svg.jar.jup{animation:jpop 3s ease-in-out both;transform-origin:50% 90%}
 .gbasket.stolen{opacity:.55;animation:gshake .5s}.gbasket.stolen .geggs{text-decoration:line-through}
 .gfox{position:absolute;top:-14px;right:-6px;font-size:34px;animation:gfox .5s cubic-bezier(.2,1.6,.4,1) both}
 .gbic{font-size:38px;line-height:1}.geggs{font-size:18px;letter-spacing:1px;word-break:break-all;line-height:1.2}
-.gpool{font-size:24px;text-align:center;letter-spacing:2px;min-height:34px;margin:4px 0}
+.gpool{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;min-height:40px;margin:6px 0}
 @keyframes gfox{from{transform:translate(30px,-30px) scale(.3);opacity:0}}
 @keyframes gshake{25%{transform:translateX(-5px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
 .gbaskets + .row .btn{white-space:nowrap}
@@ -566,3 +566,8 @@ svg.jar.jup{animation:jpop 3s ease-in-out both;transform-origin:50% 90%}
 .admdates{align-items:end;flex-wrap:wrap;gap:8px;margin:6px 0}.admdates label{font-size:13px}.admdates input{padding:6px 8px;border-radius:10px;border:2px solid var(--line);background:var(--card);color:var(--ink)}
 .admpills{gap:6px;margin:6px 0}.admpills .pill{padding:6px 12px;font-size:14px;min-height:0}
 .admdates label{display:flex;align-items:center;gap:6px}
+.gpick{display:inline-flex;align-items:center;gap:2px;padding:6px 10px;border-radius:14px;border:2.5px solid var(--line);background:var(--card);font-size:22px;cursor:pointer}.gpick small{font:700 12px Nunito,sans-serif;color:var(--soft);margin-left:6px}
+.gpick.on{border-color:var(--kid,#f2b01e);box-shadow:0 0 0 3px color-mix(in srgb,var(--kid,#f2b01e) 25%,transparent)}
+.geg.gold{filter:sepia(1) saturate(6) hue-rotate(-8deg) brightness(1.05) drop-shadow(0 0 3px #f2b01e)}
+.gcap{font:700 11px Nunito,sans-serif;color:#b0562a}.gval{font:800 12px Nunito,sans-serif;color:var(--soft)}
+.gbtns{flex-wrap:nowrap}.gbtns .btn.ghost{flex:none;width:56px;font-size:22px;padding-inline:0}
