@@ -271,7 +271,7 @@ input:focus,select:focus{border-color:var(--kid);outline:none}
 
 .tile .tsub{display:block;font-size:13px;color:var(--soft);font-weight:700;margin-top:-2px}
 /* pépite qui grandit */
-.splash svg.logo.big,.welcome svg.logo.big{width:132px;height:102px}
+.splash svg.logo.big,.welcome svg.logo.big{width:142px;height:113px}
 .progrow{display:flex;align-items:center;gap:6px}.progrow .prog{flex:1;min-width:0;margin:0}
 .gnug{width:46px;height:38px;flex:none}
 .gnug.full{filter:drop-shadow(0 0 6px rgba(245,179,35,.8))}
@@ -340,7 +340,7 @@ i.cs{background:var(--purse)}i.cc{background:var(--grow)}
 .tdots{display:flex;gap:6px;justify-content:center;margin:4px 0}
 .tdots i{width:8px;height:8px;border-radius:99px;background:var(--line);transition:width .2s}
 .tdots i.on{width:22px;background:var(--kid)}
-.tintro{display:grid;justify-items:center;gap:6px}.tintro svg.logo.big{width:124px;height:96px}.tintro .wmfull .wm{height:44px}
+.tintro{display:grid;justify-items:center;gap:6px}.tintro svg.logo.big{width:132px;height:105px}.tintro .wmfull .wm{height:44px}
 .nugrow.big{justify-content:center}.nugrow.big .gnug{width:140px;height:114px}
 .sheet.tour{animation:none}
 .tour .tvis,.tour h3,.tour>p{animation:tfade .2s ease-out}
@@ -591,3 +591,18 @@ svg.masc .mstar{transform-box:fill-box;transform-origin:center;animation:mspark 
 @keyframes mshake{0%,100%{transform:translateX(0)}50%{transform:translateX(2px) rotate(2deg)}}
 @media(prefers-reduced-motion:reduce){svg.masc,svg.masc .mstar,.dpeur svg{animation:none}}
 .mbox .mwow{position:absolute;left:-12px;top:-34px;width:84px;transform:rotate(-10deg);pointer-events:none}.mbox .mwow svg{width:84px;height:68px;display:block}
+/* mascotte : la main (mini pépite) et ses gestes */
+.marm{transform-box:view-box}
+.p-wave{transform-origin:66px 118px;animation:mwave 1.5s ease-in-out .5s 2}
+@keyframes mwave{0%,100%{transform:rotate(0)}25%{transform:rotate(-16deg)}70%{transform:rotate(12deg)}}
+.p-point{transform-origin:60px 130px;animation:mpoint 2.6s ease-in-out .6s infinite}
+@keyframes mpoint{0%,70%,100%{transform:none}80%{transform:translate(-3px,-4px) rotate(-4deg)}90%{transform:none}}
+.p-chalk{transform-origin:60px 130px;animation:mchalk .5s ease-in-out .5s 4 alternate}
+@keyframes mchalk{to{transform:translate(-3px,3px) rotate(-6deg)}}
+.p-coin,.p-heart{transform-origin:40px 140px;animation:mgive .6s cubic-bezier(.3,1.6,.5,1) .25s both}
+@keyframes mgive{0%{transform:translate(10px,8px) scale(.7)}100%{transform:none}}
+.p-flag{transform-origin:40px 102px;animation:mflag .5s ease-out .3s both}
+@keyframes mflag{0%{transform:translateY(30px) scale(.8);opacity:0}100%{transform:none;opacity:1}}
+.p-flag .mflag{transform-box:fill-box;transform-origin:left center;animation:mflap 1.1s ease-in-out .8s 3}
+@keyframes mflap{50%{transform:scaleX(.86) skewY(4deg)}}
+.p-bite,.p-mouth{transform-origin:106px 125px;animation:mgive .35s ease-out both}

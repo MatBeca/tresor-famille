@@ -8,7 +8,7 @@ import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
 import { MASC, BODY, MINI, MINI_D } from './mascot.js';
 import { GAMES, LEVELS, levelOfAge, newParty, traySum, isRight, explain, eu, ROUNDS, WIN, PER_DAY, GOLD } from './games.js';
-const VERSION = '134'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '135'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -58,12 +58,28 @@ const DICE = POST;
 const CAPS = [20, 50, 100, 200, 500, 1000, 1500, 2000, 3500, 5000, 10000, 20000, 30000, 40000, 50000];
 const PIPS = { 1: [[50, 50]], 2: [[28, 28], [72, 72]], 3: [[28, 28], [50, 50], [72, 72]], 4: [[28, 28], [72, 28], [28, 72], [72, 72]], 5: [[28, 28], [72, 28], [50, 50], [28, 72], [72, 72]], 6: [[28, 26], [72, 26], [28, 50], [72, 50], [28, 74], [72, 74]] };
 /* Mascotte Pépite : galet doré avec un visage et un reflet en étoile (charte du 28/11/2026). */
-const MVB = { full: '22 24 172 140', tight: '31 45 152 118' };
+const MVB = { full: '22 24 172 140', tight: '31 45 152 118', wide: '8 16 186 148' };
 // Contour de découpe commun : injecté ici pour ne pas dépendre d'un index.html resté en cache.
 if (!document.getElementById('pcpm')) document.body.insertAdjacentHTML('afterbegin', `<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><clipPath id="pcp"><path d="${BODY}"/></clipPath><clipPath id="pcpm"><path d="${MINI_D}"/></clipPath></defs></svg>`);
-const MASCOT = (expr = 'contente', cls = '', label = '', vb = 'full', id = '') => `<svg class="masc${cls ? ' ' + cls : ''}"${id ? ` id="${id}"` : ''} viewBox="${MVB[vb] || vb}" ${label ? `role="img" aria-label="${label}"` : 'aria-hidden="true"'}>${MASC[expr] || MASC.contente}</svg>`;
-const LOGO = MASCOT('contente', 'logo', '', 'tight').replace('</svg>', MINI + '</svg>');
-const LOGOBIG = MASCOT('contente', 'logo big', '', 'tight').replace('</svg>', MINI + '</svg>');
+/* La mini pépite sert de main : position, rotation et échelle par geste (centre au repos : 52,5 ; 146). */
+const POSES = { rest: [52.5, 146, 0, 1], wave: [38, 92, 30, 1.05], point: [42, 126, -30, 1], chalk: [40, 124, -40, 1], coin: [42, 150, 0, 1], flag: [38, 100, 10, 1], heart: [50, 146, 0, 1], bite: [116, 144, -25, 1], mouth: [106, 140, 0, 1.1] };
+const PROPS = {
+  point: '<path d="M46,122 L24,44" stroke="#7A4B00" stroke-width="7" stroke-linecap="round"/><path d="M46,122 L24,44" stroke="#D08A3E" stroke-width="3" stroke-linecap="round"/><circle cx="24" cy="44" r="4.5" fill="#fff" stroke="#7A4B00" stroke-width="2.5"/>',
+  chalk: '<rect x="26" y="78" width="10" height="30" rx="3" transform="rotate(-28 31 93)" fill="#fff" stroke="#7A4B00" stroke-width="3"/><path d="M17,76 l-6,-3 M22,71 l-2,-6" stroke="#C9C4D8" stroke-width="2.5" stroke-linecap="round"/>',
+  coin: '<circle cx="33" cy="124" r="16" fill="#D9DCE6" stroke="#5A5870" stroke-width="3"/><circle cx="33" cy="124" r="9.5" fill="#F5B323" stroke="#B07A00" stroke-width="2"/>',
+  flag: '<path d="M40,102 L32,26" stroke="#7A4B00" stroke-width="4.5" stroke-linecap="round"/><path class="mflag" d="M33,28 Q48,30 62,38 Q48,44 35,50 Z" fill="#13A05A" stroke="#0B7440" stroke-width="2.5" stroke-linejoin="round"/>',
+  heart: '<path d="M34,136 C18,125 20,111 29,111 C32.5,111 34,114 34,116 C34,114 35.5,111 39,111 C48,111 50,125 34,136 Z" fill="#E0434F" stroke="#7A4B00" stroke-width="2.5" stroke-linejoin="round"/>',
+};
+const WIDE = ['wave', 'point', 'chalk', 'coin', 'flag', 'heart'];
+const DEFPOSE = { amoureuse: 'heart', 'cest-pepite': 'flag', etonnee: 'mouth', peur: 'bite', pensive: 'chalk', 'clin-doeil': 'point', fiere: 'wave' };
+const ARM = (pose = 'rest') => { if (pose === 'none') return ''; const [x, y, r, k] = POSES[pose] || POSES.rest; return `<g class="marm p-${pose}">${PROPS[pose] || ''}<g transform="translate(${x} ${y}) rotate(${r}) scale(${k}) translate(-52.5 -146)">${MINI}</g></g>`; };
+const MASCOT = (expr = 'contente', cls = '', label = '', vb = 'full', id = '', pose) => {
+  const [ex, p0] = String(expr).split(':'), pose1 = pose || p0 || DEFPOSE[ex] || 'rest', v = WIDE.includes(pose1) && (vb === 'tight' || vb === 'full') ? 'wide' : vb;
+  return `<svg class="masc${cls ? ' ' + cls : ''}"${id ? ` id="${id}"` : ''} viewBox="${MVB[v] || v}" ${label ? `role="img" aria-label="${label}"` : 'aria-hidden="true"'}>${MASC[ex] || MASC.contente}${ARM(pose1)}</svg>`;
+};
+if (/[?&]mascdebug/.test(location.search)) window.__MASCOT = MASCOT; // planche de contrôle
+const LOGO = MASCOT('contente', 'logo', '', 'tight');
+const LOGOBIG = MASCOT('contente', 'logo big', '', 'full', '', 'wave');
 const WM = `<svg class="wm" role="img" aria-label="Pépite" viewBox="-10 -1010 2892 1260"><g fill="currentColor"><path d="M126 8Q81 8 62.0 -5.5Q43 -19 39.0 -40.5Q35 -62 35 -84V-600Q35 -622 39.0 -643.0Q43 -664 62.0 -677.5Q81 -691 127 -691H326Q364 -691 408.0 -675.5Q452 -660 491.5 -628.0Q531 -596 556.0 -548.0Q581 -500 581 -434Q581 -369 556.0 -321.0Q531 -273 491.5 -241.5Q452 -210 408.0 -194.5Q364 -179 325 -179H218V-83Q218 -61 214.0 -40.0Q210 -19 191.0 -5.5Q172 8 126 8ZM218 -362H326Q339 -362 356.0 -368.5Q373 -375 386.0 -391.0Q399 -407 399 -435Q399 -456 389.0 -472.5Q379 -489 362.5 -498.5Q346 -508 325 -508H218Z M883 20Q808 20 756.0 -4.5Q704 -29 672.0 -68.5Q640 -108 625.0 -154.0Q610 -200 610 -243Q610 -322 645.0 -382.0Q680 -442 742.0 -476.0Q804 -510 884 -510Q946 -510 990.0 -490.0Q1034 -470 1061.5 -439.0Q1089 -408 1102.0 -373.0Q1115 -338 1115 -308Q1115 -251 1087.0 -221.0Q1059 -191 1015 -191H802Q806 -175 818.5 -163.5Q831 -152 850.0 -145.5Q869 -139 891 -139Q913 -139 930.0 -141.5Q947 -144 959.5 -148.0Q972 -152 982.5 -156.0Q993 -160 1001.5 -162.5Q1010 -165 1018 -165Q1036 -165 1051.0 -153.0Q1066 -141 1078 -117Q1085 -104 1088.0 -92.5Q1091 -81 1091 -71Q1091 -41 1066.5 -21.0Q1042 -1 996.0 9.5Q950 20 883 20ZM802 -285H914Q928 -285 934.5 -291.0Q941 -297 941 -309Q941 -322 933.5 -331.0Q926 -340 913.0 -344.5Q900 -349 882 -349Q858 -349 840.0 -339.5Q822 -330 812.5 -315.5Q803 -301 802 -285Z M1430 -3Q1381 -3 1345 -23Q1340 -26 1335 -29V132Q1337 154 1332.5 174.5Q1328 195 1309.0 208.0Q1290 221 1245 221Q1201 221 1182.0 208.0Q1163 195 1159.5 175.0Q1156 155 1156 133V-410Q1156 -432 1159.5 -452.0Q1163 -472 1181.5 -485.5Q1200 -499 1244 -499Q1279 -499 1302 -490Q1321 -482 1331 -467Q1339 -473 1347 -478Q1382 -498 1430 -498Q1474 -498 1515.5 -477.0Q1557 -456 1590.0 -420.5Q1623 -385 1642.0 -340.0Q1661 -295 1661 -247Q1661 -197 1642.0 -152.5Q1623 -108 1590.5 -74.5Q1558 -41 1516.5 -22.0Q1475 -3 1430 -3ZM1406 -173Q1426 -173 1442.5 -183.0Q1459 -193 1469.0 -209.5Q1479 -226 1479 -245Q1479 -265 1469.5 -281.5Q1460 -298 1443.5 -307.5Q1427 -317 1407.0 -317.0Q1387 -317 1370.5 -307.0Q1354 -297 1344.5 -281.0Q1335 -265 1335 -245Q1335 -226 1345.0 -209.5Q1355 -193 1371.0 -183.0Q1387 -173 1406 -173Z M1789 9Q1744 9 1725.0 -4.5Q1706 -18 1702.5 -39.0Q1699 -60 1699 -82V-408Q1699 -430 1703.0 -450.5Q1707 -471 1726.0 -484.5Q1745 -498 1790 -498Q1835 -498 1853.5 -484.5Q1872 -471 1876.0 -450.0Q1880 -429 1880 -406V-81Q1880 -59 1876.0 -38.0Q1872 -17 1853.5 -4.0Q1835 9 1789 9Z M2210 9Q2157 9 2118.0 -3.0Q2079 -15 2053.5 -40.0Q2028 -65 2015.5 -103.0Q2003 -141 2003 -192V-319H1978Q1944 -321 1931.0 -341.0Q1918 -361 1918 -407Q1918 -450 1934.0 -471.5Q1950 -493 1982 -493H2003V-580Q2003 -603 2007.0 -622.5Q2011 -642 2030.0 -654.5Q2049 -667 2094 -667Q2138 -667 2157.0 -653.5Q2176 -640 2180.0 -619.0Q2184 -598 2184 -576V-496L2237 -498Q2259 -498 2279.5 -494.0Q2300 -490 2313.5 -471.0Q2327 -452 2327 -406Q2327 -364 2313.5 -345.0Q2300 -326 2279.5 -321.0Q2259 -316 2236 -316L2184 -317V-201Q2184 -190 2185.5 -182.5Q2187 -175 2190.0 -171.0Q2193 -167 2198.0 -165.0Q2203 -163 2211 -163Q2237 -163 2257.5 -159.0Q2278 -155 2289.5 -138.0Q2301 -121 2301 -81Q2301 -36 2287.0 -17.0Q2273 2 2252.0 5.5Q2231 9 2210 9Z M2625 20Q2550 20 2498.0 -4.5Q2446 -29 2414.0 -68.5Q2382 -108 2367.0 -154.0Q2352 -200 2352 -243Q2352 -322 2387.0 -382.0Q2422 -442 2484.0 -476.0Q2546 -510 2626 -510Q2688 -510 2732.0 -490.0Q2776 -470 2803.5 -439.0Q2831 -408 2844.0 -373.0Q2857 -338 2857 -308Q2857 -251 2829.0 -221.0Q2801 -191 2757 -191H2544Q2548 -175 2560.5 -163.5Q2573 -152 2592.0 -145.5Q2611 -139 2633 -139Q2655 -139 2672.0 -141.5Q2689 -144 2701.5 -148.0Q2714 -152 2724.5 -156.0Q2735 -160 2743.5 -162.5Q2752 -165 2760 -165Q2778 -165 2793.0 -153.0Q2808 -141 2820 -117Q2827 -104 2830.0 -92.5Q2833 -81 2833 -71Q2833 -41 2808.5 -21.0Q2784 -1 2738.0 9.5Q2692 20 2625 20ZM2544 -285H2656Q2670 -285 2676.5 -291.0Q2683 -297 2683 -309Q2683 -322 2675.5 -331.0Q2668 -340 2655.0 -344.5Q2642 -349 2624 -349Q2600 -349 2582.0 -339.5Q2564 -330 2554.5 -315.5Q2545 -301 2544 -285Z"/><path d="M816 -520Q798 -520 785.0 -535.0Q772 -550 762 -581Q749 -623 757.0 -643.5Q765 -664 801 -675L985 -729Q1003 -729 1016.0 -714.0Q1029 -699 1038 -668Q1052 -628 1043.0 -607.0Q1034 -586 1000 -575Z"/><circle cx="1772" cy="-700" r="92" fill="currentColor"/></g></svg>`;
 const WMFULL = `<span class="wmfull" role="img" aria-label="C’est Pépite"><span class="cest" aria-hidden="true">c’est</span>${WM.replace('role="img" aria-label="Pépite"', 'aria-hidden="true"')}</span>`;
 const LOCK = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
@@ -383,7 +399,7 @@ function growNug(prog) {
   const st = prog >= 100 ? 4 : prog >= 75 ? 3 : prog >= 50 ? 2 : prog >= 25 ? 1 : 0, sc = [0.42, 0.55, 0.7, 0.85, 1][st];
   const lbl = st === 4 ? 'Ta pépite est complète : c’est pépite !' : `Ta pépite : taille ${st + 1} sur 5`;
   const ex = ['contente', 'contente', 'ravie', 'fiere', 'cest-pepite'][st], tx = (108 * (1 - sc)).toFixed(1), ty = (162 * (1 - sc)).toFixed(1);
-  return `<svg class="gnug masc${st === 4 ? ' full' : ''}" viewBox="${MVB.full}" role="img" aria-label="${lbl}"><g transform="translate(${tx} ${ty}) scale(${sc})">${MASC[ex]}</g></svg>`;
+  return `<svg class="gnug masc${st === 4 ? ' full' : ''}" viewBox="${MVB.full}" role="img" aria-label="${lbl}"><g transform="translate(${tx} ${ty}) scale(${sc})">${MASC[ex]}${ARM(st === 4 ? 'flag' : 'rest')}</g></svg>`;
 }
 // ---------- Jeux : un espace pour apprendre en jouant, 3 parties par jour et par jeu ----------
 let party = null;
@@ -1467,7 +1483,7 @@ function medalModal() {
   const cols = [m.c, '#ffd24a', '#ff6b8b', '#4d96ff', '#6bcb77', '#ffffff'];
   const conf = Array.from({ length: 22 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--c:${cols[i % cols.length]};--d:${(2.2 + (i % 5) * 0.35).toFixed(2)}s;--dl:${((i * 0.13) % 0.9).toFixed(2)}s;--r:${(i * 47) % 360}deg"></i>`).join('');
   return `<div class="mreveal" id="mr-${medalSeq}" role="dialog" aria-modal="true" aria-labelledby="mrt" style="--m:${m.c}"><div class="mrays" aria-hidden="true"></div><div class="mconf" aria-hidden="true">${conf}</div>
-<div class="mbox"><span class="mwow" aria-hidden="true">${MASCOT('eblouie', '', '', 'full', 'mw' + medalSeq)}</span><p class="mkick">${kids().length > 1 && kk ? `Bravo ${esc(kk.name)} !` : 'Bravo !'} Nouvelle pépite</p>${matNug(m, 'mbig')}<h2 id="mrt">${m.name}</h2><p class="mmat">Pépite ${m.mat}</p><p class="mhow">${m.how}</p>
+<div class="mbox"><span class="mwow" aria-hidden="true">${MASCOT('eblouie', '', '', 'full', 'mw' + medalSeq, 'wave')}</span><p class="mkick">${kids().length > 1 && kk ? `Bravo ${esc(kk.name)} !` : 'Bravo !'} Nouvelle pépite</p>${matNug(m, 'mbig')}<h2 id="mrt">${m.name}</h2><p class="mmat">Pépite ${m.mat}</p><p class="mhow">${m.how}</p>
 <button class="btn full" data-act="mednext">${n > 1 ? `Pépite suivante (${n - 1})` : 'Super !'}</button></div></div>`;
 }
 function nextSerie(id) { const st = streakOf(id), m = MEDALS.find(x => x.serie && x.serie > st && x.serie > bestStreak(id)); return m ? { m, left: m.serie - st } : null; }
@@ -1491,7 +1507,7 @@ function pushAskShow() {
 }
 function pushAsked(later) { let a = null; try { a = JSON.parse(localStorage.getItem('pepite-pushask') || 'null'); } catch (e) {} const v = { t: Date.now(), n: ((a && a.n) || 0) + 1, later }; try { localStorage.setItem('pepite-pushask', JSON.stringify(v)); } catch (e) {} }
 function pushAskModal() {
-  return `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="pt"><div class="sheet pushask">${MASCOT('contente', 'pask')}<h2 id="pt">On vous prévient ?</h2>
+  return `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="pt"><div class="sheet pushask">${MASCOT('contente', 'pask', '', 'full', '', 'wave')}<h2 id="pt">On vous prévient ?</h2>
 <p>Le lundi, un petit récap de la paie et de ce que vous devez. Le mercredi, un rappel si la paie n’est pas rangée, avec la série et la pépite en jeu. Et une alerte quand l’un d’eux déclare de l’argent reçu.</p>
 <div class="row"><button class="btn full" data-act="pushask">Oui, me prévenir</button></div><div class="row" style="margin-top:6px"><button class="btn ghost full" data-act="pushlater">Plus tard</button></div></div></div>`;
 }
@@ -1740,7 +1756,7 @@ function roll() {
     const before = tot(cur).total, md0 = medalSet(cur), rate = facesOf(cur)[face - 1], gain = faceEur(Math.max(0, before), facesOf(cur))[face - 1];
     EV[cur] = [...evs(cur), { t: 'bourse', d: iso(), face, rate, gain }];
     rolling = false; saveK(cur); sfx(rate > 0 ? 'win' : rate < 0 ? 'lose' : 'flat');
-    sayMs(before, rate > 0 ? `Dé ${face} : +${f(gain)} dans ta tirelire !` : rate < 0 ? `Dé ${face} : ta tirelire perd ${f(Math.abs(gain))}.` : `Dé ${face} : rien ne bouge cette semaine.`, rate < 0 ? 'Ça arrive, la semaine prochaine sera peut-être meilleure.' : '', rate > 0 ? (rate === Math.max(...facesOf(cur)) ? 'etonnee' : 'ravie') : rate < 0 ? (rate === Math.min(...facesOf(cur)) && rate <= -3 ? 'sonnee' : 'triste') : 'pensive');
+    sayMs(before, rate > 0 ? `Dé ${face} : +${f(gain)} dans ta tirelire !` : rate < 0 ? `Dé ${face} : ta tirelire perd ${f(Math.abs(gain))}.` : `Dé ${face} : rien ne bouge cette semaine.`, rate < 0 ? 'Ça arrive, la semaine prochaine sera peut-être meilleure.' : '', rate > 0 ? (rate === Math.max(...facesOf(cur)) ? 'etonnee' : 'ravie') : rate < 0 ? (rate === Math.min(...facesOf(cur)) && rate <= -3 ? 'sonnee' : 'triste') : 'pensive:rest');
     { const nm = newMedal(cur, md0); if (nm) say(nm, toast && toast.msg, 'eblouie'); }
     render();
   }, quick ? 30 : 1300);
@@ -1764,7 +1780,7 @@ function doGift(ratio) {
   saveK(cur);
   if (need) queuePush('cadeau', { kid: cur, amount: amt, from: from.slice(0, 40) });
   if (need) { say(askParent(true)); form.gamount = ''; form.gfrom = ''; return; }
-  sayMs(before, inv2 ? `Super ! ${f(inv2 + bonus)} rejoignent ta tirelire.` : `${f(dep2)} dans ton porte-monnaie.`, inv2 ? `${dep2 ? `Garde ${f(dep2)} dans ton porte-monnaie et donne` : 'Donne'} ${f(inv2)} ${P().a} pour qu’ils soient mis en lieu sûr.` : '', inv2 ? (bonus > 0 ? 'amoureuse' : 'ravie') : 'contente');
+  sayMs(before, inv2 ? `Super ! ${f(inv2 + bonus)} rejoignent ta tirelire.` : `${f(dep2)} dans ton porte-monnaie.`, inv2 ? `${dep2 ? `Garde ${f(dep2)} dans ton porte-monnaie et donne` : 'Donne'} ${f(inv2)} ${P().a} pour qu’ils soient mis en lieu sûr.` : '', inv2 ? (bonus > 0 ? 'amoureuse' : 'ravie:coin') : 'contente:coin');
   form.gamount = ''; form.gfrom = ''; view = 'home';
 }
 function okGift(id, d, yes) {
@@ -1775,7 +1791,7 @@ function okGift(id, d, yes) {
   if (yes) markGoal(id, before);
   if (!yes) { say(`Refusé : ${f(e.inv + e.dep)}${e.from ? ' de ' + esc(e.from) : ''} ne compte pas.`); return; }
   if (id === cur && view === 'recu') { view = 'home'; window.scrollTo(0, 0); }
-  if (id === cur) sayMs(before, e.inv ? `Validé ! ${f(e.inv + e.bonus)} rejoignent ta tirelire.` : `Validé ! ${f(e.dep)} dans ton porte-monnaie.`, e.inv ? `Pense à mettre ${f(e.inv)} en lieu sûr.` : '', e.inv ? (e.bonus > 0 ? 'amoureuse' : 'ravie') : 'contente');
+  if (id === cur) sayMs(before, e.inv ? `Validé ! ${f(e.inv + e.bonus)} rejoignent ta tirelire.` : `Validé ! ${f(e.dep)} dans ton porte-monnaie.`, e.inv ? `Pense à mettre ${f(e.inv)} en lieu sûr.` : '', e.inv ? (e.bonus > 0 ? 'amoureuse' : 'ravie:coin') : 'contente:coin');
   else say(`Validé pour ${esc(kidOf(id).name)}.`);
 }
 const giftLine = e => `${f(e.inv + e.dep)}${e.from ? ' de ' + esc(e.from) : ''} : ${e.inv ? f(e.inv) + ' dans la tirelire' : ''}${e.inv && e.dep ? ', ' : ''}${e.dep ? f(e.dep) + ' dans le porte-monnaie' : ''}`;
@@ -1886,7 +1902,7 @@ document.addEventListener('click', ev => {
       const nm = newMedal(cur, md0), cel = nm || (lessonsOpen(cur) > ln0 && lessonsOpen(cur) <= lessonList().length ? 'Nouvelle leçon débloquée !' : '') || (st1 >= 2 && nx ? `${st1} semaines d’affilée ! Encore ${nx.left} pour une nouvelle pépite.` : '');
       if (guide !== null) guidePaid = true;
       saveK(cur);
-      sayMs(before, inv ? `Bravo ! ${f(inv + bonus)} rejoignent ta tirelire.` : 'Paie rangée : tout est dans ton porte-monnaie.', dep ? `${f(dep)} pour ton porte-monnaie : ${P().label.toLowerCase()} ${F.parents === 'parents' ? 'te les donneront' : 'te les donnera'}.` : '', inv ? (bonus > 0 ? 'amoureuse' : 'ravie') : 'contente');
+      sayMs(before, inv ? `Bravo ! ${f(inv + bonus)} rejoignent ta tirelire.` : 'Paie rangée : tout est dans ton porte-monnaie.', dep ? `${f(dep)} pour ton porte-monnaie : ${P().label.toLowerCase()} ${F.parents === 'parents' ? 'te les donneront' : 'te les donnera'}.` : '', inv ? (bonus > 0 ? 'amoureuse' : 'ravie:coin') : 'contente:coin');
       if (cel) say(cel, toast && toast.msg, nm ? 'eblouie' : /leçon/.test(cel) ? 'clin-doeil' : 'fiere');
       resetCoins(); if (ow.length <= 1) { view = 'home'; window.scrollTo(0, 0); } break;
     }
