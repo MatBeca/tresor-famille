@@ -6,9 +6,9 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { firebaseConfig, CONTACT, ADMIN } from './config.js';
 import { privacyHTML, PRIVACY_VERSION } from './legal.js';
 import { MATS, matSVG, mystSVG } from './pepites.js';
-import { MASC } from './mascot.js';
+import { MASC, BODY } from './mascot.js';
 import { GAMES, LEVELS, levelOfAge, newParty, traySum, isRight, explain, eu, ROUNDS, WIN, PER_DAY, GOLD } from './games.js';
-const VERSION = '132'; // à garder égal au cache du service worker (sw.js)
+const VERSION = '133'; // à garder égal au cache du service worker (sw.js)
 
 /* ---------- outils ---------- */
 const EUR = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -59,6 +59,8 @@ const CAPS = [20, 50, 100, 200, 500, 1000, 1500, 2000, 3500, 5000, 10000, 20000,
 const PIPS = { 1: [[50, 50]], 2: [[28, 28], [72, 72]], 3: [[28, 28], [50, 50], [72, 72]], 4: [[28, 28], [72, 28], [28, 72], [72, 72]], 5: [[28, 28], [72, 28], [50, 50], [28, 72], [72, 72]], 6: [[28, 26], [72, 26], [28, 50], [72, 50], [28, 74], [72, 74]] };
 /* Mascotte Pépite : galet doré avec un visage et un reflet en étoile (charte du 28/11/2026). */
 const MVB = { full: '22 24 172 140', tight: '31 45 152 118' };
+// Contour de découpe commun : injecté ici pour ne pas dépendre d'un index.html resté en cache.
+if (!document.getElementById('pcp')) document.body.insertAdjacentHTML('afterbegin', `<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><clipPath id="pcp"><path d="${BODY}"/></clipPath></defs></svg>`);
 const MASCOT = (expr = 'contente', cls = '', label = '', vb = 'full', id = '') => `<svg class="masc${cls ? ' ' + cls : ''}"${id ? ` id="${id}"` : ''} viewBox="${MVB[vb] || vb}" ${label ? `role="img" aria-label="${label}"` : 'aria-hidden="true"'}>${MASC[expr] || MASC.contente}</svg>`;
 const LOGO = MASCOT('contente', 'logo', '', 'tight');
 const LOGOBIG = MASCOT('contente', 'logo big', '', 'tight');

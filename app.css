@@ -578,7 +578,7 @@ svg.jar.jup{animation:jpop 3s ease-in-out both;transform-origin:50% 90%}
 /* ---------- mascotte Pépite (28/11/2026) ---------- */
 .brand svg.masc{width:46px;height:36px}
 .item .ic svg.masc{width:38px;height:30px}
-svg.masc{overflow:visible;animation:mpop .5s cubic-bezier(.3,1.5,.5,1) both;transform-origin:50% 85%}
+svg.masc{overflow:hidden;animation:mpop .5s cubic-bezier(.3,1.5,.5,1) both;transform-origin:50% 85%}
 svg.masc .mstar{transform-box:fill-box;transform-origin:center;animation:mspark 4.2s ease-in-out 1s infinite}
 @keyframes mpop{0%{transform:scale(.6) translateY(6px);opacity:0}60%{opacity:1}100%{transform:none;opacity:1}}
 @keyframes mspark{0%,82%,100%{transform:scale(1) rotate(0);opacity:1}88%{transform:scale(1.35) rotate(18deg);opacity:1}94%{transform:scale(.9);opacity:.85}}
