@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Pépite inquiète"><defs><clipPath id="cp-inquiete"><path d="M40,116 C34,90 56,66 84,62 C100,48 136,50 150,66 C172,74 180,104 168,128 C158,152 120,160 92,154 C62,156 44,140 40,116 Z"/></clipPath></defs>
+    <path d="M40,116 C34,90 56,66 84,62 C100,48 136,50 150,66 C172,74 180,104 168,128 C158,152 120,160 92,154 C62,156 44,140 40,116 Z" fill="#F5B323"/>
+    <g clip-path="url(#cp-inquiete)">
+      <circle cx="170" cy="196" r="88" fill="#E0960C"/>
+      <ellipse cx="86" cy="84" rx="42" ry="20" transform="rotate(-18 86 84)" fill="#FFD866"/>
+      <ellipse cx="134" cy="70" rx="20" ry="10" transform="rotate(-8 134 70)" fill="#FFD866"/><ellipse cx="150" cy="104" rx="5" ry="3.5" fill="#E0960C"/>
+      <ellipse cx="62" cy="132" rx="4" ry="3" fill="#E0960C"/></g>
+    <path d="M40,116 C34,90 56,66 84,62 C100,48 136,50 150,66 C172,74 180,104 168,128 C158,152 120,160 92,154 C62,156 44,140 40,116 Z" fill="none" stroke="#7A4B00" stroke-width="7" stroke-linejoin="round"/>
+    <path d="M80,67 Q83.74,80.26 97,84 Q83.74,87.74 80,101 Q76.26,87.74 63,84 Q76.26,80.26 80,67 Z" fill="#fff"/><ellipse cx="88" cy="112" rx="6.5" ry="8.5" fill="#1F1D3A"/><circle cx="90" cy="109" r="2.3" fill="#fff"/><ellipse cx="124" cy="112" rx="6.5" ry="8.5" fill="#1F1D3A"/><circle cx="126" cy="109" r="2.3" fill="#fff"/><path d="M79,96 Q88,88 97,90 M133,96 Q124,88 115,90" stroke="#1F1D3A" stroke-width="4.5" stroke-linecap="round" fill="none"/><path d="M92,134 Q97,128 102,134 Q107,140 112,134 Q117,128 120,134" stroke="#1F1D3A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M156,80 Q164,94 160,100 Q154,104 151,97 Q150,90 156,80 Z" fill="#7FC4F5" stroke="#3B7FC4" stroke-width="2"/></svg>

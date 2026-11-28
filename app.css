@@ -271,9 +271,9 @@ input:focus,select:focus{border-color:var(--kid);outline:none}
 
 .tile .tsub{display:block;font-size:13px;color:var(--soft);font-weight:700;margin-top:-2px}
 /* pépite qui grandit */
-.splash svg.logo.big,.welcome svg.logo.big{width:180px;height:73px}
+.splash svg.logo.big,.welcome svg.logo.big{width:132px;height:102px}
 .progrow{display:flex;align-items:center;gap:6px}.progrow .prog{flex:1;min-width:0;margin:0}
-.gnug{width:40px;height:35px;flex:none}
+.gnug{width:46px;height:38px;flex:none}
 .gnug.full{filter:drop-shadow(0 0 6px rgba(245,179,35,.8))}
 /* bourse en faces */
 .dfaces{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;margin:8px 0 2px}
@@ -289,7 +289,7 @@ input:focus,select:focus{border-color:var(--kid);outline:none}
 .art-item small{display:block;font-weight:800;font-size:13px;color:var(--soft)}
 .art-item b{font-size:18px;line-height:1.2}
 .ic.artn{background:color-mix(in srgb,var(--gold) 22%,var(--card));color:#6e4400;font:700 22px Fredoka,sans-serif}
-.ic.artn svg{width:34px;height:30px}
+.ic.artn svg{width:38px;height:30px}
 .parentread{margin:10px 0 4px;border-color:color-mix(in srgb,var(--gold) 55%,var(--line))}
 .nextart{margin-top:18px}
 .art{background:var(--card);border:2px solid var(--line);border-radius:28px;padding:20px 18px 8px;margin-top:6px}
@@ -323,7 +323,7 @@ i.cs{background:var(--purse)}i.cc{background:var(--grow)}
 .demoin{border:2px dashed var(--line);border-radius:22px;padding:14px;background:var(--bg)}
 .demo figcaption{font-size:13px;color:var(--soft);font-weight:700;text-align:center;margin-top:6px}
 .demojar{display:grid;grid-template-columns:130px 1fr;gap:12px;align-items:center}.demojar .tiles{grid-template-columns:1fr;margin:0;gap:6px}.demojar .tile{padding:8px 10px}.demojar .tile b{font-size:19px}
-.nugrow{display:flex;align-items:flex-end;justify-content:space-around}.nugrow .gnug{width:54px;height:47px}
+.nugrow{display:flex;align-items:flex-end;justify-content:space-around}.nugrow .gnug{width:58px;height:47px}
 .keys.mini{grid-template-columns:repeat(3,54px);gap:8px}.keys.mini .key{height:46px;display:grid;place-items:center;font-size:20px}
 .src{margin:14px 0 10px;font-size:14px}.src summary{cursor:pointer;font-weight:800;color:var(--soft)}.src ol{padding-left:20px;margin:8px 0 0}.src li{margin:5px 0;line-height:1.4}.src a{color:var(--kidd)}
 @media(max-width:380px){.demojar{grid-template-columns:1fr;justify-items:center}}
@@ -340,8 +340,8 @@ i.cs{background:var(--purse)}i.cc{background:var(--grow)}
 .tdots{display:flex;gap:6px;justify-content:center;margin:4px 0}
 .tdots i{width:8px;height:8px;border-radius:99px;background:var(--line);transition:width .2s}
 .tdots i.on{width:22px;background:var(--kid)}
-.tintro{display:grid;justify-items:center;gap:6px}.tintro svg.logo.big{width:170px;height:69px}.tintro .wmfull .wm{height:44px}
-.nugrow.big{justify-content:center}.nugrow.big .gnug{width:130px;height:113px}
+.tintro{display:grid;justify-items:center;gap:6px}.tintro svg.logo.big{width:124px;height:96px}.tintro .wmfull .wm{height:44px}
+.nugrow.big{justify-content:center}.nugrow.big .gnug{width:140px;height:114px}
 .sheet.tour{animation:none}
 .tour .tvis,.tour h3,.tour>p{animation:tfade .2s ease-out}
 @keyframes tfade{from{opacity:0;transform:translateX(14px)}}
@@ -372,7 +372,7 @@ i.cs{background:var(--purse)}i.cc{background:var(--grow)}
 .ic.aboutic{overflow:hidden;padding:0}.ic.aboutic img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
 /* Guide de l'enfant */
 .guide{align-items:flex-start;position:fixed;left:50%;transform:translateX(-50%);top:calc(70px + env(safe-area-inset-top));width:min(calc(100% - 20px),460px);z-index:40;display:flex;gap:10px;align-items:flex-end;animation:tfade .25s ease-out}
-.gmascot svg{width:58px;height:50px;filter:drop-shadow(0 3px 0 rgba(0,0,0,.15))}
+.gmascot svg{width:62px;height:48px;filter:drop-shadow(0 3px 0 rgba(0,0,0,.15))}
 .gbody{flex:1;background:var(--card);border:3px solid var(--kid);border-radius:6px 22px 22px 22px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
 .gbody p{margin:0;font:600 17px/1.4 Fredoka,sans-serif}
 .gact{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
@@ -388,7 +388,7 @@ main.view.guided{padding-bottom:300px}
 .guide.low{top:auto;bottom:calc(84px + env(safe-area-inset-bottom));align-items:flex-end}
 .guide.low .gbody{border-radius:22px 22px 22px 6px}
 .guide.low .gbody{padding:9px 12px}.guide .gbody p{font-size:15.5px;line-height:1.35}
-.guide .gmascot svg{width:42px;height:36px}
+.guide .gmascot svg{width:48px;height:37px}
 .guide .gact{margin-top:6px}
 .gprev{display:inline-grid;place-items:center;width:30px;height:30px;border:0;border-radius:50%;background:none;color:var(--soft);padding:0;opacity:.75}.gprev:active{background:var(--line)}
 .gnav{flex-basis:100%;display:flex;align-items:center;gap:4px}.gnav:empty{display:none}.gnav .btn{margin-left:auto}.gprev{margin-left:-6px}
@@ -477,7 +477,7 @@ textarea{width:100%;font:inherit;font-size:16px;font-weight:600;border-radius:14
 .medal.on{border-color:color-mix(in srgb,var(--gold) 70%,transparent)}.medal.on .mnug{filter:none;opacity:1}
 .medal b{font:700 17px Fredoka,sans-serif}.medal small{color:var(--soft);font-size:13px;line-height:1.35}
 .medal:not(.on) b{color:var(--soft)}
-.pushask{text-align:center}.pushask .pask{width:84px;height:72px;margin:0 auto 6px;display:block}.pushask h2{margin:0 0 6px}.pushask p{margin:0 0 6px}
+.pushask{text-align:center}.pushask .pask{width:100px;height:81px;margin:0 auto 6px;display:block}.pushask h2{margin:0 0 6px}.pushask p{margin:0 0 6px}
 
 .todo.pep{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 12%,var(--card))}.todo.pep .ic{background:var(--gold);color:#5a3a00}.todo.pep .mrow{margin-top:6px}
 .medal em{font-style:normal;font-size:12.5px;font-weight:700;color:color-mix(in srgb,var(--m) 70%,var(--ink))}.medal:not(.on) em{color:var(--soft)}.medal.on{border-color:color-mix(in srgb,var(--m) 55%,var(--line));background:color-mix(in srgb,var(--m) 7%,var(--card))}
@@ -574,3 +574,20 @@ svg.jar.jup{animation:jpop 3s ease-in-out both;transform-origin:50% 90%}
 .wbars div{grid-template-rows:1fr auto 16px}.wbars small{height:16px;line-height:16px;overflow:visible;position:relative;z-index:1}
 .wbars i.z{min-height:0;height:2px!important;opacity:.3;border-radius:1px}
 .wbars.dense b{display:none}.wbars.dense div{grid-template-rows:1fr 16px}
+
+/* ---------- mascotte Pépite (28/11/2026) ---------- */
+.brand svg.masc{width:46px;height:36px}
+.item .ic svg.masc{width:38px;height:30px}
+svg.masc{overflow:visible;animation:mpop .5s cubic-bezier(.3,1.5,.5,1) both;transform-origin:50% 85%}
+svg.masc .mstar{transform-box:fill-box;transform-origin:center;animation:mspark 4.2s ease-in-out 1s infinite}
+@keyframes mpop{0%{transform:scale(.6) translateY(6px);opacity:0}60%{opacity:1}100%{transform:none;opacity:1}}
+@keyframes mspark{0%,82%,100%{transform:scale(1) rotate(0);opacity:1}88%{transform:scale(1.35) rotate(18deg);opacity:1}94%{transform:scale(.9);opacity:.85}}
+.toast.tmood{display:flex;align-items:center;gap:12px;padding:10px 16px 10px 10px}
+.toast .tm{width:60px;height:49px;flex:none}
+.toast .tmsg{min-width:0}
+.dicebox{position:relative}
+.dpeur{position:absolute;right:10px;top:34px;width:78px;pointer-events:none}
+.dpeur svg{width:78px;height:63px;display:block;animation:mpop .35s ease-out both,mshake .18s ease-in-out .35s infinite}
+@keyframes mshake{0%,100%{transform:translateX(0)}50%{transform:translateX(2px) rotate(2deg)}}
+@media(prefers-reduced-motion:reduce){svg.masc,svg.masc .mstar,.dpeur svg{animation:none}}
+.mbox .mwow{position:absolute;left:-12px;top:-34px;width:84px;transform:rotate(-10deg);pointer-events:none}.mbox .mwow svg{width:84px;height:68px;display:block}
