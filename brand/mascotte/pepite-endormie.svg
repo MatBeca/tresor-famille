@@ -3,7 +3,6 @@
     <g clip-path="url(#cp-endormie)">
       <circle cx="170" cy="196" r="88" fill="#E0960C"/>
       <ellipse cx="86" cy="84" rx="42" ry="20" transform="rotate(-18 86 84)" fill="#FFD866"/>
-      <ellipse cx="134" cy="70" rx="20" ry="10" transform="rotate(-8 134 70)" fill="#FFD866"/><ellipse cx="150" cy="104" rx="5" ry="3.5" fill="#E0960C"/>
-      <ellipse cx="62" cy="132" rx="4" ry="3" fill="#E0960C"/></g>
+      <ellipse cx="134" cy="70" rx="20" ry="10" transform="rotate(-8 134 70)" fill="#FFD866"/></g>
     <path d="M40,116 C34,90 56,66 84,62 C100,48 136,50 150,66 C172,74 180,104 168,128 C158,152 120,160 92,154 C62,156 44,140 40,116 Z" fill="none" stroke="#7A4B00" stroke-width="7" stroke-linejoin="round"/>
     <path d="M80,67 Q83.74,80.26 97,84 Q83.74,87.74 80,101 Q76.26,87.74 63,84 Q76.26,80.26 80,67 Z" fill="#fff"/><path d="M80,112 Q88,119 96,112" stroke="#1F1D3A" stroke-width="4.5" stroke-linecap="round" fill="none"/><path d="M116,112 Q124,119 132,112" stroke="#1F1D3A" stroke-width="4.5" stroke-linecap="round" fill="none"/><ellipse cx="106" cy="134" rx="4" ry="5" fill="#1F1D3A"/><text x="150" y="70" font-family="Fredoka Light" font-weight="700" font-size="26" fill="#6C6686">z</text><text x="166" y="50" font-family="Fredoka Light" font-weight="700" font-size="18" fill="#6C6686">z</text></svg>

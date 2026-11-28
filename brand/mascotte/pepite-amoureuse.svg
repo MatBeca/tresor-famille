@@ -3,7 +3,6 @@
     <g clip-path="url(#cp-amoureuse)">
       <circle cx="170" cy="196" r="88" fill="#E0960C"/>
       <ellipse cx="86" cy="84" rx="42" ry="20" transform="rotate(-18 86 84)" fill="#FFD866"/>
-      <ellipse cx="134" cy="70" rx="20" ry="10" transform="rotate(-8 134 70)" fill="#FFD866"/><ellipse cx="150" cy="104" rx="5" ry="3.5" fill="#E0960C"/>
-      <ellipse cx="62" cy="132" rx="4" ry="3" fill="#E0960C"/></g>
+      <ellipse cx="134" cy="70" rx="20" ry="10" transform="rotate(-8 134 70)" fill="#FFD866"/></g>
     <path d="M40,116 C34,90 56,66 84,62 C100,48 136,50 150,66 C172,74 180,104 168,128 C158,152 120,160 92,154 C62,156 44,140 40,116 Z" fill="none" stroke="#7A4B00" stroke-width="7" stroke-linejoin="round"/>
     <path d="M80,67 Q83.74,80.26 97,84 Q83.74,87.74 80,101 Q76.26,87.74 63,84 Q76.26,80.26 80,67 Z" fill="#fff"/><path d="M88,121 C74,112 78,100 88,107 C98,100 102,112 88,121 Z" fill="#E0434F"/><path d="M124,121 C110,112 114,100 124,107 C134,100 138,112 124,121 Z" fill="#E0434F"/><path d="M96,128 Q106,138 116,128" stroke="#1F1D3A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><ellipse cx="70" cy="128" rx="9" ry="5" fill="#F0905A" opacity="0.55"/><ellipse cx="142" cy="128" rx="9" ry="5" fill="#F0905A" opacity="0.55"/><path d="M166,52 C156,44 158,34 166,40 C174,34 176,44 166,52 Z" fill="#E0434F"/></svg>
